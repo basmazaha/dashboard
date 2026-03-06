@@ -13,13 +13,14 @@ type Appointment = {
   status: string | null;
 };
 
-type OffDay = { date: string };
-
 type WorkingHour = {
-  day: string;
-  start_time: string;
-  end_time: string;
-  interval_minutes: number;
+  day_of_week: number;           // 0 = الأحد، 1 = الإثنين، ... ، 6 = السبت
+  is_open: boolean;
+  start_time: string | null;
+  end_time: string | null;
+  slot_duration_minutes: number | null;
+  break_start: string | null;
+  break_end: string | null;
 };
 
 export default function AppointmentsTable({
@@ -28,76 +29,96 @@ export default function AppointmentsTable({
   initialWorkingHours,
 }: {
   initialAppointments: Appointment[];
-  initialOffDays: OffDay[];
+  initialOffDays: string[];               // مصفوفة من التواريخ بتنسيق ISO
   initialWorkingHours: WorkingHour[];
 }) {
   const [appointments, setAppointments] = useState(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const offDaysSet = useMemo(
-    () => new Set(initialOffDays.map((od) => od.date)),
-    [initialOffDays]
-  );
+  const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
   const workingHoursByDay = useMemo(() => {
-    const map: Record<string, WorkingHour> = {};
-    initialWorkingHours.forEach((wh) => {
-      map[wh.day] = wh;
+    const map: Record<number, WorkingHour> = {};
+    initialWorkingHours.forEach(wh => {
+      map[wh.day_of_week] = wh;
     });
     return map;
   }, [initialWorkingHours]);
 
-  // التواريخ المتاحة (30 يومًا قادمة)
+  // التواريخ المتاحة (30 يوم قادمة)
   const availableDates = useMemo(() => {
     const dates: string[] = [];
     const today = new Date();
     for (let i = 0; i < 30; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      const iso = date.toISOString().split('T')[0];
-      const dayName = date.toLocaleString('en-US', { weekday: 'long' });
-      if (!offDaysSet.has(iso) && workingHoursByDay[dayName]) {
-        const formatted = date.toLocaleDateString('ar-EG', {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      const isoDate = d.toISOString().split('T')[0];
+
+      if (offDaysSet.has(isoDate)) continue;
+
+      const dayOfWeek = d.getDay(); // JavaScript: 0=Sunday, 1=Monday, ..., 6=Saturday
+      const wh = workingHoursByDay[dayOfWeek];
+
+      if (wh?.is_open && wh.start_time && wh.end_time) {
+        const formatted = d.toLocaleDateString('ar-EG', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
           day: 'numeric',
         });
-        dates.push(`${iso}|${formatted}`);
+        dates.push(`${isoDate}|${formatted}`);
       }
     }
     return dates;
   }, [offDaysSet, workingHoursByDay]);
 
-  const getAvailableTimesForDate = (dateStr: string | null) => {
-    if (!dateStr) return [];
+  const getAvailableTimesForDate = (selectedDate: string | null) => {
+    if (!selectedDate) return [];
 
-    const dateObj = new Date(dateStr);
-    const dayName = dateObj.toLocaleString('en-US', { weekday: 'long' });
-    const wh = workingHoursByDay[dayName];
+    const dateObj = new Date(selectedDate);
+    const dayOfWeek = dateObj.getDay(); // نفس نظام الجدول (0=الأحد ... 6=السبت)
 
-    if (!wh) return [];
+    const wh = workingHoursByDay[dayOfWeek];
+    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) {
+      return [];
+    }
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
-    const end = new Date(`2000-01-01T${wh.end_time}`);
-    
-    // الفاصل الزمني: نأخذ من الجدول إن وجد، وإلا 15 دقيقة
-    const intervalMs = (wh.interval_minutes || 15) * 60 * 1000;
+    const end   = new Date(`2000-01-01T${wh.end_time}`);
+
+    const slotDuration = wh.slot_duration_minutes ?? 15;
+    const slotMs = slotDuration * 60 * 1000;
+
+    // فترة الراحة (اختيارية)
+    let breakStartMs = Infinity;
+    let breakEndMs   = -Infinity;
+    if (wh.break_start && wh.break_end) {
+      breakStartMs = new Date(`2000-01-01T${wh.break_start}`).getTime();
+      breakEndMs   = new Date(`2000-01-01T${wh.break_end}`).getTime();
+    }
 
     const times: string[] = [];
+
     for (
       let current = start.getTime();
       current < end.getTime();
-      current += intervalMs
+      current += slotMs
     ) {
-      const timeDate = new Date(current);
-      const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
+      const slotStart = current;
+      const slotEnd   = current + slotMs;
 
-      // هل الوقت محجوز؟
-      const isBooked = appointments.some(
-        (a) =>
-          a.appointment_date === dateStr && a.appointment_time === isoTime
+      // استبعاد السلوت إذا تداخل مع فترة الراحة
+      if (slotStart < breakEndMs && slotEnd > breakStartMs) {
+        continue;
+      }
+
+      const timeDate = new Date(slotStart);
+      const isoTime = timeDate.toTimeString().slice(0, 5); // "09:00", "09:15", ...
+
+      const isBooked = appointments.some(a =>
+        a.appointment_date === selectedDate &&
+        a.appointment_time === isoTime
       );
 
       if (!isBooked) {
@@ -105,7 +126,10 @@ export default function AppointmentsTable({
           hour: '2-digit',
           minute: '2-digit',
           hour12: true,
-        }).replace('ص', 'صباحاً').replace('م', 'مساءً');
+        })
+          .replace('ص', 'صباحاً')
+          .replace('م', 'مساءً');
+
         times.push(`${isoTime}|${formatted}`);
       }
     }
@@ -133,9 +157,9 @@ export default function AppointmentsTable({
     startTransition(async () => {
       const result = await updateAppointment(formData);
       if ('success' in result) {
-        window.location.reload(); // تحديث بسيط – يمكن تحسينه لاحقاً
+        window.location.reload(); // تحديث بسيط بعد الحفظ
       } else if ('error' in result) {
-        alert('خطأ: ' + result.error);
+        alert('حدث خطأ أثناء الحفظ: ' + result.error);
       }
       setEditingId(null);
     });
@@ -162,9 +186,7 @@ export default function AppointmentsTable({
                 {appointments.map((appt) => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
-                  const availTimes = isEditing
-                    ? getAvailableTimesForDate(appt.appointment_date)
-                    : [];
+                  const availTimes = isEditing ? getAvailableTimesForDate(appt.appointment_date) : [];
 
                   return (
                     <tr key={appt.id} className={isEditing ? 'editing-row' : ''}>
@@ -175,6 +197,7 @@ export default function AppointmentsTable({
                             name="full_name"
                             form={formId}
                             defaultValue={appt.full_name || ''}
+                            placeholder="الاسم الكامل"
                           />
                         ) : (
                           <span className="readable-cell">{appt.full_name || '—'}</span>
@@ -188,6 +211,7 @@ export default function AppointmentsTable({
                             name="phone"
                             form={formId}
                             defaultValue={appt.phone || ''}
+                            placeholder="01xxxxxxxxx"
                           />
                         ) : (
                           <span className="readable-cell">{appt.phone || '—'}</span>
@@ -196,9 +220,13 @@ export default function AppointmentsTable({
 
                       <td>
                         {isEditing ? (
-                          <select name="date" form={formId} defaultValue={appt.appointment_date ?? ''}>
+                          <select
+                            name="date"
+                            form={formId}
+                            defaultValue={appt.appointment_date ?? ''}
+                          >
                             <option value="">اختر تاريخاً</option>
-                            {availableDates.map((d) => {
+                            {availableDates.map(d => {
                               const [iso, label] = d.split('|');
                               return <option key={iso} value={iso}>{label}</option>;
                             })}
@@ -219,9 +247,13 @@ export default function AppointmentsTable({
 
                       <td>
                         {isEditing ? (
-                          <select name="time" form={formId} defaultValue={appt.appointment_time ?? ''}>
+                          <select
+                            name="time"
+                            form={formId}
+                            defaultValue={appt.appointment_time ?? ''}
+                          >
                             <option value="">اختر وقتاً</option>
-                            {availTimes.map((t) => {
+                            {availTimes.map(t => {
                               const [iso, label] = t.split('|');
                               return <option key={iso} value={iso}>{label}</option>;
                             })}
@@ -306,7 +338,9 @@ export default function AppointmentsTable({
           </div>
         </div>
       ) : (
-        <div className="no-appointments">لا توجد مواعيد مسجلة حاليًا</div>
+        <div className="no-appointments">
+          لا توجد مواعيد مسجلة حاليًا
+        </div>
       )}
     </>
   );
