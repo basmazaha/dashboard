@@ -3,7 +3,7 @@ import './dashboard.css';
 
 export const metadata = {
   title: 'لوحة التحكم',
-  description: 'إدارة المواعيد والمستخدمين',
+  description: 'إدارة المواعيد وساعات العمل',
 };
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -23,7 +23,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="sidebar-nav">
             <ul>
               <li><a href="/dashboard" className="active">المواعيد</a></li>
-              <li><a href="/dashboard/users">المستخدمين</a></li>
+              <li><a href="/dashboard/working-hours">ساعات العمل</a></li>
               <li><a href="/dashboard/settings">الإعدادات</a></li>
             </ul>
           </nav>
