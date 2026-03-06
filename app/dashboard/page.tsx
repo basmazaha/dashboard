@@ -1,40 +1,13 @@
+// app/dashboard/page.tsx
+'use client';
+
+import { useState, useTransition } from 'react';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
+import { updateAppointment } from './actions';
 
 export const dynamic = 'force-dynamic';
-
-async function updateAppointment(formData: FormData) {
-  'use server';
-
-  const id = formData.get('appointment_id') as string;
-  const full_name = formData.get('full_name') as string | null;
-  const phone = formData.get('phone') as string | null;
-  const date = formData.get('date') as string | null;
-  const time = formData.get('time') as string | null;
-  const status = formData.get('status') as string | null;
-
-  if (!id) return;
-
-  const updates: Record<string, string> = {};
-
-  if (full_name?.trim())    updates.full_name = full_name.trim();
-  if (phone?.trim())        updates.phone = phone.trim();
-  if (date)                 updates.appointment_date = date;
-  if (time)                 updates.appointment_time = time;
-  if (status)               updates.status = status;
-
-  if (Object.keys(updates).length === 0) return;
-
-  const { error } = await supabaseServer
-    .from('appointments')
-    .update(updates)
-    .eq('id', id);
-
-  if (error) {
-    console.error('خطأ أثناء تحديث الموعد:', error);
-  }
-}
 
 export default async function DashboardPage() {
   const { userId } = await auth();
@@ -42,7 +15,7 @@ export default async function DashboardPage() {
 
   const user = await currentUser();
 
-  const { data: appointments, error } = await supabaseServer
+  const { data: appointmentsData, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .order('appointment_date', { ascending: true })
@@ -57,6 +30,48 @@ export default async function DashboardPage() {
     );
   }
 
+  const appointments = appointmentsData || [];
+
+  // الآن، بما أننا في client component، سنستخدم useState للـ appointments إذا أردنا تحديثًا محليًا، لكن للبداية، نستخدم البيانات المجلوبة
+  // لتحديث محلي، يمكننا استخدام useState(appointments)
+
+  const [localAppointments, setLocalAppointments] = useState(appointments);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  // دالة للتبديل بين وضع العرض والتعديل
+  const toggleEdit = (id: string) => {
+    setEditingId(editingId === id ? null : id);
+  };
+
+  // عند الضغط على حفظ
+  const handleSave = async (formData: FormData) => {
+    startTransition(async () => {
+      await updateAppointment(formData);
+      // إعادة جلب البيانات أو تحديث الحالة المحلية
+      // للبساطة، نفترض إعادة جلب، لكن يمكن تحديث محلي
+      const { data: updatedData } = await supabaseServer
+        .from('appointments')
+        .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
+        .order('appointment_date', { ascending: true })
+        .limit(50);
+      setLocalAppointments(updatedData || []);
+      setEditingId(null);
+    });
+  };
+
+  // دالة لتحويل الحالة إلى نص عربي
+  const getStatusText = (status: string | null) => {
+    switch (status) {
+      case 'pending': return 'معلق';
+      case 'confirmed': return 'مؤكد';
+      case 'cancelled': return 'ملغي';
+      case 'completed': return 'مكتمل';
+      case 'absent': return 'متغيب';
+      default: return 'مؤكد';
+    }
+  };
+
   return (
     <div>
       <div className="dashboard-page-header">
@@ -67,7 +82,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {appointments && appointments.length > 0 ? (
+      {localAppointments.length > 0 ? (
         <div className="appointments-table-container">
           <div className="overflow-x-auto">
             <table className="appointments-table">
@@ -79,78 +94,127 @@ export default async function DashboardPage() {
                   <th>الوقت</th>
                   <th>السبب</th>
                   <th>الحالة</th>
-                  <th>حفظ التعديلات</th>
+                  <th>إجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appt) => {
-                  const formId = `form-${appt.id}`;
+                {localAppointments.map((appt) => {
+                  const isEditing = editingId === appt.id;
 
                   return (
-                    <tr key={appt.id}>
-                      <td data-label="الاسم">
-                        <input
-                          form={formId}
-                          type="text"
-                          name="full_name"
-                          defaultValue={appt.full_name || ''}
-                          placeholder="الاسم الكامل"
-                        />
+                    <tr key={appt.id} className={isEditing ? 'editing-row' : ''}>
+                      <td>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            name="full_name"
+                            form={`form-${appt.id}`}
+                            defaultValue={appt.full_name || ''}
+                          />
+                        ) : (
+                          <span className="readable-cell">{appt.full_name || '—'}</span>
+                        )}
                       </td>
 
-                      <td data-label="التليفون">
-                        <input
-                          form={formId}
-                          type="tel"
-                          name="phone"
-                          defaultValue={appt.phone || ''}
-                          placeholder="01xxxxxxxxx"
-                        />
+                      <td>
+                        {isEditing ? (
+                          <input
+                            type="tel"
+                            name="phone"
+                            form={`form-${appt.id}`}
+                            defaultValue={appt.phone || ''}
+                          />
+                        ) : (
+                          <span className="readable-cell">{appt.phone || '—'}</span>
+                        )}
                       </td>
 
-                      <td data-label="التاريخ">
-                        <input
-                          form={formId}
-                          type="date"
-                          name="date"
-                          defaultValue={appt.appointment_date ?? ''}
-                        />
+                      <td>
+                        {isEditing ? (
+                          <input
+                            type="date"
+                            name="date"
+                            form={`form-${appt.id}`}
+                            defaultValue={appt.appointment_date ?? ''}
+                          />
+                        ) : (
+                          <span className="readable-cell">{appt.appointment_date || '—'}</span>
+                        )}
                       </td>
 
-                      <td data-label="الوقت">
-                        <input
-                          form={formId}
-                          type="time"
-                          name="time"
-                          defaultValue={appt.appointment_time ?? ''}
-                        />
+                      <td>
+                        {isEditing ? (
+                          <input
+                            type="time"
+                            name="time"
+                            form={`form-${appt.id}`}
+                            defaultValue={appt.appointment_time ?? ''}
+                          />
+                        ) : (
+                          <span className="readable-cell">{appt.appointment_time || '—'}</span>
+                        )}
                       </td>
 
-                      <td data-label="السبب">
-                        {appt.reason || '—'}
+                      <td>
+                        <span className="readable-cell">{appt.reason || '—'}</span>
                       </td>
 
-                      <td data-label="الحالة">
-                        <select
-                          form={formId}
-                          name="status"
-                          defaultValue={appt.status || 'confirmed'}
-                          className={`status-${appt.status || 'confirmed'}`}
-                        >
-                          <option value="confirmed">مؤكد</option>
-                          <option value="cancelled">ملغي</option>
-                          <option value="rescheduled">معدل</option>
-                          <option value="completed">مكتمل</option>
-                          <option value="absent">متغيب</option>
-                        </select>
+                      <td>
+                        {isEditing ? (
+                          <select
+                            name="status"
+                            form={`form-${appt.id}`}
+                            defaultValue={appt.status || 'confirmed'}
+                            className={`status-${appt.status || 'confirmed'}`}
+                          >
+                            <option value="pending">معلق</option>
+                            <option value="confirmed">مؤكد</option>
+                            <option value="cancelled">ملغي</option>
+                            <option value="completed">مكتمل</option>
+                            <option value="absent">متغيب</option>
+                          </select>
+                        ) : (
+                          <span className={`status-badge status-${appt.status || 'confirmed'}`}>
+                            {getStatusText(appt.status)}
+                          </span>
+                        )}
                       </td>
 
-                      <td data-label="">
-                        <form id={formId} action={updateAppointment}>
-                          <input type="hidden" name="appointment_id" value={appt.id} />
-                          <button type="submit" className="save-btn">
-                            حفظ
+                      <td className="actions-cell">
+                        {isEditing ? (
+                          <div className="edit-actions">
+                            <button
+                              type="submit"
+                              form={`form-${appt.id}`}
+                              className="save-btn"
+                              disabled={isPending}
+                            >
+                              {isPending ? 'جاري الحفظ...' : 'حفظ'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingId(null)}
+                              className="cancel-btn"
+                            >
+                              إلغاء
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleEdit(appt.id)}
+                            className="edit-btn"
+                          >
+                            تعديل
                           </button>
+                        )}
+                        {/* form مخفي لكل صف */}
+                        <form
+                          id={`form-${appt.id}`}
+                          action={handleSave}
+                          className="hidden"
+                        >
+                          <input type="hidden" name="appointment_id" value={appt.id} />
                         </form>
                       </td>
                     </tr>
