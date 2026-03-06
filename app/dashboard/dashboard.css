@@ -327,3 +327,54 @@ html, body {
     padding-bottom: 1.2rem;
   }
 }
+
+/* إضافات CSS الجديدة لـ inline editing */
+.readable-cell {
+  display: block;
+  padding: 0.3rem 0;
+}
+
+.status-badge {
+  padding: 0.35em 0.9em;
+  border-radius: 0.5rem;
+  font-weight: 500;
+}
+
+.actions-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.edit-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.edit-btn:hover {
+  background: #2563eb;
+}
+
+.cancel-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  margin-right: 0.5rem;
+  cursor: pointer;
+}
+
+.editing-row {
+  background: #f0f9ff;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}
