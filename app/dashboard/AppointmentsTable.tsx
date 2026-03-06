@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import { updateAppointment } from './actions';
 
 type Appointment = {
@@ -13,14 +13,105 @@ type Appointment = {
   status: string | null;
 };
 
+type OffDay = { date: string };
+
+type WorkingHour = {
+  day: string;
+  start_time: string;
+  end_time: string;
+  interval_minutes: number;
+};
+
 export default function AppointmentsTable({
   initialAppointments,
+  initialOffDays,
+  initialWorkingHours,
 }: {
   initialAppointments: Appointment[];
+  initialOffDays: OffDay[];
+  initialWorkingHours: WorkingHour[];
 }) {
   const [appointments, setAppointments] = useState(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const offDaysSet = useMemo(
+    () => new Set(initialOffDays.map((od) => od.date)),
+    [initialOffDays]
+  );
+
+  const workingHoursByDay = useMemo(() => {
+    const map: Record<string, WorkingHour> = {};
+    initialWorkingHours.forEach((wh) => {
+      map[wh.day] = wh;
+    });
+    return map;
+  }, [initialWorkingHours]);
+
+  // التواريخ المتاحة (30 يومًا قادمة)
+  const availableDates = useMemo(() => {
+    const dates: string[] = [];
+    const today = new Date();
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const iso = date.toISOString().split('T')[0];
+      const dayName = date.toLocaleString('en-US', { weekday: 'long' });
+      if (!offDaysSet.has(iso) && workingHoursByDay[dayName]) {
+        const formatted = date.toLocaleDateString('ar-EG', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        dates.push(`${iso}|${formatted}`);
+      }
+    }
+    return dates;
+  }, [offDaysSet, workingHoursByDay]);
+
+  const getAvailableTimesForDate = (dateStr: string | null) => {
+    if (!dateStr) return [];
+
+    const dateObj = new Date(dateStr);
+    const dayName = dateObj.toLocaleString('en-US', { weekday: 'long' });
+    const wh = workingHoursByDay[dayName];
+
+    if (!wh) return [];
+
+    const start = new Date(`2000-01-01T${wh.start_time}`);
+    const end = new Date(`2000-01-01T${wh.end_time}`);
+    
+    // الفاصل الزمني: نأخذ من الجدول إن وجد، وإلا 15 دقيقة
+    const intervalMs = (wh.interval_minutes || 15) * 60 * 1000;
+
+    const times: string[] = [];
+    for (
+      let current = start.getTime();
+      current < end.getTime();
+      current += intervalMs
+    ) {
+      const timeDate = new Date(current);
+      const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
+
+      // هل الوقت محجوز؟
+      const isBooked = appointments.some(
+        (a) =>
+          a.appointment_date === dateStr && a.appointment_time === isoTime
+      );
+
+      if (!isBooked) {
+        const formatted = timeDate.toLocaleTimeString('ar-EG', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        }).replace('ص', 'صباحاً').replace('م', 'مساءً');
+        times.push(`${isoTime}|${formatted}`);
+      }
+    }
+
+    return times;
+  };
 
   const toggleEdit = (id: string) => {
     setEditingId(editingId === id ? null : id);
@@ -35,21 +126,17 @@ export default function AppointmentsTable({
       completed: 'مكتمل',
       absent: 'متغيب',
     };
-    return map[status ?? 'confirmed'] ?? status ?? 'مؤكد';
+    return map[status ?? 'confirmed'] ?? 'مؤكد';
   };
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
       const result = await updateAppointment(formData);
-
       if ('success' in result) {
-        // إعادة جلب البيانات بعد التحديث (بسيط وموثوق)
-        // بديل: يمكنك تحديث الحالة محليًا بشكل متفائل (optimistic)
-        window.location.reload(); // حل مؤقت – يمكن تحسينه لاحقًا
+        window.location.reload(); // تحديث بسيط – يمكن تحسينه لاحقاً
       } else if ('error' in result) {
-        alert('حدث خطأ: ' + result.error);
+        alert('خطأ: ' + result.error);
       }
-
       setEditingId(null);
     });
   };
@@ -75,6 +162,9 @@ export default function AppointmentsTable({
                 {appointments.map((appt) => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
+                  const availTimes = isEditing
+                    ? getAvailableTimesForDate(appt.appointment_date)
+                    : [];
 
                   return (
                     <tr key={appt.id} className={isEditing ? 'editing-row' : ''}>
@@ -85,7 +175,6 @@ export default function AppointmentsTable({
                             name="full_name"
                             form={formId}
                             defaultValue={appt.full_name || ''}
-                            placeholder="الاسم الكامل"
                           />
                         ) : (
                           <span className="readable-cell">{appt.full_name || '—'}</span>
@@ -99,7 +188,6 @@ export default function AppointmentsTable({
                             name="phone"
                             form={formId}
                             defaultValue={appt.phone || ''}
-                            placeholder="01xxxxxxxxx"
                           />
                         ) : (
                           <span className="readable-cell">{appt.phone || '—'}</span>
@@ -108,27 +196,46 @@ export default function AppointmentsTable({
 
                       <td>
                         {isEditing ? (
-                          <input
-                            type="date"
-                            name="date"
-                            form={formId}
-                            defaultValue={appt.appointment_date ?? ''}
-                          />
+                          <select name="date" form={formId} defaultValue={appt.appointment_date ?? ''}>
+                            <option value="">اختر تاريخاً</option>
+                            {availableDates.map((d) => {
+                              const [iso, label] = d.split('|');
+                              return <option key={iso} value={iso}>{label}</option>;
+                            })}
+                          </select>
                         ) : (
-                          <span className="readable-cell">{appt.appointment_date || '—'}</span>
+                          <span className="readable-cell">
+                            {appt.appointment_date
+                              ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
+                                  weekday: 'long',
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                })
+                              : '—'}
+                          </span>
                         )}
                       </td>
 
                       <td>
                         {isEditing ? (
-                          <input
-                            type="time"
-                            name="time"
-                            form={formId}
-                            defaultValue={appt.appointment_time ?? ''}
-                          />
+                          <select name="time" form={formId} defaultValue={appt.appointment_time ?? ''}>
+                            <option value="">اختر وقتاً</option>
+                            {availTimes.map((t) => {
+                              const [iso, label] = t.split('|');
+                              return <option key={iso} value={iso}>{label}</option>;
+                            })}
+                          </select>
                         ) : (
-                          <span className="readable-cell">{appt.appointment_time || '—'}</span>
+                          <span className="readable-cell">
+                            {appt.appointment_time
+                              ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true,
+                                }).replace('ص', 'صباحاً').replace('م', 'مساءً')
+                              : '—'}
+                          </span>
                         )}
                       </td>
 
@@ -187,11 +294,7 @@ export default function AppointmentsTable({
                           </button>
                         )}
 
-                        <form
-                          id={formId}
-                          action={handleSubmit}
-                          className="hidden"
-                        >
+                        <form id={formId} action={handleSubmit} className="hidden">
                           <input type="hidden" name="appointment_id" value={appt.id} />
                         </form>
                       </td>
@@ -203,9 +306,7 @@ export default function AppointmentsTable({
           </div>
         </div>
       ) : (
-        <div className="no-appointments">
-          لا توجد مواعيد مسجلة حاليًا
-        </div>
+        <div className="no-appointments">لا توجد مواعيد مسجلة حاليًا</div>
       )}
     </>
   );
