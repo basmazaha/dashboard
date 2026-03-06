@@ -1,4 +1,3 @@
-// app/dashboard/layout.tsx
 import type { ReactNode } from 'react';
 import './dashboard.css';
 
