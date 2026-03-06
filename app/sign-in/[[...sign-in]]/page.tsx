@@ -19,8 +19,7 @@ export default function Page() {
             rootBox: { width: '100%', maxWidth: '420px' },
           }
         }}
-        afterSignInUrl="/dashboard"
-        redirectUrl="/dashboard"
+        
       />
     </div>
   );
