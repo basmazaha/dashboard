@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -14,17 +13,28 @@ export default async function DashboardPage() {
 
   const user = await currentUser();
 
-  const { data: appointments, error } = await supabaseServer
+  // جلب المواعيد
+  const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .order('appointment_date', { ascending: true })
     .limit(50);
 
-  if (error) {
-    console.error('خطأ في جلب المواعيد:', error);
+  // جلب أيام العطل
+  const { data: offDays, error: offError } = await supabaseServer
+    .from('off_days')
+    .select('date');
+
+  // جلب ساعات العمل
+  const { data: workingHours, error: hoursError } = await supabaseServer
+    .from('working_hours')
+    .select('day, start_time, end_time, interval_minutes');
+
+  if (apptError || offError || hoursError) {
+    console.error('خطأ في جلب البيانات:', apptError || offError || hoursError);
     return (
       <div className="no-appointments">
-        حدث خطأ أثناء جلب المواعيد: {error.message}
+        حدث خطأ أثناء جلب البيانات، يرجى المحاولة لاحقًا.
       </div>
     );
   }
@@ -39,7 +49,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <AppointmentsTable initialAppointments={appointments || []} />
+      <AppointmentsTable 
+        initialAppointments={appointments || []} 
+        initialOffDays={offDays || []} 
+        initialWorkingHours={workingHours || []} 
+      />
     </div>
   );
 }
