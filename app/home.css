@@ -1,0 +1,128 @@
+/* app/home.css - Plain CSS فقط - RTL */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  direction: rtl;
+  font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+  background: #f8f9fa;
+  color: #1f2937;
+}
+
+.home-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hero */
+.hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+}
+
+.hero-content {
+  text-align: center;
+  max-width: 900px;
+}
+
+.hero-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 1.3rem;
+  color: #4b5563;
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-block;
+  padding: 1rem 2.5rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #4f46e5;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+}
+
+.btn-primary:hover {
+  background-color: #4338ca;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: #4f46e5;
+  border: 2px solid #c7d2fe;
+}
+
+.btn-secondary:hover {
+  background-color: #f3f4f6;
+  border-color: #a5b4fc;
+}
+
+/* Footer */
+.site-footer {
+  padding: 1.5rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+}
+
+/* Responsive */
+@media (min-width: 640px) {
+  .hero-title {
+    font-size: 3.8rem;
+  }
+  .hero-subtitle {
+    font-size: 1.5rem;
+  }
+  .hero-buttons {
+    flex-direction: row;
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-title {
+    font-size: 4.8rem;
+  }
+  .hero {
+    padding: 4rem 2rem;
+  }
+}
