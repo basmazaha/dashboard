@@ -16,11 +16,11 @@ export async function updateAppointment(formData: FormData) {
 
   const updates: Record<string, any> = {};
 
-  if (full_name?.trim())    updates.full_name = full_name.trim();
-  if (phone?.trim())        updates.phone = phone.trim();
-  if (date)                 updates.appointment_date = date;
-  if (time)                 updates.appointment_time = time;
-  if (status)               updates.status = status;
+  if (full_name?.trim()) updates.full_name = full_name.trim();
+  if (phone?.trim())     updates.phone = phone.trim();
+  if (date)              updates.appointment_date = date;
+  if (time)              updates.appointment_time = time;
+  if (status)            updates.status = status;
 
   if (Object.keys(updates).length === 0) {
     return { message: 'لا توجد تغييرات' };
