@@ -20,24 +20,31 @@ export default async function DashboardPage() {
     .order('appointment_date', { ascending: true })
     .limit(50);
 
-  // جلب أيام العطل
-  const { data: offDays, error: offError } = await supabaseServer
+  // جلب أيام العطل (التواريخ فقط)
+  const { data: offDaysData, error: offError } = await supabaseServer
     .from('off_days')
     .select('date');
 
-  // جلب ساعات العمل
+  // جلب ساعات العمل بالهيكل الفعلي
   const { data: workingHours, error: hoursError } = await supabaseServer
     .from('working_hours')
-    .select('day, start_time, end_time, interval_minutes');
+    .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
   if (apptError || offError || hoursError) {
-    console.error('خطأ في جلب البيانات:', apptError || offError || hoursError);
+    console.error('خطأ في appointments:', apptError);
+    console.error('خطأ في off_days:', offError);
+    console.error('خطأ في working_hours:', hoursError);
+
     return (
       <div className="no-appointments">
-        حدث خطأ أثناء جلب البيانات، يرجى المحاولة لاحقًا.
+        حدث خطأ أثناء جلب البيانات.
+        <br />
+        <small>(تحقق من console لمعرفة التفاصيل)</small>
       </div>
     );
   }
+
+  const offDays = offDaysData?.map(row => row.date) || [];
 
   return (
     <div>
@@ -51,7 +58,7 @@ export default async function DashboardPage() {
 
       <AppointmentsTable 
         initialAppointments={appointments || []} 
-        initialOffDays={offDays || []} 
+        initialOffDays={offDays}
         initialWorkingHours={workingHours || []} 
       />
     </div>
