@@ -12,44 +12,48 @@ type Appointment = {
   status: string | null;
 };
 
+// نفس الدالة المساعدة
+const normalizeTimeForDb = (time: string | null): string | null => {
+  if (!time) return null;
+  if (time.length === 5) return `${time}:00`;
+  if (time.length === 8) return time;
+  return time;
+};
+
 export async function updateAppointment(formData: FormData) {
   const id = formData.get('appointment_id') as string;
-  const full_name = formData.get('full_name') as string | null;
-  const phone = formData.get('phone') as string | null;
-  const date = formData.get('date') as string | null;
-  const time = formData.get('time') as string | null;
+  let full_name = formData.get('full_name') as string | null;
+  let phone = formData.get('phone') as string | null;
+  let date = formData.get('date') as string | null;
+  let time = formData.get('time') as string | null; // يأتي كـ "HH:MM"
   const status = formData.get('status') as string | null;
 
-  if (!id) {
-    return { error: 'لا يوجد معرف للموعد' };
-  }
+  if (!id) return { error: 'لا يوجد معرف للموعد' };
 
-  // ────────────────────────────────────────────────
-  // التحقق من عدم وجود حجز متداخل (server-side validation)
-  // ────────────────────────────────────────────────
-  if (status !== 'cancelled' && date && time) {
+  // تحويل الوقت إلى صيغة Supabase (time → HH:MM:00)
+  const dbTime = normalizeTimeForDb(time);
+
+  // التحقق من عدم التداخل
+  if (status !== 'cancelled' && date && dbTime) {
     const { data: existing, error: checkError } = await supabaseServer
       .from('appointments')
       .select('id, status')
       .eq('appointment_date', date)
-      .eq('appointment_time', time)
+      .eq('appointment_time', dbTime)
       .neq('id', id);
 
     if (checkError) {
-      console.error('خطأ أثناء التحقق من التداخل:', checkError);
-      return { error: 'خطأ في التحقق من توافر الموعد' };
+      console.error('خطأ في التحقق من التداخل:', checkError);
+      return { error: 'خطأ في التحقق من توفر الموعد' };
     }
 
-    const isAlreadyBooked = existing?.some(appt => appt.status !== 'cancelled');
+    const isDoubleBooked = existing?.some(appt => appt.status !== 'cancelled');
 
-    if (isAlreadyBooked) {
-      return { error: 'هذا الموعد (التاريخ والوقت) محجوز بالفعل من قبل شخص آخر' };
+    if (isDoubleBooked) {
+      return { error: 'هذا الوقت محجوز بالفعل في التاريخ المحدد' };
     }
   }
 
-  // ────────────────────────────────────────────────
-  // بناء التحديثات
-  // ────────────────────────────────────────────────
   const updates: Record<string, any> = {};
 
   if (status === 'cancelled') {
@@ -57,11 +61,11 @@ export async function updateAppointment(formData: FormData) {
     updates.appointment_date = null;
     updates.appointment_time = null;
   } else {
-    if (full_name?.trim())    updates.full_name = full_name.trim();
-    if (phone?.trim())        updates.phone = phone.trim();
-    if (date)                 updates.appointment_date = date;
-    if (time)                 updates.appointment_time = time;
-    if (status)               updates.status = status;
+    if (full_name?.trim()) updates.full_name = full_name.trim();
+    if (phone?.trim())     updates.phone = phone.trim();
+    if (date)              updates.appointment_date = date;
+    if (dbTime)            updates.appointment_time = dbTime;
+    if (status)            updates.status = status;
   }
 
   if (Object.keys(updates).length === 0) {
@@ -74,7 +78,7 @@ export async function updateAppointment(formData: FormData) {
     .eq('id', id);
 
   if (error) {
-    console.error('خطأ أثناء تحديث الموعد:', error);
+    console.error('خطأ تحديث الموعد:', error);
     return { error: error.message };
   }
 
@@ -82,16 +86,22 @@ export async function updateAppointment(formData: FormData) {
 }
 
 export async function fetchAppointments() {
-  const { data: appointments, error } = await supabaseServer
+  const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .order('appointment_date', { ascending: true })
     .limit(50);
 
   if (error) {
-    console.error('خطأ في جلب المواعيد:', error);
+    console.error('خطأ جلب المواعيد:', error);
     return { error: error.message, appointments: [] as Appointment[] };
   }
 
-  return { appointments: (appointments ?? []) as Appointment[] };
+  // اختياري: نُقصّر الوقت عند الجلب ليتوافق مع الـ client
+  const normalized = (data ?? []).map(row => ({
+    ...row,
+    appointment_time: normalizeTimeForDb(row.appointment_time),
+  }));
+
+  return { appointments: normalized as Appointment[] };
 }
