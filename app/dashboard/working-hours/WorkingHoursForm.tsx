@@ -22,15 +22,15 @@ type Props = {
 function formatArabicTime(time: string | null): string {
   if (!time) return '—';
 
-  const [hStr, mStr] = time.split(':');
-  const h = parseInt(hStr, 10);
-  const m = parseInt(mStr, 10);
+  const [hoursStr, minutesStr] = time.split(':');
+  const hours = parseInt(hoursStr, 10);
+  const minutes = parseInt(minutesStr, 10) || 0;
 
-  const period = h < 12 ? 'صباحًا' : 'مساءً';
-  const displayH = h % 12 || 12;
-  const displayM = m.toString().padStart(2, '0');
+  const period = hours < 12 ? 'صباحًا' : 'مساءً';
+  const displayHour = hours % 12 || 12;
+  const displayMinutes = minutes.toString().padStart(2, '0');
 
-  return `\( {displayH}: \){displayM} ${period}`;
+  return `\( {displayHour}: \){displayMinutes} ${period}`;
 }
 
 export default function WorkingHoursForm({ initialHours }: Props) {
@@ -46,7 +46,9 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     value: string | number | boolean | null
   ) => {
     setHours(prev =>
-      prev.map(h => (h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h))
+      prev.map(h =>
+        h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h
+      )
     );
   };
 
@@ -94,7 +96,9 @@ export default function WorkingHoursForm({ initialHours }: Props) {
         )}
       </div>
 
-      {message && <div className={`message ${message.type}`}>{message.text}</div>}
+      {message && (
+        <div className={`message ${message.type}`}>{message.text}</div>
+      )}
 
       <div className="table-wrapper">
         <table className="hours-table">
