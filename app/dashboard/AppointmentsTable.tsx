@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
-import { updateAppointment, fetchAppointments } from './actions';
+import { updateAppointment, insertAppointment, fetchAppointments } from './actions';
 
 type Appointment = {
   id: string;
@@ -50,6 +49,7 @@ export default function AppointmentsTable({
 }) {
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -162,6 +162,25 @@ export default function AppointmentsTable({
     }
   };
 
+  const toggleAdd = () => {
+    if (isAdding) {
+      setIsAdding(false);
+      setFormValues({});
+      setFormErrors({});
+    } else {
+      setIsAdding(true);
+      setFormValues({
+        full_name: '',
+        phone: '',
+        date: '',
+        time: '',
+        status: 'confirmed',
+        reason: '',
+      });
+      setFormErrors({});
+    }
+  };
+
   const getStatusText = (status: string | null) => {
     const map: Record<string, string> = {
       pending: 'معلق',
@@ -174,37 +193,9 @@ export default function AppointmentsTable({
     return map[status ?? 'confirmed'] ?? 'مؤكد';
   };
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleUpdate = async (formData: FormData) => {
     setIsSubmitting(true);
     setFormErrors({});
-
-    const full_name = (formData.get('full_name') as string)?.trim() || '';
-    const phone = (formData.get('phone') as string)?.trim() || '';
-
-    const localErrors: Record<string, string> = {};
-
-    if (!full_name) {
-      localErrors.full_name = 'الاسم مطلوب';
-    } else if (full_name.length < 3) {
-      localErrors.full_name = 'الاسم يجب أن يكون 3 حروف على الأقل';
-    }
-
-    if (!phone) {
-      localErrors.phone = 'رقم التليفون مطلوب';
-    } else {
-      const phoneDigits = phone.replace(/\s+/g, '');
-      if (!/^\+?[0-9]+$/.test(phoneDigits)) {
-        localErrors.phone = 'رقم التليفون يجب أن يحتوي أرقام فقط أو +';
-      } else if (phoneDigits.length > 20) {
-        localErrors.phone = 'رقم التليفون لا يجب أن يتجاوز 20 رقم';
-      }
-    }
-
-    if (Object.keys(localErrors).length > 0) {
-      setFormErrors(localErrors);
-      setIsSubmitting(false);
-      return;
-    }
 
     const appointmentId = formData.get('appointment_id') as string;
     const originalAppt = appointments.find(a => a.id === appointmentId);
@@ -250,9 +241,194 @@ export default function AppointmentsTable({
     setIsSubmitting(false);
   };
 
+  const handleInsert = async (formData: FormData) => {
+    setIsSubmitting(true);
+    setFormErrors({});
+
+    // Optimistic insert
+    const tempId = 'temp-' + Date.now().toString();
+    const optimisticAppt: Appointment = {
+      id: tempId,
+      full_name: formData.get('full_name') as string | null,
+      phone: formData.get('phone') as string | null,
+      appointment_date: formData.get('date') as string | null,
+      appointment_time: formData.get('time') as string | null,
+      reason: formData.get('reason') as string | null,
+      status: formData.get('status') as string | null ?? 'confirmed',
+    };
+
+    setAppointments(prev => [optimisticAppt, ...prev]);
+
+    const result = await insertAppointment(formData);
+
+    if ('errors' in result) {
+      setFormErrors(result.errors as Record<string, string>);
+      setAppointments(prev => prev.filter(a => a.id !== tempId));
+    } else if ('success' in result) {
+      const fetchResult = await fetchAppointments();
+      if ('appointments' in fetchResult) {
+        setAppointments(fetchResult.appointments ?? []);
+      }
+      setFormErrors({});
+      setIsAdding(false);
+      setFormValues({});
+    } else {
+      alert('حدث خطأ أثناء الإضافة: ' + (result.error || 'غير معروف'));
+      setAppointments(prev => prev.filter(a => a.id !== tempId));
+    }
+
+    setIsSubmitting(false);
+  };
+
   return (
     <>
-      {appointments.length > 0 ? (
+      <div className="mb-6 flex justify-end">
+        <button
+          type="button"
+          onClick={toggleAdd}
+          className={`
+            px-6 py-3 text-base font-medium rounded-lg text-white transition-all
+            ${isAdding 
+              ? 'bg-red-600 hover:bg-red-700' 
+              : 'bg-green-600 hover:bg-green-700 shadow-md'}
+          `}
+        >
+          {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
+        </button>
+      </div>
+
+      {isAdding && (
+        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
+          <h3 className="text-lg font-bold mb-4 text-blue-800">إضافة موعد جديد</h3>
+          <form action={handleInsert} id="add-appointment-form">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل</label>
+                <input
+                  type="text"
+                  name="full_name"
+                  value={formValues.full_name || ''}
+                  onChange={e => {
+                    setFormValues({ ...formValues, full_name: e.target.value });
+                    setFormErrors(prev => ({ ...prev, full_name: '' }));
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.full_name ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="الاسم الكامل"
+                />
+                {formErrors.full_name && <p className="mt-1 text-sm text-red-600">{formErrors.full_name}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">رقم التليفون</label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formValues.phone || ''}
+                  onChange={e => {
+                    setFormValues({ ...formValues, phone: e.target.value });
+                    setFormErrors(prev => ({ ...prev, phone: '' }));
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                  placeholder="01xxxxxxxxx"
+                />
+                {formErrors.phone && <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
+                <select
+                  name="date"
+                  value={formValues.date || ''}
+                  onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.date ? 'border-red-500' : 'border-gray-300'}`}
+                >
+                  <option value="">اختر التاريخ</option>
+                  {availableDates.map(d => {
+                    const [iso, label] = d.split('|');
+                    return <option key={iso} value={iso}>{label}</option>;
+                  })}
+                </select>
+                {formErrors.date && <p className="mt-1 text-sm text-red-600">{formErrors.date}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الوقت</label>
+                <select
+                  name="time"
+                  value={formValues.time || ''}
+                  onChange={e => setFormValues({ ...formValues, time: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.time ? 'border-red-500' : 'border-gray-300'}`}
+                  disabled={!formValues.date}
+                >
+                  <option value="">اختر الوقت</option>
+                  {getAvailableTimesForDate(formValues.date).map(t => {
+                    const [iso, label] = t.split('|');
+                    return <option key={iso} value={iso}>{label}</option>;
+                  })}
+                </select>
+                {formErrors.time && <p className="mt-1 text-sm text-red-600">{formErrors.time}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">السبب (اختياري)</label>
+                <input
+                  type="text"
+                  name="reason"
+                  value={formValues.reason || ''}
+                  onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="سبب الحجز"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
+                <select
+                  name="status"
+                  value={formValues.status || 'confirmed'}
+                  onChange={e => setFormValues({ ...formValues, status: e.target.value })}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 status-${formValues.status || 'confirmed'}`}
+                >
+                  <option value="pending">معلق</option>
+                  <option value="confirmed">مؤكد</option>
+                  <option value="cancelled">ملغي</option>
+                  <option value="rescheduled">معاد جدولته</option>
+                  <option value="completed">مكتمل</option>
+                  <option value="absent">متغيب</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={toggleAdd}
+                className="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition"
+              >
+                إلغاء
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`
+                  px-8 py-2.5 rounded-lg text-white font-medium transition
+                  ${isSubmitting 
+                    ? 'bg-gray-400 cursor-not-allowed' 
+                    : 'bg-emerald-600 hover:bg-emerald-700 shadow'}
+                `}
+              >
+                {isSubmitting ? 'جاري الإضافة...' : 'حفظ الموعد'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {appointments.length === 0 && !isAdding ? (
+        <div className="no-appointments text-center py-16 text-gray-500 text-lg">
+          لا توجد مواعيد مسجلة حاليًا
+        </div>
+      ) : (
         <div className="appointments-table-container">
           <div className="overflow-x-auto">
             <table className="appointments-table">
@@ -283,7 +459,7 @@ export default function AppointmentsTable({
                               type="text"
                               name="full_name"
                               form={formId}
-                              value={formValues.full_name}
+                              value={formValues.full_name || ''}
                               onChange={e => {
                                 setFormValues({ ...formValues, full_name: e.target.value });
                                 setFormErrors(prev => ({ ...prev, full_name: '' }));
@@ -291,9 +467,7 @@ export default function AppointmentsTable({
                               placeholder="الاسم الكامل"
                               className={formErrors.full_name ? 'input-error' : ''}
                             />
-                            {formErrors.full_name && (
-                              <span className="error-message">{formErrors.full_name}</span>
-                            )}
+                            {formErrors.full_name && <span className="error-message">{formErrors.full_name}</span>}
                           </div>
                         ) : (
                           <span className="readable-cell">{appt.full_name || '—'}</span>
@@ -307,7 +481,7 @@ export default function AppointmentsTable({
                               type="tel"
                               name="phone"
                               form={formId}
-                              value={formValues.phone}
+                              value={formValues.phone || ''}
                               onChange={e => {
                                 setFormValues({ ...formValues, phone: e.target.value });
                                 setFormErrors(prev => ({ ...prev, phone: '' }));
@@ -315,9 +489,7 @@ export default function AppointmentsTable({
                               placeholder="01xxxxxxxxx أو +201..."
                               className={formErrors.phone ? 'input-error' : ''}
                             />
-                            {formErrors.phone && (
-                              <span className="error-message">{formErrors.phone}</span>
-                            )}
+                            {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
                           </div>
                         ) : (
                           <span className="readable-cell">{appt.phone || '—'}</span>
@@ -329,7 +501,7 @@ export default function AppointmentsTable({
                           <select
                             name="date"
                             form={formId}
-                            value={formValues.date}
+                            value={formValues.date || ''}
                             onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
                           >
                             <option value="">اختر تاريخاً</option>
@@ -357,7 +529,7 @@ export default function AppointmentsTable({
                           <select
                             name="time"
                             form={formId}
-                            value={formValues.time}
+                            value={formValues.time || ''}
                             onChange={e => setFormValues({ ...formValues, time: e.target.value })}
                           >
                             <option value="">اختر وقتاً</option>
@@ -388,7 +560,7 @@ export default function AppointmentsTable({
                           <select
                             name="status"
                             form={formId}
-                            value={formValues.status}
+                            value={formValues.status || 'confirmed'}
                             onChange={e => setFormValues({ ...formValues, status: e.target.value })}
                             className={`status-${formValues.status || 'confirmed'}`}
                           >
@@ -413,18 +585,7 @@ export default function AppointmentsTable({
                               type="submit"
                               form={formId}
                               disabled={isSubmitting}
-                              className="
-                                save-btn
-                                px-5 py-2
-                                text-sm font-medium
-                                rounded-md
-                                bg-emerald-600
-                                hover:bg-emerald-700
-                                text-white
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                                transition-all
-                              "
+                              className="save-btn px-5 py-2 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                               {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
@@ -432,16 +593,7 @@ export default function AppointmentsTable({
                             <button
                               type="button"
                               onClick={() => toggleEdit(appt.id, appt)}
-                              className="
-                                cancel-btn
-                                px-5 py-2
-                                text-sm font-medium
-                                rounded-md
-                                bg-red-600
-                                hover:bg-red-700
-                                text-white
-                                transition-all
-                              "
+                              className="cancel-btn px-5 py-2 text-sm font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-all"
                             >
                               إلغاء
                             </button>
@@ -450,22 +602,13 @@ export default function AppointmentsTable({
                           <button
                             type="button"
                             onClick={() => toggleEdit(appt.id, appt)}
-                            className="
-                              edit-btn
-                              px-6 py-2
-                              text-sm font-medium
-                              rounded-md
-                              bg-blue-600
-                              hover:bg-blue-700
-                              text-white
-                              transition-all
-                            "
+                            className="edit-btn px-6 py-2 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all"
                           >
                             تعديل
                           </button>
                         )}
 
-                        <form id={formId} action={handleSubmit} className="hidden">
+                        <form id={formId} action={handleUpdate} className="hidden">
                           <input type="hidden" name="appointment_id" value={appt.id} />
                         </form>
                       </td>
@@ -476,11 +619,7 @@ export default function AppointmentsTable({
             </table>
           </div>
         </div>
-      ) : (
-        <div className="no-appointments">
-          لا توجد مواعيد مسجلة حاليًا
-        </div>
       )}
     </>
   );
-}
+                }
