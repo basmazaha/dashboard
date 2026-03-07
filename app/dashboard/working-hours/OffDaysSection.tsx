@@ -1,13 +1,10 @@
+// app/dashboard/working-hours/OffDaysSection.tsx
+
 'use client';
 
 import { useState } from 'react';
 import { addOffDay, deleteOffDay } from './actions';
-
-type OffDay = {
-  id: string;
-  date: string;
-  description: string | null;
-};
+import type { OffDay } from './types';
 
 type Props = {
   initialOffDays: OffDay[];
