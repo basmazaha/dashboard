@@ -9,32 +9,37 @@ export default async function WorkingHoursPage() {
 
   if (!result.success) {
     return (
-      <div className="error-message">
-        حدث خطأ أثناء جلب البيانات.
+      <div style={{ padding: '2rem', color: '#dc2626', textAlign: 'center' }}>
+        حدث خطأ أثناء جلب البيانات: {result.error || 'غير معروف'}
       </div>
     );
   }
 
-  const { workingHours, offDays } = result;
+  // ضمان أن workingHours و offDays دائمًا مصفوفة (حتى لو فارغة)
+  const workingHours = result.workingHours ?? [];
+  const offDays = result.offDays ?? [];
 
   const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
-  const defaultHours = daysOfWeek.map(dow => {
-    const existing = workingHours.find(h => h.day_of_week === dow);
-    return existing || {
-      day_of_week: dow,
-      is_open: false,
-      start_time: null,
-      end_time: null,
-      slot_duration_minutes: null,
-      break_start: null,
-      break_end: null,
-    };
+
+  const defaultHours = daysOfWeek.map((dow) => {
+    const existing = workingHours.find((h) => h.day_of_week === dow);
+    return (
+      existing || {
+        day_of_week: dow,
+        is_open: false,
+        start_time: null,
+        end_time: null,
+        slot_duration_minutes: 15,
+        break_start: null,
+        break_end: null,
+      }
+    );
   });
 
   return (
-    <div>
+    <div style={{ padding: '1.5rem' }}>
       <WorkingHoursForm initialHours={defaultHours} />
-      <OffDaysSection initialOffDays={offDays || []} />
+      <OffDaysSection initialOffDays={offDays} />
     </div>
   );
 }
