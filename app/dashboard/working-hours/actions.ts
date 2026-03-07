@@ -13,7 +13,17 @@ export type WorkingHourInput = {
   break_end?: string | null;
 };
 
-export async function upsertWorkingHours(hours: WorkingHourInput[]) {
+export type OffDay = {
+  id: string;
+  date: string;
+  description: string | null;
+};
+
+type ActionResult<T = unknown> =
+  | { success: true; data: T }
+  | { success: false; error: string };
+
+export async function upsertWorkingHours(hours: WorkingHourInput[]): Promise<ActionResult<null>> {
   try {
     const { error } = await supabaseServer
       .from('working_hours')
@@ -33,14 +43,14 @@ export async function upsertWorkingHours(hours: WorkingHourInput[]) {
     if (error) throw error;
 
     revalidatePath('/dashboard/working-hours');
-    return { success: true };
+    return { success: true, data: null };
   } catch (err: any) {
-    console.error(err);
-    return { success: false, error: err.message || 'حدث خطأ أثناء الحفظ' };
+    console.error('upsertWorkingHours error:', err);
+    return { success: false, error: err.message || 'حدث خطأ أثناء حفظ ساعات العمل' };
   }
 }
 
-export async function addOffDay(formData: FormData) {
+export async function addOffDay(formData: FormData): Promise<ActionResult<OffDay>> {
   const date = formData.get('date') as string;
   const description = (formData.get('description') as string)?.trim() || null;
 
@@ -49,21 +59,24 @@ export async function addOffDay(formData: FormData) {
   }
 
   try {
-    const { error } = await supabaseServer
+    const { data, error } = await supabaseServer
       .from('off_days')
-      .insert({ date, description });
+      .insert({ date, description })
+      .select('id, date, description')
+      .single();
 
     if (error) throw error;
+    if (!data) throw new Error('لم يتم إرجاع السجل الجديد');
 
     revalidatePath('/dashboard/working-hours');
-    return { success: true };
+    return { success: true, data };
   } catch (err: any) {
-    console.error(err);
-    return { success: false, error: err.message || 'حدث خطأ أثناء إضافة اليوم' };
+    console.error('addOffDay error:', err);
+    return { success: false, error: err.message || 'حدث خطأ أثناء إضافة اليوم المغلق' };
   }
 }
 
-export async function deleteOffDay(id: string) {
+export async function deleteOffDay(id: string): Promise<ActionResult<null>> {
   try {
     const { error } = await supabaseServer
       .from('off_days')
@@ -73,14 +86,16 @@ export async function deleteOffDay(id: string) {
     if (error) throw error;
 
     revalidatePath('/dashboard/working-hours');
-    return { success: true };
+    return { success: true, data: null };
   } catch (err: any) {
-    console.error(err);
+    console.error('deleteOffDay error:', err);
     return { success: false, error: err.message || 'حدث خطأ أثناء الحذف' };
   }
 }
 
-export async function getWorkingHoursAndOffDays() {
+export async function getWorkingHoursAndOffDays(): Promise<
+  ActionResult<{ workingHours: WorkingHourInput[]; offDays: OffDay[] }>
+> {
   const { data: hours, error: hoursError } = await supabaseServer
     .from('working_hours')
     .select('*')
@@ -98,7 +113,9 @@ export async function getWorkingHoursAndOffDays() {
 
   return {
     success: true,
-    workingHours: hours ?? [],
-    offDays: offDays ?? [],
+    data: {
+      workingHours: hours ?? [],
+      offDays: offDays ?? [],
+    },
   };
 }
