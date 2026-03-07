@@ -26,12 +26,10 @@ type WorkingHour = {
 
 function normalizeTime(time: string | null): string {
   if (!time) return '';
-  // تقطع الثواني إذا وجدت (HH:MM:SS → HH:MM)
   return time.split(':').slice(0, 2).join(':');
 }
 
 function toFullTimeFormat(time: string | null): string {
-  // تحول "HH:MM" إلى "HH:MM:00" للحفظ في عمود time
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
@@ -207,7 +205,9 @@ export default function AppointmentsTable({
       const result = await updateAppointment(formData);
 
       if ('success' in result) {
+        // إعادة جلب البيانات من السيرفر
         const fetchResult = await fetchAppointments();
+
         if ('appointments' in fetchResult) {
           setAppointments(fetchResult.appointments ?? []);
         } else {
@@ -215,9 +215,10 @@ export default function AppointmentsTable({
         }
       } else {
         alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
+        // rollback
         if (originalAppt) {
           setAppointments(prev =>
-            prev.map(a => (a.id === appointmentId ? originalAppt : a))
+            prev.map(appt => (appt.id === appointmentId ? originalAppt : appt))
           );
         }
       }
