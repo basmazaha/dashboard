@@ -19,23 +19,8 @@ type Props = {
   initialHours: WorkingHour[];
 };
 
-function formatArabicTime(time: string | null): string {
-  if (!time) return '—';
-
-  const [hoursStr, minutesStr] = time.split(':');
-  const hours = parseInt(hoursStr, 10);
-  const minutes = parseInt(minutesStr, 10) || 0;
-
-  const period = hours < 12 ? 'صباحًا' : 'مساءً';
-  const displayHour = hours % 12 || 12;
-  const displayMinutes = minutes.toString().padStart(2, '0');
-
-  return `\( {displayHour}: \){displayMinutes} ${period}`;
-}
-
 export default function WorkingHoursForm({ initialHours }: Props) {
   const [hours, setHours] = useState<WorkingHour[]>(initialHours);
-  const [originalHours, setOriginalHours] = useState<WorkingHour[]>(initialHours);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -59,7 +44,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     const result = await upsertWorkingHours(hours);
 
     if (result.success) {
-      setOriginalHours(hours);
       setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
       setIsEditing(false);
     } else {
@@ -69,12 +53,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     setSaving(false);
   };
 
-  const handleCancel = () => {
-    setHours(originalHours);
-    setIsEditing(false);
-    setMessage(null);
-  };
-
   return (
     <section className="hours-section">
       <div className="section-header">
@@ -82,7 +60,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
 
         {isEditing ? (
           <div className="edit-controls">
-            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
+            <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
               إلغاء
             </button>
             <button className="btn btn-save" onClick={handleSave} disabled={saving}>
@@ -140,7 +118,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.start_time || ''}
                       onChange={e => handleChange(day.day_of_week, 'start_time', e.target.value)}
                     />
-                  ) : formatArabicTime(day.start_time)}
+                  ) : (day.start_time || '—')}
                 </td>
 
                 <td>
@@ -151,7 +129,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.end_time || ''}
                       onChange={e => handleChange(day.day_of_week, 'end_time', e.target.value)}
                     />
-                  ) : formatArabicTime(day.end_time)}
+                  ) : (day.end_time || '—')}
                 </td>
 
                 <td>
@@ -170,7 +148,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                         )
                       }
                     />
-                  ) : day.slot_duration_minutes ?? '—'}
+                  ) : (day.slot_duration_minutes ?? '—')}
                 </td>
 
                 <td>
@@ -181,7 +159,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.break_start || ''}
                       onChange={e => handleChange(day.day_of_week, 'break_start', e.target.value)}
                     />
-                  ) : formatArabicTime(day.break_start)}
+                  ) : (day.break_start || '—')}
                 </td>
 
                 <td>
@@ -192,7 +170,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.break_end || ''}
                       onChange={e => handleChange(day.day_of_week, 'break_end', e.target.value)}
                     />
-                  ) : formatArabicTime(day.break_end)}
+                  ) : (day.break_end || '—')}
                 </td>
               </tr>
             ))}
