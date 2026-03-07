@@ -1,4 +1,4 @@
-/*  app/dashboard/working-hours/working-hours.css */
+/* app/dashboard/working-hours/working-hours.css */
 
 /* أقسام عامة */
 .hours-section,
@@ -30,8 +30,8 @@
 }
 
 /* مجموعة الأزرار */
-.action-buttons,
-.edit-controls {
+.edit-controls,
+.action-buttons {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -131,32 +131,29 @@
   border-radius: 10px;
   border: 1px solid #e5e7eb;
   margin: 1rem 0;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .data-table,
-.hours-table,
-.off-days-table {
+.hours-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
+  table-layout: auto;
 }
 
 .data-table th,
 .data-table td,
 .hours-table th,
-.hours-table td,
-.off-days-table th,
-.off-days-table td {
-  padding: 1rem 1.2rem;
+.hours-table td {
+  padding: 1rem 1.1rem;
   text-align: center;
   border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
 }
 
 .data-table th,
-.hours-table th,
-.off-days-table th {
+.hours-table th {
   background: #f8f9fa;
   font-weight: 600;
   color: #374151;
@@ -164,8 +161,7 @@
 }
 
 .data-table td,
-.hours-table td,
-.off-days-table td {
+.hours-table td {
   color: #1f2937;
 }
 
@@ -199,31 +195,63 @@
   font-weight: bold;
 }
 
-/* الـ inputs داخل الجدول */
-.time-cell input[type="time"],
-.duration-cell input[type="number"],
-.off-days-table input[type="date"],
-.off-days-table input[type="text"] {
+/* ──────────────────────────────────────────────── */
+/* الحقول الموحدة (inputs) في الجداول وفي الإضافة   */
+/* ──────────────────────────────────────────────── */
+
+.form-input {
   width: 100%;
-  max-width: 160px;
-  padding: 0.6rem;
+  max-width: 170px;
+  padding: 0.68rem 0.9rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 1rem;
   text-align: center;
+  box-sizing: border-box;
+  background: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.time-cell input:focus,
-.duration-cell input:focus,
-.off-days-table input:focus {
+.form-input:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+
+/* إخفاء أسهم الـ number */
+input[type="number"].form-input {
+  -moz-appearance: textfield;
+}
+
+input[type="number"].form-input::-webkit-outer-spin-button,
+input[type="number"].form-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ضبط عرض الأعمدة الزمنية والمدة */
+.hours-table th:nth-child(3),
+.hours-table th:nth-child(4),
+.hours-table th:nth-child(6),
+.hours-table th:nth-child(7),
+.hours-table td.time-cell,
+.hours-table td.duration-cell {
+  min-width: 135px;
+}
+
+.hours-table th:nth-child(5),
+.hours-table td.duration-cell {
+  min-width: 110px;
 }
 
 /* قسم إضافة يوم جديد */
 .add-new-row {
-  margin-top: 2rem;
+  margin-top: 2.25rem;
   padding: 1.5rem;
   background: #f9fafb;
   border-radius: 10px;
@@ -231,10 +259,9 @@
 }
 
 .add-new-row h3 {
-  margin-top: 0;
+  margin: 0 0 1.25rem 0;
   font-size: 1.25rem;
   color: #374151;
-  margin-bottom: 1rem;
 }
 
 .add-form {
@@ -244,53 +271,92 @@
   align-items: center;
 }
 
-.add-form input {
+.add-form .form-input {
   flex: 1;
   min-width: 180px;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 1rem;
+  max-width: none;
 }
 
 .add-form button {
   min-width: 140px;
 }
 
-/* Responsive للموبايل */
+/* Responsive للموبايل والشاشات الصغيرة */
+@media (max-width: 1024px) {
+  .hours-table th,
+  .hours-table td {
+    padding: 0.9rem 0.8rem;
+  }
+
+  .form-input {
+    max-width: none;
+  }
+}
+
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
+    gap: 1.2rem;
   }
 
-  .action-buttons,
   .edit-controls {
     width: 100%;
     justify-content: flex-end;
   }
 
   .data-table th,
-  .data-table td {
-    padding: 0.8rem;
-    font-size: 0.95rem;
+  .data-table td,
+  .hours-table th,
+  .hours-table td {
+    padding: 0.8rem 0.7rem;
+    font-size: 0.94rem;
   }
 
   .day-cell {
-    padding-right: 1rem;
+    padding-right: 1.2rem;
   }
 
   .add-form {
     flex-direction: column;
+    align-items: stretch;
   }
 
-  .add-form input,
+  .add-form .form-input,
   .add-form button {
     width: 100%;
   }
 
+  .add-form button {
+    margin-top: 0.5rem;
+  }
+
   .table-wrapper {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hours-table th:nth-child(3),
+  .hours-table th:nth-child(4),
+  .hours-table th:nth-child(6),
+  .hours-table th:nth-child(7) {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-header h2 {
+    font-size: 1.4rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    min-width: 100px;
+  }
+
+  .message {
+    font-size: 0.95rem;
+    padding: 0.9rem 1.2rem;
   }
 }
