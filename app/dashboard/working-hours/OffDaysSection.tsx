@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { addOffDay, deleteOffDay } from './actions';   // ← حذف upsertOffDays
+import { addOffDay, deleteOffDay } from './actions';
 
 type OffDay = {
   id: string;
@@ -32,6 +32,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
 
     const formData = new FormData();
     formData.append('date', newDate);
+
     const trimmedDesc = newDescription.trim();
     if (trimmedDesc) {
       formData.append('description', trimmedDesc);
@@ -39,8 +40,8 @@ export default function OffDaysSection({ initialOffDays }: Props) {
 
     const result = await addOffDay(formData);
 
-    if (result.success && result.newDay) {
-      setOffDays(prev => [...prev, result.newDay]);
+    if (result.success) {
+      setOffDays(prev => [...prev, result.data]);
       setNewDate('');
       setNewDescription('');
       setMessage({ type: 'success', text: 'تم إضافة اليوم المغلق بنجاح' });
@@ -99,9 +100,10 @@ export default function OffDaysSection({ initialOffDays }: Props) {
                       type="date"
                       defaultValue={day.date}
                       onChange={e => {
-                        // تعديل محلي فقط (لن يحفظ إلا إذا أضفنا upsert لاحقًا)
                         setOffDays(prev =>
-                          prev.map(d => d.id === day.id ? { ...d, date: e.target.value } : d)
+                          prev.map(d =>
+                            d.id === day.id ? { ...d, date: e.target.value } : d
+                          )
                         );
                       }}
                     />
@@ -122,7 +124,11 @@ export default function OffDaysSection({ initialOffDays }: Props) {
                       defaultValue={day.description || ''}
                       onChange={e => {
                         setOffDays(prev =>
-                          prev.map(d => d.id === day.id ? { ...d, description: e.target.value || null } : d)
+                          prev.map(d =>
+                            d.id === day.id
+                              ? { ...d, description: e.target.value.trim() || null }
+                              : d
+                          )
                         );
                       }}
                     />
