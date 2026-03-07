@@ -22,15 +22,15 @@ type Props = {
 function formatArabicTime(time: string | null): string {
   if (!time) return '—';
 
-  const [hoursStr, minutesStr] = time.split(':');
-  const hours = parseInt(hoursStr, 10);
-  const minutes = parseInt(minutesStr, 10);
+  const [hStr, mStr] = time.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
 
-  const period = hours < 12 ? 'صباحًا' : 'مساءً';
-  const displayHour = hours % 12 || 12;
-  const displayMinutes = minutes.toString().padStart(2, '0');
+  const period = h < 12 ? 'صباحًا' : 'مساءً';
+  const displayH = h % 12 || 12;
+  const displayM = m.toString().padStart(2, '0');
 
-  return `\( {displayHour}: \){displayMinutes} ${period}`;
+  return `\( {displayH}: \){displayM} ${period}`;
 }
 
 export default function WorkingHoursForm({ initialHours }: Props) {
@@ -128,7 +128,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   )}
                 </td>
 
-                <td className="time-cell">
+                <td>
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
@@ -139,7 +139,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   ) : formatArabicTime(day.start_time)}
                 </td>
 
-                <td className="time-cell">
+                <td>
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
@@ -150,7 +150,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   ) : formatArabicTime(day.end_time)}
                 </td>
 
-                <td className="duration-cell">
+                <td>
                   {isEditing && day.is_open ? (
                     <input
                       type="number"
@@ -169,7 +169,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   ) : day.slot_duration_minutes ?? '—'}
                 </td>
 
-                <td className="time-cell">
+                <td>
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
@@ -180,7 +180,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   ) : formatArabicTime(day.break_start)}
                 </td>
 
-                <td className="time-cell">
+                <td>
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
