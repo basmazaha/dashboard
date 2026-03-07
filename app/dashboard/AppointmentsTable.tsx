@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { updateAppointment, fetchAppointments } from './actions';
 
-// تعريف النوع هنا أيضًا للـ client component
 type Appointment = {
   id: string;
   full_name: string | null;
@@ -26,12 +25,10 @@ type WorkingHour = {
 
 function normalizeTime(time: string | null): string {
   if (!time) return '';
-  // تقطع الثواني إذا وجدت (HH:MM:SS → HH:MM)
   return time.split(':').slice(0, 2).join(':');
 }
 
 function toFullTimeFormat(time: string | null): string {
-  // تحول "HH:MM" إلى "HH:MM:00" للحفظ في عمود time
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
@@ -53,7 +50,8 @@ export default function AppointmentsTable({
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
-  const [isPending, startTransition] = useTransition();
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
@@ -98,9 +96,7 @@ export default function AppointmentsTable({
     const dayOfWeek = dateObj.getDay();
 
     const wh = workingHoursByDay[dayOfWeek];
-    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) {
-      return [];
-    }
+    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
     const end = new Date(`2000-01-01T${wh.end_time}`);
@@ -117,17 +113,11 @@ export default function AppointmentsTable({
 
     const times: string[] = [];
 
-    for (
-      let current = start.getTime();
-      current < end.getTime();
-      current += slotMs
-    ) {
+    for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
       const slotStart = current;
       const slotEnd = current + slotMs;
 
-      if (slotStart < breakEndMs && slotEnd > breakStartMs) {
-        continue;
-      }
+      if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
 
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5);
@@ -144,9 +134,7 @@ export default function AppointmentsTable({
           hour: '2-digit',
           minute: '2-digit',
           hour12: true,
-        })
-          .replace('ص', 'صباحاً')
-          .replace('م', 'مساءً');
+        }).replace('ص', 'صباحاً').replace('م', 'مساءً');
 
         times.push(`${isoTime}|${formatted}`);
       }
@@ -159,6 +147,7 @@ export default function AppointmentsTable({
     if (editingId === id) {
       setEditingId(null);
       setFormValues({});
+      setFormErrors({});
     } else {
       setEditingId(id);
       setFormValues({
@@ -168,6 +157,7 @@ export default function AppointmentsTable({
         time: normalizeTime(initialValues.appointment_time),
         status: initialValues.status || 'confirmed',
       });
+      setFormErrors({});
     }
   };
 
@@ -183,48 +173,80 @@ export default function AppointmentsTable({
     return map[status ?? 'confirmed'] ?? 'مؤكد';
   };
 
-  const handleSubmit = (formData: FormData) => {
-    startTransition(async () => {
-      const appointmentId = formData.get('appointment_id') as string;
-      const originalAppt = appointments.find(a => a.id === appointmentId);
+  const handleSubmit = async (formData: FormData) => {
+    setIsSubmitting(true);
+    setFormErrors({});
 
-      // Optimistic update
-      setAppointments(prev =>
-        prev.map(appt =>
-          appt.id === appointmentId
-            ? {
-                ...appt,
-                full_name: formData.get('full_name') as string | null,
-                phone: formData.get('phone') as string | null,
-                appointment_date: formData.get('date') as string | null,
-                appointment_time: formData.get('time') as string | null,
-                status: formData.get('status') as string | null,
-              }
-            : appt
-        )
-      );
+    const full_name = (formData.get('full_name') as string)?.trim() || '';
+    const phone = (formData.get('phone') as string)?.trim() || '';
 
-      const result = await updateAppointment(formData);
+    const localErrors: Record<string, string> = {};
 
-      if ('success' in result) {
-        const fetchResult = await fetchAppointments();
-        if ('appointments' in fetchResult) {
-          setAppointments(fetchResult.appointments ?? []);
-        } else {
-          console.error('فشل في إعادة جلب المواعيد بعد التحديث');
-        }
-      } else {
-        alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-        if (originalAppt) {
-          setAppointments(prev =>
-            prev.map(a => (a.id === appointmentId ? originalAppt : a))
-          );
-        }
+    if (!full_name) {
+      localErrors.full_name = 'الاسم مطلوب';
+    } else if (full_name.length < 3) {
+      localErrors.full_name = 'الاسم يجب أن يكون 3 حروف على الأقل';
+    }
+
+    if (!phone) {
+      localErrors.phone = 'رقم التليفون مطلوب';
+    } else {
+      const phoneDigits = phone.replace(/\s+/g, '');
+      if (!/^\+?[0-9]+$/.test(phoneDigits)) {
+        localErrors.phone = 'رقم التليفون يجب أن يحتوي أرقام فقط أو +';
+      } else if (phoneDigits.length > 20) {
+        localErrors.phone = 'رقم التليفون لا يجب أن يتجاوز 20 رقم';
       }
+    }
 
+    if (Object.keys(localErrors).length > 0) {
+      setFormErrors(localErrors);
+      setIsSubmitting(false);
+      return;
+    }
+
+    const appointmentId = formData.get('appointment_id') as string;
+    const originalAppt = appointments.find(a => a.id === appointmentId);
+
+    // Optimistic update
+    setAppointments(prev =>
+      prev.map(appt =>
+        appt.id === appointmentId
+          ? {
+              ...appt,
+              full_name: formData.get('full_name') as string | null,
+              phone: formData.get('phone') as string | null,
+              appointment_date: formData.get('date') as string | null,
+              appointment_time: formData.get('time') as string | null,
+              status: formData.get('status') as string | null,
+            }
+          : appt
+      )
+    );
+
+    const result = await updateAppointment(formData);
+
+    if ('errors' in result) {
+      setFormErrors(result.errors as Record<string, string>);
+      if (originalAppt) {
+        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
+      }
+    } else if ('success' in result) {
+      const fetchResult = await fetchAppointments();
+      if ('appointments' in fetchResult) {
+        setAppointments(fetchResult.appointments ?? []);
+      }
+      setFormErrors({});
       setEditingId(null);
       setFormValues({});
-    });
+    } else {
+      alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
+      if (originalAppt) {
+        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
+      }
+    }
+
+    setIsSubmitting(false);
   };
 
   return (
@@ -245,7 +267,7 @@ export default function AppointmentsTable({
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appt) => {
+                {appointments.map(appt => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : appt.appointment_date;
@@ -255,14 +277,23 @@ export default function AppointmentsTable({
                     <tr key={appt.id} className={isEditing ? 'editing-row' : ''}>
                       <td>
                         {isEditing ? (
-                          <input
-                            type="text"
-                            name="full_name"
-                            form={formId}
-                            value={formValues.full_name}
-                            onChange={e => setFormValues({ ...formValues, full_name: e.target.value })}
-                            placeholder="الاسم الكامل"
-                          />
+                          <div className="input-wrapper">
+                            <input
+                              type="text"
+                              name="full_name"
+                              form={formId}
+                              value={formValues.full_name}
+                              onChange={e => {
+                                setFormValues({ ...formValues, full_name: e.target.value });
+                                setFormErrors(prev => ({ ...prev, full_name: '' }));
+                              }}
+                              placeholder="الاسم الكامل"
+                              className={formErrors.full_name ? 'input-error' : ''}
+                            />
+                            {formErrors.full_name && (
+                              <span className="error-message">{formErrors.full_name}</span>
+                            )}
+                          </div>
                         ) : (
                           <span className="readable-cell">{appt.full_name || '—'}</span>
                         )}
@@ -270,14 +301,23 @@ export default function AppointmentsTable({
 
                       <td>
                         {isEditing ? (
-                          <input
-                            type="tel"
-                            name="phone"
-                            form={formId}
-                            value={formValues.phone}
-                            onChange={e => setFormValues({ ...formValues, phone: e.target.value })}
-                            placeholder="01xxxxxxxxx"
-                          />
+                          <div className="input-wrapper">
+                            <input
+                              type="tel"
+                              name="phone"
+                              form={formId}
+                              value={formValues.phone}
+                              onChange={e => {
+                                setFormValues({ ...formValues, phone: e.target.value });
+                                setFormErrors(prev => ({ ...prev, phone: '' }));
+                              }}
+                              placeholder="01xxxxxxxxx أو +201..."
+                              className={formErrors.phone ? 'input-error' : ''}
+                            />
+                            {formErrors.phone && (
+                              <span className="error-message">{formErrors.phone}</span>
+                            )}
+                          </div>
                         ) : (
                           <span className="readable-cell">{appt.phone || '—'}</span>
                         )}
@@ -365,23 +405,13 @@ export default function AppointmentsTable({
                         )}
                       </td>
 
-                      <td
-                        className="
-                          actions-cell
-                          whitespace-nowrap
-                          min-w-[190px]
-                          text-center
-                          align-middle
-                          px-3
-                          py-2
-                        "
-                      >
+                      <td className="actions-cell whitespace-nowrap min-w-[190px] text-center align-middle px-3 py-2">
                         {isEditing ? (
                           <div className="edit-actions flex items-center justify-center gap-4 flex-nowrap">
                             <button
                               type="submit"
                               form={formId}
-                              disabled={isPending}
+                              disabled={isSubmitting}
                               className="
                                 save-btn
                                 px-5 py-2
@@ -395,7 +425,7 @@ export default function AppointmentsTable({
                                 transition-all
                               "
                             >
-                              {isPending ? 'جاري الحفظ...' : 'حفظ'}
+                              {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
 
                             <button
