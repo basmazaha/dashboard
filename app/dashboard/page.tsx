@@ -1,4 +1,4 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AppointmentsTable from './AppointmentsTable';
@@ -11,35 +11,27 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  const user = await currentUser();
-
-  // جلب المواعيد
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .order('appointment_date', { ascending: true })
     .limit(50);
 
-  // جلب أيام العطل (التواريخ فقط)
   const { data: offDaysData, error: offError } = await supabaseServer
     .from('off_days')
     .select('date');
 
-  // جلب ساعات العمل بالهيكل الفعلي
   const { data: workingHours, error: hoursError } = await supabaseServer
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
   if (apptError || offError || hoursError) {
-    console.error('خطأ في appointments:', apptError);
-    console.error('خطأ في off_days:', offError);
-    console.error('خطأ في working_hours:', hoursError);
-
+    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError });
     return (
       <div className="no-appointments">
         حدث خطأ أثناء جلب البيانات.
         <br />
-        <small>(تحقق من console لمعرفة التفاصيل)</small>
+        <small>يرجى التحقق من الـ console</small>
       </div>
     );
   }
@@ -50,10 +42,6 @@ export default async function DashboardPage() {
     <div>
       <div className="dashboard-page-header">
         <h2 className="dashboard-page-title">المواعيد</h2>
-        <div className="current-user-info">
-          المستخدم الحالي: <strong>{user?.firstName || user?.username || 'غير معروف'}</strong> 
-          (ID: {userId.slice(0, 8)}...)
-        </div>
       </div>
 
       <AppointmentsTable 
