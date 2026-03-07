@@ -1,3 +1,4 @@
+// app/dashboard/actions.ts
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -16,15 +17,11 @@ export async function updateAppointment(formData: FormData) {
 
   const updates: Record<string, any> = {};
 
-  // حالة خاصة: إذا تم اختيار "ملغي" → نمسح التاريخ والوقت تلقائيًا
   if (status === 'cancelled') {
     updates.status = 'cancelled';
     updates.appointment_date = null;
     updates.appointment_time = null;
-    // اختياري: يمكنك إضافة حقل مثل cancelled_at إذا أردت تسجيل وقت الإلغاء
-    // updates.cancelled_at = new Date().toISOString();
   } else {
-    // الحالات العادية
     if (full_name?.trim())    updates.full_name = full_name.trim();
     if (phone?.trim())        updates.phone = phone.trim();
     if (date)                 updates.appointment_date = date;
@@ -47,4 +44,20 @@ export async function updateAppointment(formData: FormData) {
   }
 
   return { success: true };
+}
+
+// إضافة action جديد لإعادة جلب المواعيد
+export async function fetchAppointments() {
+  const { data: appointments, error } = await supabaseServer
+    .from('appointments')
+    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
+    .order('appointment_date', { ascending: true })
+    .limit(50);
+
+  if (error) {
+    console.error('خطأ في جلب المواعيد:', error);
+    return { error: error.message };
+  }
+
+  return { appointments };
 }
