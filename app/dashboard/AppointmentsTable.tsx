@@ -35,6 +35,7 @@ export default function AppointmentsTable({
 }) {
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [isPending, startTransition] = useTransition();
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
@@ -137,8 +138,22 @@ export default function AppointmentsTable({
     return times;
   };
 
-  const toggleEdit = (id: string) => {
-    setEditingId(editingId === id ? null : id);
+  const toggleEdit = (id: string, initialAppt?: Appointment) => {
+    if (editingId === id) {
+      setEditingId(null);
+      setFormValues({});
+    } else {
+      setEditingId(id);
+      if (initialAppt) {
+        setFormValues({
+          full_name: initialAppt.full_name || '',
+          phone: initialAppt.phone || '',
+          date: initialAppt.appointment_date || '',
+          time: initialAppt.appointment_time || '',
+          status: initialAppt.status || 'confirmed',
+        });
+      }
+    }
   };
 
   const getStatusText = (status: string | null) => {
@@ -159,6 +174,11 @@ export default function AppointmentsTable({
       const newStatus = formData.get('status') as string;
       const newDate = formData.get('date') as string | null;
       const newTime = formData.get('time') as string | null;
+      const fullName = formData.get('full_name') as string | null;
+      const phone = formData.get('phone') as string | null;
+
+      // حفظ القيم الحالية للتراجع في حالة الفشل
+      const previousAppt = appointments.find(a => a.id === appointmentId);
 
       // Optimistic update
       setAppointments(prev =>
@@ -166,6 +186,8 @@ export default function AppointmentsTable({
           appt.id === appointmentId
             ? {
                 ...appt,
+                full_name: fullName?.trim() || appt.full_name,
+                phone: phone?.trim() || appt.phone,
                 status: newStatus,
                 appointment_date: newStatus === 'cancelled' ? null : (newDate || appt.appointment_date),
                 appointment_time: newStatus === 'cancelled' ? null : (newTime || appt.appointment_time),
@@ -177,7 +199,7 @@ export default function AppointmentsTable({
       const result = await updateAppointment(formData);
 
       if ('success' in result) {
-        // إعادة جلب البيانات من السيرفر
+        // إعادة جلب البيانات من السيرفر للتأكد من التحديث
         const fetchResult = await fetchAppointments();
 
         if ('appointments' in fetchResult) {
@@ -187,10 +209,17 @@ export default function AppointmentsTable({
         }
       } else {
         alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-        window.location.reload();
+        // إعادة الـ state إلى السابق في حالة الفشل
+        if (previousAppt) {
+          setAppointments(prev =>
+            prev.map(appt => (appt.id === appointmentId ? previousAppt : appt))
+          );
+        }
+        window.location.reload(); // أو يمكن تجنب reload إذا أردت
       }
 
       setEditingId(null);
+      setFormValues({});
     });
   };
 
@@ -215,7 +244,8 @@ export default function AppointmentsTable({
                 {appointments.map((appt) => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
-                  const availTimes = isEditing ? getAvailableTimesForDate(appt.appointment_date) : [];
+                  const currentDate = isEditing ? (formValues.date || '') : appt.appointment_date || '';
+                  const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
                   return (
                     <tr key={appt.id} className={isEditing ? 'editing-row' : ''}>
@@ -225,7 +255,8 @@ export default function AppointmentsTable({
                             type="text"
                             name="full_name"
                             form={formId}
-                            defaultValue={appt.full_name || ''}
+                            value={formValues.full_name || ''}
+                            onChange={e => setFormValues({ ...formValues, full_name: e.target.value })}
                             placeholder="الاسم الكامل"
                           />
                         ) : (
@@ -239,7 +270,8 @@ export default function AppointmentsTable({
                             type="tel"
                             name="phone"
                             form={formId}
-                            defaultValue={appt.phone || ''}
+                            value={formValues.phone || ''}
+                            onChange={e => setFormValues({ ...formValues, phone: e.target.value })}
                             placeholder="01xxxxxxxxx"
                           />
                         ) : (
@@ -252,7 +284,8 @@ export default function AppointmentsTable({
                           <select
                             name="date"
                             form={formId}
-                            defaultValue={appt.appointment_date ?? ''}
+                            value={formValues.date || ''}
+                            onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
                           >
                             <option value="">اختر تاريخاً</option>
                             {availableDates.map(d => {
@@ -279,7 +312,8 @@ export default function AppointmentsTable({
                           <select
                             name="time"
                             form={formId}
-                            defaultValue={appt.appointment_time ?? ''}
+                            value={formValues.time || ''}
+                            onChange={e => setFormValues({ ...formValues, time: e.target.value })}
                           >
                             <option value="">اختر وقتاً</option>
                             {availTimes.map(t => {
@@ -309,8 +343,9 @@ export default function AppointmentsTable({
                           <select
                             name="status"
                             form={formId}
-                            defaultValue={appt.status || 'confirmed'}
-                            className={`status-${appt.status || 'confirmed'}`}
+                            value={formValues.status || 'confirmed'}
+                            onChange={e => setFormValues({ ...formValues, status: e.target.value })}
+                            className={`status-${formValues.status || 'confirmed'}`}
                           >
                             <option value="pending">معلق</option>
                             <option value="confirmed">مؤكد</option>
@@ -339,7 +374,7 @@ export default function AppointmentsTable({
                             </button>
                             <button
                               type="button"
-                              onClick={() => setEditingId(null)}
+                              onClick={() => toggleEdit(appt.id)}
                               className="cancel-btn"
                             >
                               إلغاء
@@ -348,7 +383,7 @@ export default function AppointmentsTable({
                         ) : (
                           <button
                             type="button"
-                            onClick={() => toggleEdit(appt.id)}
+                            onClick={() => toggleEdit(appt.id, appt)}
                             className="edit-btn"
                           >
                             تعديل
