@@ -5,7 +5,6 @@ import { supabaseServer } from '@/lib/supabaseServer';
 type Appointment = {
   id: string;
   full_name: string | null;
-  email: string | null;
   appointment_date: string | null;
   appointment_time: string | null;
   phone: string | null;
@@ -21,22 +20,22 @@ function normalizeTime(time: string | null): string {
 function toFullTimeFormat(time: string | null): string {
   if (!time) return '00:00:00';
   const parts = time.split(':');
-  if (parts.length === 2) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+  if (parts.length === 2) {
+    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+  }
   if (parts.length === 3) return time;
   return '00:00:00';
 }
 
 export async function updateAppointment(formData: FormData) {
   const id = formData.get('appointment_id') as string;
-  if (!id) return { error: 'لا يوجد معرف للموعد' };
-
   const full_name = (formData.get('full_name') as string)?.trim() || '';
-  const email = (formData.get('email') as string)?.trim() || null;
   const phone = (formData.get('phone') as string)?.trim() || '';
   const date = formData.get('date') as string | null;
   const time = formData.get('time') as string | null;
   const status = formData.get('status') as string | null;
-  const reason = formData.get('reason') as string | null;
+
+  if (!id) return { error: 'لا يوجد معرف للموعد' };
 
   const errors: Record<string, string> = {};
 
@@ -54,6 +53,7 @@ export async function updateAppointment(formData: FormData) {
 
   const dbTime = time ? toFullTimeFormat(time) : null;
 
+  // التحقق من عدم التداخل
   if (status !== 'cancelled' && date && dbTime) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
@@ -62,21 +62,16 @@ export async function updateAppointment(formData: FormData) {
 
     if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
-    if (existing?.some(a =>
-      a.status !== 'cancelled' &&
-      a.id !== id &&
+    if (existing?.some(a => 
+      a.status !== 'cancelled' && 
+      a.id !== id && 
       normalizeTime(a.appointment_time) === normalizeTime(time)
     )) {
       return { error: 'هذا الوقت محجوز بالفعل' };
     }
   }
 
-  const updates: Record<string, any> = {
-    full_name,
-    email,
-    phone,
-    reason,
-  };
+  const updates: Record<string, any> = { full_name, phone };
 
   if (status === 'cancelled') {
     updates.status = 'cancelled';
@@ -92,8 +87,8 @@ export async function updateAppointment(formData: FormData) {
     }
   }
 
-  if (Object.keys(updates).length <= 2) {  // full_name + phone + email/reason غالباً موجودين
-    return { message: 'لا توجد تغييرات جوهرية' };
+  if (Object.keys(updates).length === 0) {
+    return { message: 'لا توجد تغييرات' };
   }
 
   const { error } = await supabaseServer
@@ -108,7 +103,6 @@ export async function updateAppointment(formData: FormData) {
 
 export async function insertAppointment(formData: FormData) {
   const full_name = (formData.get('full_name') as string)?.trim() || '';
-  const email = (formData.get('email') as string)?.trim() || null;
   const phone = (formData.get('phone') as string)?.trim() || '';
   const date = formData.get('date') as string | null;
   const time = formData.get('time') as string | null;
@@ -134,6 +128,7 @@ export async function insertAppointment(formData: FormData) {
 
   const dbTime = time ? toFullTimeFormat(time) : null;
 
+  // التحقق من عدم التداخل
   if (date && dbTime) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
@@ -142,8 +137,8 @@ export async function insertAppointment(formData: FormData) {
 
     if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
-    if (existing?.some(a =>
-      a.status !== 'cancelled' &&
+    if (existing?.some(a => 
+      a.status !== 'cancelled' && 
       normalizeTime(a.appointment_time) === normalizeTime(time)
     )) {
       return { error: 'هذا الوقت محجوز بالفعل' };
@@ -152,7 +147,6 @@ export async function insertAppointment(formData: FormData) {
 
   const insertData = {
     full_name,
-    email,
     phone,
     appointment_date: date,
     appointment_time: dbTime,
@@ -164,7 +158,7 @@ export async function insertAppointment(formData: FormData) {
   const { data, error } = await supabaseServer
     .from('appointments')
     .insert([insertData])
-    .select('id, full_name, email, appointment_date, appointment_time, phone, reason, status')
+    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .single();
 
   if (error) return { error: error.message || 'فشل إضافة الموعد' };
@@ -175,7 +169,7 @@ export async function insertAppointment(formData: FormData) {
 export async function fetchAppointments() {
   const { data, error } = await supabaseServer
     .from('appointments')
-    .select('id, full_name, email, appointment_date, appointment_time, phone, reason, status')
+    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .order('appointment_date', { ascending: true })
     .limit(50);
 
