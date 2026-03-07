@@ -1,4 +1,6 @@
-/* app/dashboard/working-hours/working-hours.css */
+.hours-section {
+  margin-bottom: 3rem;
+}
 
 .section-header {
   display: flex;
@@ -7,78 +9,22 @@
   margin-bottom: 1.5rem;
 }
 
-.section-title {
+.section-header h2 {
+  margin: 0;
   font-size: 1.6rem;
-  color: #1f2937;
 }
 
-.header-buttons {
+.edit-controls {
   display: flex;
   gap: 1rem;
-}
-
-.table-container {
-  overflow-x: auto;
-  margin-bottom: 2rem;
-}
-
-.working-hours-table, .off-days-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  border-radius: 0.5rem;
-}
-
-.working-hours-table th, .working-hours-table td,
-.off-days-table th, .off-days-table td {
-  padding: 1rem;
-  text-align: center;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.working-hours-table th, .off-days-table th {
-  background: #f3f4f6;
-  font-weight: 600;
-  color: #4b5563;
-}
-
-.message {
-  padding: 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.message.success {
-  background: #ecfdf5;
-  color: #065f46;
-}
-
-.message.error {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.add-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.add-form input {
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
 }
 
 .btn {
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  border-radius: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  border: none;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s;
+  font-weight: 500;
 }
 
 .btn-edit {
@@ -86,17 +32,9 @@
   color: white;
 }
 
-.btn-edit:hover {
-  background: #2563eb;
-}
-
 .btn-save {
   background: #10b981;
   color: white;
-}
-
-.btn-save:hover {
-  background: #059669;
 }
 
 .btn-cancel {
@@ -104,44 +42,62 @@
   color: white;
 }
 
-.btn-cancel:hover {
-  background: #4b5563;
+.message {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
 
-.btn-delete {
-  background: #ef4444;
-  color: white;
+.message.success { background: #d1fae5; color: #065f46; }
+.message.error   { background: #fee2e2; color: #991b1b; }
+
+.table-wrapper {
+  overflow-x: auto;
 }
 
-.btn-delete:hover {
-  background: #dc2626;
+.hours-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.btn-add {
-  background: #3b82f6;
-  color: white;
+.hours-table th,
+.hours-table td {
+  padding: 12px 10px;
+  text-align: center;
+  border: 1px solid #e5e7eb;
 }
 
-.btn-add:hover {
-  background: #2563eb;
+.hours-table th {
+  background: #f3f4f6;
+  font-weight: 600;
+  color: #374151;
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.day-cell {
+  font-weight: 600;
+  text-align: right;
+  padding-right: 1.5rem;
 }
 
-/* Responsive for mobile */
-@media (max-width: 640px) {
-  .table-container {
-    overflow-x: auto;
-  }
+.checkbox-cell input {
+  transform: scale(1.3);
+}
 
-  .working-hours-table, .off-days-table {
-    min-width: 800px;
-  }
+.yes { color: #059669; font-weight: bold; }
+.no  { color: #dc2626; font-weight: bold; }
 
-  .add-form {
-    flex-direction: column;
-  }
+.hours-table input[type="time"],
+.hours-table input[type="number"] {
+  width: 100%;
+  padding: 6px;
+  text-align: center;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.hours-table input[type="checkbox"] {
+  cursor: pointer;
 }
