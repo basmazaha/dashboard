@@ -18,12 +18,12 @@ export async function upsertWorkingHours(hours: WorkingHourInput[]) {
     const { error } = await supabaseServer
       .from('working_hours')
       .upsert(
-        hours.map(h => ({
+        hours.map((h) => ({
           day_of_week: h.day_of_week,
           is_open: h.is_open,
           start_time: h.start_time || null,
           end_time: h.end_time || null,
-          slot_duration_minutes: h.slot_duration_minutes || null,
+          slot_duration_minutes: h.slot_duration_minutes ?? null,
           break_start: h.break_start || null,
           break_end: h.break_end || null,
         })),
@@ -35,6 +35,7 @@ export async function upsertWorkingHours(hours: WorkingHourInput[]) {
     revalidatePath('/dashboard/working-hours');
     return { success: true };
   } catch (err: any) {
+    console.error(err);
     return { success: false, error: err.message || 'حدث خطأ أثناء الحفظ' };
   }
 }
@@ -57,6 +58,7 @@ export async function addOffDay(formData: FormData) {
     revalidatePath('/dashboard/working-hours');
     return { success: true };
   } catch (err: any) {
+    console.error(err);
     return { success: false, error: err.message || 'حدث خطأ أثناء إضافة اليوم' };
   }
 }
@@ -73,6 +75,7 @@ export async function deleteOffDay(id: string) {
     revalidatePath('/dashboard/working-hours');
     return { success: true };
   } catch (err: any) {
+    console.error(err);
     return { success: false, error: err.message || 'حدث خطأ أثناء الحذف' };
   }
 }
@@ -81,7 +84,7 @@ export async function getWorkingHoursAndOffDays() {
   const { data: hours, error: hoursError } = await supabaseServer
     .from('working_hours')
     .select('*')
-    .order('day_of_week');
+    .order('day_of_week', { ascending: true });
 
   const { data: offDays, error: offError } = await supabaseServer
     .from('off_days')
@@ -89,12 +92,13 @@ export async function getWorkingHoursAndOffDays() {
     .order('date', { ascending: false });
 
   if (hoursError || offError) {
+    console.error('خطأ في جلب البيانات:', { hoursError, offError });
     return { success: false, error: 'فشل جلب البيانات' };
   }
 
   return {
     success: true,
-    workingHours: hours || [],
-    offDays: offDays || [],
+    workingHours: hours ?? [],
+    offDays: offDays ?? [],
   };
 }
