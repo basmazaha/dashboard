@@ -38,13 +38,12 @@ function toFullTimeFormat(time: string | null): string {
   return '00:00:00';
 }
 
-// ── Server Action لإضافة موعد جديد ────────────────────────────────────────
 async function createAppointment(formData: FormData) {
   'use server';
 
   const full_name = (formData.get('full_name') as string)?.trim() || '';
   const phone = (formData.get('phone') as string)?.trim() || '';
-  let appointment_date = formData.get('date') as string | null;
+  const appointment_date = formData.get('date') as string | null;
   let appointment_time = formData.get('time') as string | null;
   const reason = (formData.get('reason') as string)?.trim() || null;
 
@@ -70,7 +69,6 @@ async function createAppointment(formData: FormData) {
     return { errors };
   }
 
-  // تحويل الوقت إلى صيغة PostgreSQL time
   if (appointment_time) {
     appointment_time = toFullTimeFormat(appointment_time);
   }
@@ -110,7 +108,6 @@ export default function AppointmentsTable({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // حالة نافذة إضافة موعد جديد
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
     full_name: '',
@@ -125,7 +122,9 @@ export default function AppointmentsTable({
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
+    initialWorkingHours.forEach(wh => {
+      map[wh.day_of_week] = wh;
+    });
     return map;
   }, [initialWorkingHours]);
 
@@ -160,8 +159,8 @@ export default function AppointmentsTable({
 
     const dateObj = new Date(selectedDate);
     const dayOfWeek = dateObj.getDay();
-    const wh = workingHoursByDay[dayOfWeek];
 
+    const wh = workingHoursByDay[dayOfWeek];
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
@@ -315,11 +314,11 @@ export default function AppointmentsTable({
     setAddErrors({});
 
     const formData = new FormData();
-    formData.append('full_name', addForm.full_name);
-    formData.append('phone', addForm.phone);
+    formData.append('full_name', addForm.full_name.trim());
+    formData.append('phone', addForm.phone.trim());
     formData.append('date', addForm.date);
     formData.append('time', addForm.time);
-    formData.append('reason', addForm.reason);
+    formData.append('reason', addForm.reason.trim());
 
     const result = await createAppointment(formData);
 
@@ -343,16 +342,7 @@ export default function AppointmentsTable({
       <div className="mb-6 flex justify-end">
         <button
           onClick={() => setShowAddModal(true)}
-          className="
-            px-6 py-2.5
-            bg-indigo-600
-            hover:bg-indigo-700
-            text-white
-            font-medium
-            rounded-md
-            shadow-sm
-            transition-all
-          "
+          className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-md shadow-sm transition-all"
         >
           + إضافة حجز جديد
         </button>
@@ -374,7 +364,7 @@ export default function AppointmentsTable({
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appt) => {
+                {appointments.map(appt => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : appt.appointment_date;
@@ -397,9 +387,7 @@ export default function AppointmentsTable({
                               placeholder="الاسم الكامل"
                               className={formErrors.full_name ? 'input-error' : ''}
                             />
-                            {formErrors.full_name && (
-                              <span className="error-message">{formErrors.full_name}</span>
-                            )}
+                            {formErrors.full_name && <span className="error-message">{formErrors.full_name}</span>}
                           </div>
                         ) : (
                           <span className="readable-cell">{appt.full_name || '—'}</span>
@@ -421,9 +409,7 @@ export default function AppointmentsTable({
                               placeholder="01xxxxxxxxx أو +20..."
                               className={formErrors.phone ? 'input-error' : ''}
                             />
-                            {formErrors.phone && (
-                              <span className="error-message">{formErrors.phone}</span>
-                            )}
+                            {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
                           </div>
                         ) : (
                           <span className="readable-cell">{appt.phone || '—'}</span>
@@ -519,18 +505,7 @@ export default function AppointmentsTable({
                               type="submit"
                               form={formId}
                               disabled={isSubmitting}
-                              className="
-                                save-btn
-                                px-5 py-2
-                                text-sm font-medium
-                                rounded-md
-                                bg-emerald-600
-                                hover:bg-emerald-700
-                                text-white
-                                disabled:opacity-50
-                                disabled:cursor-not-allowed
-                                transition-all
-                              "
+                              className="save-btn px-5 py-2 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                               {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
@@ -538,16 +513,7 @@ export default function AppointmentsTable({
                             <button
                               type="button"
                               onClick={() => toggleEdit(appt.id, appt)}
-                              className="
-                                cancel-btn
-                                px-5 py-2
-                                text-sm font-medium
-                                rounded-md
-                                bg-red-600
-                                hover:bg-red-700
-                                text-white
-                                transition-all
-                              "
+                              className="cancel-btn px-5 py-2 text-sm font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-all"
                             >
                               إلغاء
                             </button>
@@ -556,16 +522,7 @@ export default function AppointmentsTable({
                           <button
                             type="button"
                             onClick={() => toggleEdit(appt.id, appt)}
-                            className="
-                              edit-btn
-                              px-6 py-2
-                              text-sm font-medium
-                              rounded-md
-                              bg-blue-600
-                              hover:bg-blue-700
-                              text-white
-                              transition-all
-                            "
+                            className="edit-btn px-6 py-2 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all"
                           >
                             تعديل
                           </button>
@@ -588,7 +545,6 @@ export default function AppointmentsTable({
         </div>
       )}
 
-      {/* نافذة إضافة موعد جديد */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -608,9 +564,7 @@ export default function AppointmentsTable({
                       addErrors.full_name ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
-                  {addErrors.full_name && (
-                    <p className="mt-1 text-sm text-red-600">{addErrors.full_name}</p>
-                  )}
+                  {addErrors.full_name && <p className="mt-1 text-sm text-red-600">{addErrors.full_name}</p>}
                 </div>
 
                 <div>
@@ -626,9 +580,7 @@ export default function AppointmentsTable({
                       addErrors.phone ? 'border-red-500' : 'border-gray-300'
                     }`}
                   />
-                  {addErrors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{addErrors.phone}</p>
-                  )}
+                  {addErrors.phone && <p className="mt-1 text-sm text-red-600">{addErrors.phone}</p>}
                 </div>
 
                 <div>
@@ -648,9 +600,7 @@ export default function AppointmentsTable({
                       return <option key={iso} value={iso}>{label}</option>;
                     })}
                   </select>
-                  {addErrors.date && (
-                    <p className="mt-1 text-sm text-red-600">{addErrors.date}</p>
-                  )}
+                  {addErrors.date && <p className="mt-1 text-sm text-red-600">{addErrors.date}</p>}
                 </div>
 
                 <div>
@@ -671,9 +621,7 @@ export default function AppointmentsTable({
                       return <option key={iso} value={iso}>{label}</option>;
                     })}
                   </select>
-                  {addErrors.time && (
-                    <p className="mt-1 text-sm text-red-600">{addErrors.time}</p>
-                  )}
+                  {addErrors.time && <p className="mt-1 text-sm text-red-600">{addErrors.time}</p>}
                 </div>
 
                 <div>
@@ -709,4 +657,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-}
+                            }
