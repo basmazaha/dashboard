@@ -1,4 +1,3 @@
-// app/dashboard/working-hours/actions.ts
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -24,7 +23,7 @@ export async function upsertWorkingHours(hours: WorkingHourInput[]) {
           is_open: h.is_open,
           start_time: h.start_time || null,
           end_time: h.end_time || null,
-          slot_duration_minutes: h.slot_duration_minutes || 15,
+          slot_duration_minutes: h.slot_duration_minutes || null,
           break_start: h.break_start || null,
           break_end: h.break_end || null,
         })),
@@ -87,7 +86,7 @@ export async function getWorkingHoursAndOffDays() {
   const { data: offDays, error: offError } = await supabaseServer
     .from('off_days')
     .select('id, date, description')
-    .order('date');
+    .order('date', { ascending: false });
 
   if (hoursError || offError) {
     return { success: false, error: 'فشل جلب البيانات' };
