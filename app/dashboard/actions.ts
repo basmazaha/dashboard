@@ -2,6 +2,17 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 
+// تعريف النوع هنا لأن الملف server-only ولا يشارك الـ types مع client تلقائيًا
+type Appointment = {
+  id: string;
+  full_name: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+  phone: string | null;
+  reason: string | null;
+  status: string | null;
+};
+
 export async function updateAppointment(formData: FormData) {
   const id = formData.get('appointment_id') as string;
   const full_name = formData.get('full_name') as string | null;
@@ -57,5 +68,5 @@ export async function fetchAppointments() {
     return { error: error.message, appointments: [] as Appointment[] };
   }
 
-  return { appointments: appointments ?? [] };
+  return { appointments: (appointments ?? []) as Appointment[] };
 }
