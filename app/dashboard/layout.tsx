@@ -2,8 +2,8 @@
 import type { ReactNode } from 'react';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { SignOutButton } from '@clerk/nextjs';
-import SidebarNav from './SidebarNav'; // ← استيراد مكون الـ Sidebar الجديد
-import './dashboard.css';
+import SidebarNav from './SidebarNav';
+import './dashboard.css'; // ← تأكد إن السطر ده موجود هنا
 
 export const metadata = {
   title: 'لوحة التحكم',
@@ -13,7 +13,7 @@ export const metadata = {
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const { userId } = await auth();
   if (!userId) {
-    return null; // أو يمكنك استخدام redirect('/sign-in') إذا أردت توجيه المستخدم
+    return null; // أو redirect('/sign-in')
   }
 
   const user = await currentUser();
@@ -24,24 +24,14 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <div className="header-container">
           <h1 className="dashboard-logo">لوحة التحكم</h1>
 
-          <div className="user-info flex items-center gap-4">
+          <div className="user-info">
             <div className="current-user-info">
               المستخدم الحالي: <strong>{user?.firstName || user?.username || 'غير معروف'}</strong> 
-              (ID: {userId?.slice(0, 8)}...)
+              <span className="user-id">(ID: {userId?.slice(0, 8)}...)</span>
             </div>
 
             <SignOutButton>
-              <button
-                className="
-                  px-5 py-2
-                  text-sm font-medium
-                  rounded-md
-                  bg-red-600
-                  hover:bg-red-700
-                  text-white
-                  transition-all
-                "
-              >
+              <button className="btn btn--logout">
                 تسجيل الخروج
               </button>
             </SignOutButton>
@@ -51,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
       <div className="dashboard-body">
         <aside className="dashboard-sidebar">
-          <SidebarNav />  {/* ← تم استدعاء المكون هنا بدلاً من كتابة <nav> مباشرة */}
+          <SidebarNav />
         </aside>
 
         <main className="dashboard-main-content">
