@@ -35,6 +35,29 @@ export async function upsertWorkingHours(hours: WorkingHour[]): Promise<ActionRe
   }
 }
 
+export async function upsertOffDays(days: OffDay[]): Promise<ActionResult<null>> {
+  try {
+    const { error } = await supabaseServer
+      .from('off_days')
+      .upsert(
+        days.map((d) => ({
+          id: d.id,
+          date: d.date,
+          description: d.description,
+        })),
+        { onConflict: 'id' }
+      );
+
+    if (error) throw error;
+
+    revalidatePath('/dashboard/working-hours');
+    return { success: true, data: null };
+  } catch (err: any) {
+    console.error('upsertOffDays error:', err);
+    return { success: false, error: err.message || 'حدث خطأ أثناء حفظ الأيام المغلقة' };
+  }
+}
+
 export async function addOffDay(formData: FormData): Promise<ActionResult<OffDay>> {
   const date = formData.get('date') as string;
   const description = (formData.get('description') as string)?.trim() || null;
