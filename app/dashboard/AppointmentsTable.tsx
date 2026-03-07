@@ -1,3 +1,4 @@
+// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -200,7 +201,6 @@ export default function AppointmentsTable({
     const appointmentId = formData.get('appointment_id') as string;
     const originalAppt = appointments.find(a => a.id === appointmentId);
 
-    // Optimistic update
     setAppointments(prev =>
       prev.map(appt =>
         appt.id === appointmentId
@@ -245,7 +245,6 @@ export default function AppointmentsTable({
     setIsSubmitting(true);
     setFormErrors({});
 
-    // Optimistic insert
     const tempId = 'temp-' + Date.now().toString();
     const optimisticAppt: Appointment = {
       id: tempId,
@@ -282,28 +281,24 @@ export default function AppointmentsTable({
 
   return (
     <>
-      <div className="mb-6 flex justify-end">
+      <div className="appointments__actions">
         <button
           type="button"
           onClick={toggleAdd}
-          className={`
-            px-6 py-3 text-base font-medium rounded-lg text-white transition-all
-            ${isAdding 
-              ? 'bg-red-600 hover:bg-red-700' 
-              : 'bg-green-600 hover:bg-green-700 shadow-md'}
-          `}
+          className={`btn btn--${isAdding ? 'danger' : 'success'}`}
         >
           {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
         </button>
       </div>
 
       {isAdding && (
-        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
-          <h3 className="text-lg font-bold mb-4 text-blue-800">إضافة موعد جديد</h3>
+        <div className="appointment-form appointment-form--new">
+          <h3 className="appointment-form__title">إضافة موعد جديد</h3>
+
           <form action={handleInsert} id="add-appointment-form">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل</label>
+            <div className="form-grid">
+              <div className="form-field">
+                <label className="form-label">الاسم الكامل</label>
                 <input
                   type="text"
                   name="full_name"
@@ -312,14 +307,16 @@ export default function AppointmentsTable({
                     setFormValues({ ...formValues, full_name: e.target.value });
                     setFormErrors(prev => ({ ...prev, full_name: '' }));
                   }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.full_name ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                   placeholder="الاسم الكامل"
                 />
-                {formErrors.full_name && <p className="mt-1 text-sm text-red-600">{formErrors.full_name}</p>}
+                {formErrors.full_name && (
+                  <p className="form-error">{formErrors.full_name}</p>
+                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">رقم التليفون</label>
+              <div className="form-field">
+                <label className="form-label">رقم التليفون</label>
                 <input
                   type="tel"
                   name="phone"
@@ -328,19 +325,19 @@ export default function AppointmentsTable({
                     setFormValues({ ...formValues, phone: e.target.value });
                     setFormErrors(prev => ({ ...prev, phone: '' }));
                   }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                   placeholder="01xxxxxxxxx"
                 />
-                {formErrors.phone && <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>}
+                {formErrors.phone && <p className="form-error">{formErrors.phone}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
+              <div className="form-field">
+                <label className="form-label">التاريخ</label>
                 <select
                   name="date"
                   value={formValues.date || ''}
                   onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.date ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`form-select ${formErrors.date ? 'form-select--error' : ''}`}
                 >
                   <option value="">اختر التاريخ</option>
                   {availableDates.map(d => {
@@ -348,16 +345,16 @@ export default function AppointmentsTable({
                     return <option key={iso} value={iso}>{label}</option>;
                   })}
                 </select>
-                {formErrors.date && <p className="mt-1 text-sm text-red-600">{formErrors.date}</p>}
+                {formErrors.date && <p className="form-error">{formErrors.date}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الوقت</label>
+              <div className="form-field">
+                <label className="form-label">الوقت</label>
                 <select
                   name="time"
                   value={formValues.time || ''}
                   onChange={e => setFormValues({ ...formValues, time: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.time ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`form-select ${formErrors.time ? 'form-select--error' : ''}`}
                   disabled={!formValues.date}
                 >
                   <option value="">اختر الوقت</option>
@@ -366,28 +363,28 @@ export default function AppointmentsTable({
                     return <option key={iso} value={iso}>{label}</option>;
                   })}
                 </select>
-                {formErrors.time && <p className="mt-1 text-sm text-red-600">{formErrors.time}</p>}
+                {formErrors.time && <p className="form-error">{formErrors.time}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">السبب (اختياري)</label>
+              <div className="form-field">
+                <label className="form-label">السبب (اختياري)</label>
                 <input
                   type="text"
                   name="reason"
                   value={formValues.reason || ''}
                   onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="form-input"
                   placeholder="سبب الحجز"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
+              <div className="form-field">
+                <label className="form-label">الحالة</label>
                 <select
                   name="status"
                   value={formValues.status || 'confirmed'}
                   onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 status-${formValues.status || 'confirmed'}`}
+                  className={`form-select form-select--status-${formValues.status || 'confirmed'}`}
                 >
                   <option value="pending">معلق</option>
                   <option value="confirmed">مؤكد</option>
@@ -399,23 +396,18 @@ export default function AppointmentsTable({
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-4">
+            <div className="form-actions">
               <button
                 type="button"
                 onClick={toggleAdd}
-                className="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition"
+                className="btn btn--secondary"
               >
                 إلغاء
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`
-                  px-8 py-2.5 rounded-lg text-white font-medium transition
-                  ${isSubmitting 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow'}
-                `}
+                className={`btn btn--primary ${isSubmitting ? 'btn--disabled' : ''}`}
               >
                 {isSubmitting ? 'جاري الإضافة...' : 'حفظ الموعد'}
               </button>
@@ -425,12 +417,12 @@ export default function AppointmentsTable({
       )}
 
       {appointments.length === 0 && !isAdding ? (
-        <div className="no-appointments text-center py-16 text-gray-500 text-lg">
+        <div className="no-appointments">
           لا توجد مواعيد مسجلة حاليًا
         </div>
       ) : (
-        <div className="appointments-table-container">
-          <div className="overflow-x-auto">
+        <div className="appointments-table-wrapper">
+          <div className="table-container">
             <table className="appointments-table">
               <thead>
                 <tr>
@@ -451,7 +443,7 @@ export default function AppointmentsTable({
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
                   return (
-                    <tr key={appt.id} className={isEditing ? 'editing-row' : ''}>
+                    <tr key={appt.id} className={`appointment-row ${isEditing ? 'appointment-row--editing' : ''}`}>
                       <td>
                         {isEditing ? (
                           <div className="input-wrapper">
@@ -465,12 +457,14 @@ export default function AppointmentsTable({
                                 setFormErrors(prev => ({ ...prev, full_name: '' }));
                               }}
                               placeholder="الاسم الكامل"
-                              className={formErrors.full_name ? 'input-error' : ''}
+                              className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.full_name && <span className="error-message">{formErrors.full_name}</span>}
+                            {formErrors.full_name && (
+                              <span className="form-error">{formErrors.full_name}</span>
+                            )}
                           </div>
                         ) : (
-                          <span className="readable-cell">{appt.full_name || '—'}</span>
+                          <span className="cell-content">{appt.full_name || '—'}</span>
                         )}
                       </td>
 
@@ -487,12 +481,14 @@ export default function AppointmentsTable({
                                 setFormErrors(prev => ({ ...prev, phone: '' }));
                               }}
                               placeholder="01xxxxxxxxx أو +201..."
-                              className={formErrors.phone ? 'input-error' : ''}
+                              className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
+                            {formErrors.phone && (
+                              <span className="form-error">{formErrors.phone}</span>
+                            )}
                           </div>
                         ) : (
-                          <span className="readable-cell">{appt.phone || '—'}</span>
+                          <span className="cell-content">{appt.phone || '—'}</span>
                         )}
                       </td>
 
@@ -503,6 +499,7 @@ export default function AppointmentsTable({
                             form={formId}
                             value={formValues.date || ''}
                             onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
+                            className="form-select"
                           >
                             <option value="">اختر تاريخاً</option>
                             {availableDates.map(d => {
@@ -511,7 +508,7 @@ export default function AppointmentsTable({
                             })}
                           </select>
                         ) : (
-                          <span className="readable-cell">
+                          <span className="cell-content">
                             {appt.appointment_date
                               ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
                                   weekday: 'long',
@@ -531,6 +528,7 @@ export default function AppointmentsTable({
                             form={formId}
                             value={formValues.time || ''}
                             onChange={e => setFormValues({ ...formValues, time: e.target.value })}
+                            className="form-select"
                           >
                             <option value="">اختر وقتاً</option>
                             {availTimes.map(t => {
@@ -539,7 +537,7 @@ export default function AppointmentsTable({
                             })}
                           </select>
                         ) : (
-                          <span className="readable-cell">
+                          <span className="cell-content">
                             {appt.appointment_time
                               ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
                                   hour: '2-digit',
@@ -552,7 +550,7 @@ export default function AppointmentsTable({
                       </td>
 
                       <td>
-                        <span className="readable-cell">{appt.reason || '—'}</span>
+                        <span className="cell-content">{appt.reason || '—'}</span>
                       </td>
 
                       <td>
@@ -562,7 +560,7 @@ export default function AppointmentsTable({
                             form={formId}
                             value={formValues.status || 'confirmed'}
                             onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                            className={`status-${formValues.status || 'confirmed'}`}
+                            className={`form-select form-select--status-${formValues.status || 'confirmed'}`}
                           >
                             <option value="pending">معلق</option>
                             <option value="confirmed">مؤكد</option>
@@ -572,20 +570,20 @@ export default function AppointmentsTable({
                             <option value="absent">متغيب</option>
                           </select>
                         ) : (
-                          <span className={`status-badge status-${appt.status || 'confirmed'}`}>
+                          <span className={`status-badge status-badge--${appt.status || 'confirmed'}`}>
                             {getStatusText(appt.status)}
                           </span>
                         )}
                       </td>
 
-                      <td className="actions-cell whitespace-nowrap min-w-[190px] text-center align-middle px-3 py-2">
+                      <td className="actions-cell">
                         {isEditing ? (
-                          <div className="edit-actions flex items-center justify-center gap-4 flex-nowrap">
+                          <div className="edit-actions">
                             <button
                               type="submit"
                               form={formId}
                               disabled={isSubmitting}
-                              className="save-btn px-5 py-2 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                              className={`btn btn--save ${isSubmitting ? 'btn--disabled' : ''}`}
                             >
                               {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
@@ -593,7 +591,7 @@ export default function AppointmentsTable({
                             <button
                               type="button"
                               onClick={() => toggleEdit(appt.id, appt)}
-                              className="cancel-btn px-5 py-2 text-sm font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-all"
+                              className="btn btn--cancel"
                             >
                               إلغاء
                             </button>
@@ -602,13 +600,13 @@ export default function AppointmentsTable({
                           <button
                             type="button"
                             onClick={() => toggleEdit(appt.id, appt)}
-                            className="edit-btn px-6 py-2 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all"
+                            className="btn btn--edit"
                           >
                             تعديل
                           </button>
                         )}
 
-                        <form id={formId} action={handleUpdate} className="hidden">
+                        <form id={formId} action={handleUpdate} className="form--hidden">
                           <input type="hidden" name="appointment_id" value={appt.id} />
                         </form>
                       </td>
