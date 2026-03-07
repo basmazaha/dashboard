@@ -1,7 +1,8 @@
+// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useTransition, useMemo } from 'react';
-import { updateAppointment } from './actions';
+import { updateAppointment, fetchAppointments } from './actions';
 
 type Appointment = {
   id: string;
@@ -85,16 +86,16 @@ export default function AppointmentsTable({
     }
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
-    const end   = new Date(`2000-01-01T${wh.end_time}`);
+    const end = new Date(`2000-01-01T${wh.end_time}`);
 
     const slotDuration = wh.slot_duration_minutes ?? 15;
     const slotMs = slotDuration * 60 * 1000;
 
     let breakStartMs = Infinity;
-    let breakEndMs   = -Infinity;
+    let breakEndMs = -Infinity;
     if (wh.break_start && wh.break_end) {
       breakStartMs = new Date(`2000-01-01T${wh.break_start}`).getTime();
-      breakEndMs   = new Date(`2000-01-01T${wh.break_end}`).getTime();
+      breakEndMs = new Date(`2000-01-01T${wh.break_end}`).getTime();
     }
 
     const times: string[] = [];
@@ -105,7 +106,7 @@ export default function AppointmentsTable({
       current += slotMs
     ) {
       const slotStart = current;
-      const slotEnd   = current + slotMs;
+      const slotEnd = current + slotMs;
 
       if (slotStart < breakEndMs && slotEnd > breakStartMs) {
         continue;
@@ -114,11 +115,12 @@ export default function AppointmentsTable({
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5);
 
-      // التحقق من الحجوزات بناءً على الحالة الحالية في الـ state
+      // التحقق من الحجوزات بناءً على الحالة الحالية في الـ state (استبعاد الملغية)
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
         a.appointment_time === isoTime &&
-        a.status !== 'cancelled'   // ← هذا السطر مهم جدًا
+        a.status !== 'cancelled' &&
+        a.id !== editingId  // استبعاد الموعد الحالي أثناء التعديل
       );
 
       if (!isBooked) {
@@ -156,12 +158,11 @@ export default function AppointmentsTable({
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
       const appointmentId = formData.get('appointment_id') as string;
-
-      // تحديث متفائل (optimistic update) لتحسين تجربة المستخدم
       const newStatus = formData.get('status') as string;
       const newDate = formData.get('date') as string | null;
       const newTime = formData.get('time') as string | null;
 
+      // تحديث متفائل محلي (optimistic update)
       setAppointments(prev =>
         prev.map(appt =>
           appt.id === appointmentId
@@ -178,11 +179,17 @@ export default function AppointmentsTable({
       const result = await updateAppointment(formData);
 
       if ('success' in result) {
-        // بعد النجاح → إعادة تحميل للتأكد من مزامنة البيانات مع السيرفر
-        window.location.reload();
-      } else {
-        alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-        // يمكن إعادة التحميل أو revert الـ optimistic update هنا
+        // إعادة جلب المواعيد من السيرفر للتأكد من المزامنة
+        const fetchResult = await fetchAppointments();
+        if ('appointments' in fetchResult) {
+          setAppointments(fetchResult.appointments);
+        } else if ('error' in fetchResult) {
+          console.error('خطأ في إعادة جلب المواعيد:', fetchResult.error);
+          alert('حدث خطأ في إعادة تحميل المواعيد.');
+        }
+      } else if ('error' in result) {
+        // إعادة التحميل إذا فشل
+        alert('حدث خطأ أثناء الحفظ: ' + result.error);
         window.location.reload();
       }
 
