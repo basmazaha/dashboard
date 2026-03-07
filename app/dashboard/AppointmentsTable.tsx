@@ -6,6 +6,7 @@ import { updateAppointment, insertAppointment, fetchAppointments } from './actio
 type Appointment = {
   id: string;
   full_name: string | null;
+  email: string | null;
   appointment_date: string | null;
   appointment_time: string | null;
   phone: string | null;
@@ -58,9 +59,7 @@ export default function AppointmentsTable({
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => {
-      map[wh.day_of_week] = wh;
-    });
+    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
     return map;
   }, [initialWorkingHours]);
 
@@ -95,8 +94,8 @@ export default function AppointmentsTable({
 
     const dateObj = new Date(selectedDate);
     const dayOfWeek = dateObj.getDay();
-
     const wh = workingHoursByDay[dayOfWeek];
+
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
@@ -117,7 +116,6 @@ export default function AppointmentsTable({
     for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
       const slotStart = current;
       const slotEnd = current + slotMs;
-
       if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
 
       const timeDate = new Date(slotStart);
@@ -140,11 +138,10 @@ export default function AppointmentsTable({
         times.push(`${isoTime}|${formatted}`);
       }
     }
-
     return times;
   };
 
-  const toggleEdit = (id: string, initialValues: Appointment) => {
+  const toggleEdit = (id: string, appt: Appointment) => {
     if (editingId === id) {
       setEditingId(null);
       setFormValues({});
@@ -152,31 +149,33 @@ export default function AppointmentsTable({
     } else {
       setEditingId(id);
       setFormValues({
-        full_name: initialValues.full_name || '',
-        phone: initialValues.phone || '',
-        date: initialValues.appointment_date || '',
-        time: normalizeTime(initialValues.appointment_time),
-        status: initialValues.status || 'confirmed',
+        full_name: appt.full_name || '',
+        email: appt.email || '',
+        phone: appt.phone || '',
+        date: appt.appointment_date || '',
+        time: normalizeTime(appt.appointment_time),
+        reason: appt.reason || '',
+        status: appt.status || 'confirmed',
       });
       setFormErrors({});
     }
   };
 
   const toggleAdd = () => {
-    if (isAdding) {
-      setIsAdding(false);
-      setFormValues({});
-      setFormErrors({});
-    } else {
-      setIsAdding(true);
+    setIsAdding(!isAdding);
+    if (!isAdding) {
       setFormValues({
         full_name: '',
+        email: '',
         phone: '',
         date: '',
         time: '',
-        status: 'confirmed',
         reason: '',
+        status: 'confirmed',
       });
+      setFormErrors({});
+    } else {
+      setFormValues({});
       setFormErrors({});
     }
   };
@@ -197,22 +196,24 @@ export default function AppointmentsTable({
     setIsSubmitting(true);
     setFormErrors({});
 
-    const appointmentId = formData.get('appointment_id') as string;
-    const originalAppt = appointments.find(a => a.id === appointmentId);
+    const id = formData.get('appointment_id') as string;
+    const original = appointments.find(a => a.id === id);
 
-    // Optimistic update
+    // optimistic
     setAppointments(prev =>
-      prev.map(appt =>
-        appt.id === appointmentId
+      prev.map(a =>
+        a.id === id
           ? {
-              ...appt,
+              ...a,
               full_name: formData.get('full_name') as string | null,
+              email: formData.get('email') as string | null,
               phone: formData.get('phone') as string | null,
               appointment_date: formData.get('date') as string | null,
               appointment_time: formData.get('time') as string | null,
+              reason: formData.get('reason') as string | null,
               status: formData.get('status') as string | null,
             }
-          : appt
+          : a
       )
     );
 
@@ -220,22 +221,16 @@ export default function AppointmentsTable({
 
     if ('errors' in result) {
       setFormErrors(result.errors as Record<string, string>);
-      if (originalAppt) {
-        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
-      }
+      if (original) setAppointments(prev => prev.map(a => a.id === id ? original : a));
     } else if ('success' in result) {
-      const fetchResult = await fetchAppointments();
-      if ('appointments' in fetchResult) {
-        setAppointments(fetchResult.appointments ?? []);
-      }
-      setFormErrors({});
+      const fresh = await fetchAppointments();
+      if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
       setEditingId(null);
       setFormValues({});
+      setFormErrors({});
     } else {
-      alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-      if (originalAppt) {
-        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
-      }
+      alert('خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
+      if (original) setAppointments(prev => prev.map(a => a.id === id ? original : a));
     }
 
     setIsSubmitting(false);
@@ -245,11 +240,11 @@ export default function AppointmentsTable({
     setIsSubmitting(true);
     setFormErrors({});
 
-    // Optimistic insert
-    const tempId = 'temp-' + Date.now().toString();
-    const optimisticAppt: Appointment = {
+    const tempId = 'temp-' + Date.now();
+    const optimistic: Appointment = {
       id: tempId,
       full_name: formData.get('full_name') as string | null,
+      email: formData.get('email') as string | null,
       phone: formData.get('phone') as string | null,
       appointment_date: formData.get('date') as string | null,
       appointment_time: formData.get('time') as string | null,
@@ -257,7 +252,7 @@ export default function AppointmentsTable({
       status: formData.get('status') as string | null ?? 'confirmed',
     };
 
-    setAppointments(prev => [optimisticAppt, ...prev]);
+    setAppointments(prev => [optimistic, ...prev]);
 
     const result = await insertAppointment(formData);
 
@@ -265,15 +260,13 @@ export default function AppointmentsTable({
       setFormErrors(result.errors as Record<string, string>);
       setAppointments(prev => prev.filter(a => a.id !== tempId));
     } else if ('success' in result) {
-      const fetchResult = await fetchAppointments();
-      if ('appointments' in fetchResult) {
-        setAppointments(fetchResult.appointments ?? []);
-      }
-      setFormErrors({});
+      const fresh = await fetchAppointments();
+      if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
       setIsAdding(false);
       setFormValues({});
+      setFormErrors({});
     } else {
-      alert('حدث خطأ أثناء الإضافة: ' + (result.error || 'غير معروف'));
+      alert('خطأ أثناء الإضافة: ' + (result.error || 'غير معروف'));
       setAppointments(prev => prev.filter(a => a.id !== tempId));
     }
 
@@ -284,13 +277,13 @@ export default function AppointmentsTable({
     <>
       <div className="mb-6 flex justify-end">
         <button
-          type="button"
           onClick={toggleAdd}
+          type="button"
           className={`
-            px-6 py-3 text-base font-medium rounded-lg text-white transition-all
-            ${isAdding 
-              ? 'bg-red-600 hover:bg-red-700' 
-              : 'bg-green-600 hover:bg-green-700 shadow-md'}
+            px-6 py-3 text-base font-medium rounded-xl shadow-md transition-all
+            ${isAdding
+              ? 'bg-red-600 hover:bg-red-700 text-white'
+              : 'bg-green-600 hover:bg-green-700 text-white'}
           `}
         >
           {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
@@ -298,49 +291,63 @@ export default function AppointmentsTable({
       </div>
 
       {isAdding && (
-        <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
-          <h3 className="text-lg font-bold mb-4 text-blue-800">إضافة موعد جديد</h3>
-          <form action={handleInsert} id="add-appointment-form">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="mb-8 p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <h3 className="text-xl font-bold mb-5 text-gray-800">إضافة موعد جديد</h3>
+
+          <form action={handleInsert} className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الاسم الكامل</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">الاسم الكامل *</label>
                 <input
-                  type="text"
                   name="full_name"
                   value={formValues.full_name || ''}
                   onChange={e => {
-                    setFormValues({ ...formValues, full_name: e.target.value });
-                    setFormErrors(prev => ({ ...prev, full_name: '' }));
+                    setFormValues(v => ({ ...v, full_name: e.target.value }));
+                    setFormErrors(e => ({ ...e, full_name: '' }));
                   }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.full_name ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition ${formErrors.full_name ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   placeholder="الاسم الكامل"
                 />
-                {formErrors.full_name && <p className="mt-1 text-sm text-red-600">{formErrors.full_name}</p>}
+                {formErrors.full_name && <p className="mt-1.5 text-sm text-red-600">{formErrors.full_name}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">رقم التليفون</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">البريد الإلكتروني (اختياري)</label>
                 <input
-                  type="tel"
+                  name="email"
+                  type="email"
+                  value={formValues.email || ''}
+                  onChange={e => {
+                    setFormValues(v => ({ ...v, email: e.target.value }));
+                    setFormErrors(e => ({ ...e, email: '' }));
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  placeholder="example@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">رقم التليفون *</label>
+                <input
                   name="phone"
                   value={formValues.phone || ''}
                   onChange={e => {
-                    setFormValues({ ...formValues, phone: e.target.value });
-                    setFormErrors(prev => ({ ...prev, phone: '' }));
+                    setFormValues(v => ({ ...v, phone: e.target.value }));
+                    setFormErrors(e => ({ ...e, phone: '' }));
                   }}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.phone ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition ${formErrors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                   placeholder="01xxxxxxxxx"
                 />
-                {formErrors.phone && <p className="mt-1 text-sm text-red-600">{formErrors.phone}</p>}
+                {formErrors.phone && <p className="mt-1.5 text-sm text-red-600">{formErrors.phone}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">التاريخ *</label>
                 <select
                   name="date"
                   value={formValues.date || ''}
-                  onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.date ? 'border-red-500' : 'border-gray-300'}`}
+                  onChange={e => setFormValues(v => ({ ...v, date: e.target.value, time: '' }))}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition ${formErrors.date ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                 >
                   <option value="">اختر التاريخ</option>
                   {availableDates.map(d => {
@@ -348,17 +355,17 @@ export default function AppointmentsTable({
                     return <option key={iso} value={iso}>{label}</option>;
                   })}
                 </select>
-                {formErrors.date && <p className="mt-1 text-sm text-red-600">{formErrors.date}</p>}
+                {formErrors.date && <p className="mt-1.5 text-sm text-red-600">{formErrors.date}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الوقت</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">الوقت *</label>
                 <select
                   name="time"
                   value={formValues.time || ''}
-                  onChange={e => setFormValues({ ...formValues, time: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${formErrors.time ? 'border-red-500' : 'border-gray-300'}`}
+                  onChange={e => setFormValues(v => ({ ...v, time: e.target.value }))}
                   disabled={!formValues.date}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition ${formErrors.time ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
                 >
                   <option value="">اختر الوقت</option>
                   {getAvailableTimesForDate(formValues.date).map(t => {
@@ -366,28 +373,16 @@ export default function AppointmentsTable({
                     return <option key={iso} value={iso}>{label}</option>;
                   })}
                 </select>
-                {formErrors.time && <p className="mt-1 text-sm text-red-600">{formErrors.time}</p>}
+                {formErrors.time && <p className="mt-1.5 text-sm text-red-600">{formErrors.time}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">السبب (اختياري)</label>
-                <input
-                  type="text"
-                  name="reason"
-                  value={formValues.reason || ''}
-                  onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="سبب الحجز"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">الحالة</label>
                 <select
                   name="status"
                   value={formValues.status || 'confirmed'}
-                  onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 status-${formValues.status || 'confirmed'}`}
+                  onChange={e => setFormValues(v => ({ ...v, status: e.target.value }))}
+                  className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition status-${formValues.status || 'confirmed'}`}
                 >
                   <option value="pending">معلق</option>
                   <option value="confirmed">مؤكد</option>
@@ -397,13 +392,24 @@ export default function AppointmentsTable({
                   <option value="absent">متغيب</option>
                 </select>
               </div>
+
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">السبب / الملاحظات (اختياري)</label>
+                <input
+                  name="reason"
+                  value={formValues.reason || ''}
+                  onChange={e => setFormValues(v => ({ ...v, reason: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  placeholder="سبب الحجز أو ملاحظات إضافية"
+                />
+              </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-4">
+            <div className="flex flex-col sm:flex-row justify-end gap-4 mt-6">
               <button
                 type="button"
                 onClick={toggleAdd}
-                className="px-6 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition"
+                className="px-8 py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition font-medium order-2 sm:order-1"
               >
                 إلغاء
               </button>
@@ -411,13 +417,13 @@ export default function AppointmentsTable({
                 type="submit"
                 disabled={isSubmitting}
                 className={`
-                  px-8 py-2.5 rounded-lg text-white font-medium transition
-                  ${isSubmitting 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow'}
+                  px-10 py-3 rounded-xl text-white font-medium transition order-1 sm:order-2
+                  ${isSubmitting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-md'}
                 `}
               >
-                {isSubmitting ? 'جاري الإضافة...' : 'حفظ الموعد'}
+                {isSubmitting ? 'جاري الحفظ...' : 'حفظ الموعد'}
               </button>
             </div>
           </form>
@@ -425,201 +431,190 @@ export default function AppointmentsTable({
       )}
 
       {appointments.length === 0 && !isAdding ? (
-        <div className="no-appointments text-center py-16 text-gray-500 text-lg">
+        <div className="text-center py-16 text-gray-500 text-lg font-medium">
           لا توجد مواعيد مسجلة حاليًا
         </div>
       ) : (
-        <div className="appointments-table-container">
-          <div className="overflow-x-auto">
-            <table className="appointments-table">
-              <thead>
-                <tr>
-                  <th>الاسم</th>
-                  <th>التليفون</th>
-                  <th>التاريخ</th>
-                  <th>الوقت</th>
-                  <th>السبب</th>
-                  <th>الحالة</th>
-                  <th>إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.map(appt => {
-                  const isEditing = editingId === appt.id;
-                  const formId = `form-${appt.id}`;
-                  const currentDate = isEditing ? formValues.date : appt.appointment_date;
-                  const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
+        <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+          <table className="w-full min-w-[1000px] text-right">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="px-6 py-4 font-semibold text-gray-700">الاسم</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">الإيميل</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">التليفون</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">التاريخ</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">الوقت</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">السبب</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">الحالة</th>
+                <th className="px-6 py-4 font-semibold text-gray-700">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {appointments.map(appt => {
+                const isEditing = editingId === appt.id;
+                const formId = `edit-form-${appt.id}`;
+                const currentDate = isEditing ? formValues.date : appt.appointment_date;
+                const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
-                  return (
-                    <tr key={appt.id} className={isEditing ? 'editing-row' : ''}>
-                      <td>
-                        {isEditing ? (
-                          <div className="input-wrapper">
-                            <input
-                              type="text"
-                              name="full_name"
-                              form={formId}
-                              value={formValues.full_name || ''}
-                              onChange={e => {
-                                setFormValues({ ...formValues, full_name: e.target.value });
-                                setFormErrors(prev => ({ ...prev, full_name: '' }));
-                              }}
-                              placeholder="الاسم الكامل"
-                              className={formErrors.full_name ? 'input-error' : ''}
-                            />
-                            {formErrors.full_name && <span className="error-message">{formErrors.full_name}</span>}
-                          </div>
-                        ) : (
-                          <span className="readable-cell">{appt.full_name || '—'}</span>
-                        )}
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <div className="input-wrapper">
-                            <input
-                              type="tel"
-                              name="phone"
-                              form={formId}
-                              value={formValues.phone || ''}
-                              onChange={e => {
-                                setFormValues({ ...formValues, phone: e.target.value });
-                                setFormErrors(prev => ({ ...prev, phone: '' }));
-                              }}
-                              placeholder="01xxxxxxxxx أو +201..."
-                              className={formErrors.phone ? 'input-error' : ''}
-                            />
-                            {formErrors.phone && <span className="error-message">{formErrors.phone}</span>}
-                          </div>
-                        ) : (
-                          <span className="readable-cell">{appt.phone || '—'}</span>
-                        )}
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="date"
+                return (
+                  <tr key={appt.id} className={isEditing ? 'bg-blue-50' : ''}>
+                    <td className="px-6 py-4">
+                      {isEditing ? (
+                        <input
+                          name="full_name"
+                          form={formId}
+                          value={formValues.full_name || ''}
+                          onChange={e => setFormValues(v => ({ ...v, full_name: e.target.value }))}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      ) : (
+                        appt.full_name || '—'
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {isEditing ? (
+                        <input
+                          name="email"
+                          type="email"
+                          form={formId}
+                          value={formValues.email || ''}
+                          onChange={e => setFormValues(v => ({ ...v, email: e.target.value }))}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      ) : (
+                        appt.email || '—'
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {isEditing ? (
+                        <input
+                          name="phone"
+                          form={formId}
+                          value={formValues.phone || ''}
+                          onChange={e => setFormValues(v => ({ ...v, phone: e.target.value }))}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      ) : (
+                        appt.phone || '—'
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {isEditing ? (
+                        <select
+                          name="date"
+                          form={formId}
+                          value={formValues.date || ''}
+                          onChange={e => setFormValues(v => ({ ...v, date: e.target.value, time: '' }))}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        >
+                          <option value="">اختر</option>
+                          {availableDates.map(d => {
+                            const [iso, label] = d.split('|');
+                            return <option key={iso} value={iso}>{label}</option>;
+                          })}
+                        </select>
+                      ) : (
+                        appt.appointment_date
+                          ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                            })
+                          : '—'
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {isEditing ? (
+                        <select
+                          name="time"
+                          form={formId}
+                          value={formValues.time || ''}
+                          onChange={e => setFormValues(v => ({ ...v, time: e.target.value }))}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        >
+                          <option value="">اختر</option>
+                          {availTimes.map(t => {
+                            const [iso, label] = t.split('|');
+                            return <option key={iso} value={iso}>{label}</option>;
+                          })}
+                        </select>
+                      ) : (
+                        appt.appointment_time
+                          ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            }).replace('ص', 'صباحاً').replace('م', 'مساءً')
+                          : '—'
+                      )}
+                    </td>
+                    <td className="px-6 py-4">{appt.reason || '—'}</td>
+                    <td className="px-6 py-4">
+                      {isEditing ? (
+                        <select
+                          name="status"
+                          form={formId}
+                          value={formValues.status || 'confirmed'}
+                          onChange={e => setFormValues(v => ({ ...v, status: e.target.value }))}
+                          className={`w-full px-3 py-2 border rounded-lg status-${formValues.status || 'confirmed'}`}
+                        >
+                          <option value="pending">معلق</option>
+                          <option value="confirmed">مؤكد</option>
+                          <option value="cancelled">ملغي</option>
+                          <option value="rescheduled">معاد جدولته</option>
+                          <option value="completed">مكتمل</option>
+                          <option value="absent">متغيب</option>
+                        </select>
+                      ) : (
+                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium status-badge status-${appt.status || 'confirmed'}`}>
+                          {getStatusText(appt.status)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                      {isEditing ? (
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
+                          <button
+                            type="submit"
                             form={formId}
-                            value={formValues.date || ''}
-                            onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
+                            disabled={isSubmitting}
+                            className={`
+                              px-5 py-2 rounded-lg text-white font-medium transition
+                              ${isSubmitting ? 'bg-gray-400' : 'bg-emerald-600 hover:bg-emerald-700'}
+                            `}
                           >
-                            <option value="">اختر تاريخاً</option>
-                            {availableDates.map(d => {
-                              const [iso, label] = d.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
-                            })}
-                          </select>
-                        ) : (
-                          <span className="readable-cell">
-                            {appt.appointment_date
-                              ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                })
-                              : '—'}
-                          </span>
-                        )}
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="time"
-                            form={formId}
-                            value={formValues.time || ''}
-                            onChange={e => setFormValues({ ...formValues, time: e.target.value })}
-                          >
-                            <option value="">اختر وقتاً</option>
-                            {availTimes.map(t => {
-                              const [iso, label] = t.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
-                            })}
-                          </select>
-                        ) : (
-                          <span className="readable-cell">
-                            {appt.appointment_time
-                              ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true,
-                                }).replace('ص', 'صباحاً').replace('م', 'مساءً')
-                              : '—'}
-                          </span>
-                        )}
-                      </td>
-
-                      <td>
-                        <span className="readable-cell">{appt.reason || '—'}</span>
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="status"
-                            form={formId}
-                            value={formValues.status || 'confirmed'}
-                            onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                            className={`status-${formValues.status || 'confirmed'}`}
-                          >
-                            <option value="pending">معلق</option>
-                            <option value="confirmed">مؤكد</option>
-                            <option value="cancelled">ملغي</option>
-                            <option value="rescheduled">معاد جدولته</option>
-                            <option value="completed">مكتمل</option>
-                            <option value="absent">متغيب</option>
-                          </select>
-                        ) : (
-                          <span className={`status-badge status-${appt.status || 'confirmed'}`}>
-                            {getStatusText(appt.status)}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="actions-cell whitespace-nowrap min-w-[190px] text-center align-middle px-3 py-2">
-                        {isEditing ? (
-                          <div className="edit-actions flex items-center justify-center gap-4 flex-nowrap">
-                            <button
-                              type="submit"
-                              form={formId}
-                              disabled={isSubmitting}
-                              className="save-btn px-5 py-2 text-sm font-medium rounded-md bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                            >
-                              {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => toggleEdit(appt.id, appt)}
-                              className="cancel-btn px-5 py-2 text-sm font-medium rounded-md bg-red-600 hover:bg-red-700 text-white transition-all"
-                            >
-                              إلغاء
-                            </button>
-                          </div>
-                        ) : (
+                            {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
+                          </button>
                           <button
                             type="button"
                             onClick={() => toggleEdit(appt.id, appt)}
-                            className="edit-btn px-6 py-2 text-sm font-medium rounded-md bg-blue-600 hover:bg-blue-700 text-white transition-all"
+                            className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition"
                           >
-                            تعديل
+                            إلغاء
                           </button>
-                        )}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => toggleEdit(appt.id, appt)}
+                          className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+                        >
+                          تعديل
+                        </button>
+                      )}
 
-                        <form id={formId} action={handleUpdate} className="hidden">
-                          <input type="hidden" name="appointment_id" value={appt.id} />
-                        </form>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      <form id={formId} action={handleUpdate} className="hidden">
+                        <input type="hidden" name="appointment_id" value={appt.id} />
+                      </form>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </>
   );
-                }
+}
