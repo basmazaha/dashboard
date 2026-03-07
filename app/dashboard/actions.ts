@@ -16,11 +16,21 @@ export async function updateAppointment(formData: FormData) {
 
   const updates: Record<string, any> = {};
 
-  if (full_name?.trim()) updates.full_name = full_name.trim();
-  if (phone?.trim())     updates.phone = phone.trim();
-  if (date)              updates.appointment_date = date;
-  if (time)              updates.appointment_time = time;
-  if (status)            updates.status = status;
+  // حالة خاصة: إذا تم اختيار "ملغي" → نمسح التاريخ والوقت تلقائيًا
+  if (status === 'cancelled') {
+    updates.status = 'cancelled';
+    updates.appointment_date = null;
+    updates.appointment_time = null;
+    // اختياري: يمكنك إضافة حقل مثل cancelled_at إذا أردت تسجيل وقت الإلغاء
+    // updates.cancelled_at = new Date().toISOString();
+  } else {
+    // الحالات العادية
+    if (full_name?.trim())    updates.full_name = full_name.trim();
+    if (phone?.trim())        updates.phone = phone.trim();
+    if (date)                 updates.appointment_date = date;
+    if (time)                 updates.appointment_time = time;
+    if (status)               updates.status = status;
+  }
 
   if (Object.keys(updates).length === 0) {
     return { message: 'لا توجد تغييرات' };
