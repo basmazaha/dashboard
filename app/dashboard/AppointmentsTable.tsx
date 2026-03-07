@@ -14,7 +14,7 @@ type Appointment = {
 };
 
 type WorkingHour = {
-  day_of_week: number;           // 0 = الأحد، 1 = الإثنين، ... ، 6 = السبت
+  day_of_week: number;
   is_open: boolean;
   start_time: string | null;
   end_time: string | null;
@@ -29,7 +29,7 @@ export default function AppointmentsTable({
   initialWorkingHours,
 }: {
   initialAppointments: Appointment[];
-  initialOffDays: string[];               // مصفوفة من التواريخ بتنسيق ISO
+  initialOffDays: string[];
   initialWorkingHours: WorkingHour[];
 }) {
   const [appointments, setAppointments] = useState(initialAppointments);
@@ -57,7 +57,7 @@ export default function AppointmentsTable({
 
       if (offDaysSet.has(isoDate)) continue;
 
-      const dayOfWeek = d.getDay(); // JavaScript: 0=Sunday, 1=Monday, ..., 6=Saturday
+      const dayOfWeek = d.getDay();
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
@@ -77,7 +77,7 @@ export default function AppointmentsTable({
     if (!selectedDate) return [];
 
     const dateObj = new Date(selectedDate);
-    const dayOfWeek = dateObj.getDay(); // نفس نظام الجدول (0=الأحد ... 6=السبت)
+    const dayOfWeek = dateObj.getDay();
 
     const wh = workingHoursByDay[dayOfWeek];
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) {
@@ -90,7 +90,6 @@ export default function AppointmentsTable({
     const slotDuration = wh.slot_duration_minutes ?? 15;
     const slotMs = slotDuration * 60 * 1000;
 
-    // فترة الراحة (اختيارية)
     let breakStartMs = Infinity;
     let breakEndMs   = -Infinity;
     if (wh.break_start && wh.break_end) {
@@ -108,17 +107,18 @@ export default function AppointmentsTable({
       const slotStart = current;
       const slotEnd   = current + slotMs;
 
-      // استبعاد السلوت إذا تداخل مع فترة الراحة
       if (slotStart < breakEndMs && slotEnd > breakStartMs) {
         continue;
       }
 
       const timeDate = new Date(slotStart);
-      const isoTime = timeDate.toTimeString().slice(0, 5); // "09:00", "09:15", ...
+      const isoTime = timeDate.toTimeString().slice(0, 5);
 
+      // التحقق من الحجوزات بناءً على الحالة الحالية في الـ state
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
-        a.appointment_time === isoTime
+        a.appointment_time === isoTime &&
+        a.status !== 'cancelled'   // ← هذا السطر مهم جدًا
       );
 
       if (!isBooked) {
@@ -155,12 +155,37 @@ export default function AppointmentsTable({
 
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
+      const appointmentId = formData.get('appointment_id') as string;
+
+      // تحديث متفائل (optimistic update) لتحسين تجربة المستخدم
+      const newStatus = formData.get('status') as string;
+      const newDate = formData.get('date') as string | null;
+      const newTime = formData.get('time') as string | null;
+
+      setAppointments(prev =>
+        prev.map(appt =>
+          appt.id === appointmentId
+            ? {
+                ...appt,
+                status: newStatus,
+                appointment_date: newStatus === 'cancelled' ? null : (newDate || appt.appointment_date),
+                appointment_time: newStatus === 'cancelled' ? null : (newTime || appt.appointment_time),
+              }
+            : appt
+        )
+      );
+
       const result = await updateAppointment(formData);
+
       if ('success' in result) {
-        window.location.reload(); // تحديث بسيط بعد الحفظ
-      } else if ('error' in result) {
-        alert('حدث خطأ أثناء الحفظ: ' + result.error);
+        // بعد النجاح → إعادة تحميل للتأكد من مزامنة البيانات مع السيرفر
+        window.location.reload();
+      } else {
+        alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
+        // يمكن إعادة التحميل أو revert الـ optimistic update هنا
+        window.location.reload();
       }
+
       setEditingId(null);
     });
   };
