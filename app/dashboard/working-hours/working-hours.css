@@ -1,14 +1,16 @@
 /* app/dashboard/working-hours/working-hours.css */
 
+/* أقسام عامة */
 .hours-section,
 .off-days-section {
   margin-bottom: 3rem;
   background: white;
   border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem 1.5rem 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
+/* رأس القسم (العنوان + الأزرار) */
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -16,6 +18,8 @@
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
   border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .section-header h2 {
@@ -25,12 +29,16 @@
   color: #111827;
 }
 
-.edit-controls,
-.action-buttons {
+/* مجموعة الأزرار */
+.action-buttons,
+.edit-controls {
   display: flex;
+  align-items: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
+/* الأزرار العامة */
 .btn {
   padding: 0.65rem 1.4rem;
   font-size: 1rem;
@@ -39,6 +47,8 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-width: 120px;
+  text-align: center;
 }
 
 .btn-edit {
@@ -93,30 +103,35 @@
   cursor: not-allowed;
 }
 
+/* رسائل النجاح / الخطأ */
 .message {
   padding: 1rem 1.5rem;
   border-radius: 8px;
   margin-bottom: 1.5rem;
   text-align: center;
   font-weight: 500;
+  border: 1px solid;
 }
 
 .message.success {
   background: #ecfdf5;
   color: #065f46;
-  border: 1px solid #a7f3d0;
+  border-color: #a7f3d0;
 }
 
 .message.error {
   background: #fee2e2;
   color: #991b1b;
-  border: 1px solid #fecaca;
+  border-color: #fecaca;
 }
 
+/* الجدول العام */
 .table-wrapper {
   overflow-x: auto;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
+  margin: 1rem 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .data-table,
@@ -154,23 +169,26 @@
   color: #1f2937;
 }
 
+/* تحسين خلية اليوم */
 .day-cell {
   font-weight: 600;
   text-align: right !important;
-  padding-right: 2rem;
+  padding-right: 1.8rem;
   color: #111827;
 }
 
+/* خلية الـ checkbox */
 .checkbox-cell {
   text-align: center;
 }
 
 .checkbox-cell input {
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 1.5rem;
+  height: 1.5rem;
   cursor: pointer;
 }
 
+/* نعم / لا */
 .yes {
   color: #059669;
   font-weight: bold;
@@ -181,10 +199,13 @@
   font-weight: bold;
 }
 
+/* الـ inputs داخل الجدول */
 .time-cell input[type="time"],
-.duration-cell input[type="number"] {
+.duration-cell input[type="number"],
+.off-days-table input[type="date"],
+.off-days-table input[type="text"] {
   width: 100%;
-  max-width: 140px;
+  max-width: 160px;
   padding: 0.6rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -193,12 +214,14 @@
 }
 
 .time-cell input:focus,
-.duration-cell input:focus {
+.duration-cell input:focus,
+.off-days-table input:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* قسم إضافة يوم جديد */
 .add-new-row {
   margin-top: 2rem;
   padding: 1.5rem;
@@ -211,13 +234,14 @@
   margin-top: 0;
   font-size: 1.25rem;
   color: #374151;
+  margin-bottom: 1rem;
 }
 
 .add-form {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-top: 1rem;
+  align-items: center;
 }
 
 .add-form input {
@@ -233,7 +257,7 @@
   min-width: 140px;
 }
 
-/* Responsive adjustments */
+/* Responsive للموبايل */
 @media (max-width: 768px) {
   .section-header {
     flex-direction: column;
@@ -241,8 +265,8 @@
     gap: 1rem;
   }
 
-  .edit-controls,
-  .action-buttons {
+  .action-buttons,
+  .edit-controls {
     width: 100%;
     justify-content: flex-end;
   }
@@ -259,5 +283,14 @@
 
   .add-form {
     flex-direction: column;
+  }
+
+  .add-form input,
+  .add-form button {
+    width: 100%;
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
   }
 }
