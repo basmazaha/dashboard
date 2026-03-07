@@ -9,19 +9,28 @@ export default function SidebarNav() {
 
   return (
     <nav className="sidebar-nav">
-      <ul>
+      <ul className="nav-list">
         <li>
-          <Link href="/dashboard" className={pathname === '/dashboard' ? 'active' : ''}>
+          <Link 
+            href="/dashboard" 
+            className={`nav-link ${pathname === '/dashboard' ? 'nav-link--active' : ''}`}
+          >
             المواعيد
           </Link>
         </li>
         <li>
-          <Link href="/dashboard/working-hours" className={pathname === '/dashboard/working-hours' ? 'active' : ''}>
+          <Link 
+            href="/dashboard/working-hours" 
+            className={`nav-link ${pathname === '/dashboard/working-hours' ? 'nav-link--active' : ''}`}
+          >
             ساعات العمل
           </Link>
         </li>
         <li>
-          <Link href="/dashboard/settings" className={pathname === '/dashboard/settings' ? 'active' : ''}>
+          <Link 
+            href="/dashboard/settings" 
+            className={`nav-link ${pathname === '/dashboard/settings' ? 'nav-link--active' : ''}`}
+          >
             الإعدادات
           </Link>
         </li>
