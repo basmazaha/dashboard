@@ -3,7 +3,6 @@
 import { useState, useTransition, useMemo } from 'react';
 import { updateAppointment, fetchAppointments } from './actions';
 
-// تعريف النوع هنا أيضًا للـ client component
 type Appointment = {
   id: string;
   full_name: string | null;
@@ -24,6 +23,24 @@ type WorkingHour = {
   break_end: string | null;
 };
 
+// دالة مساعدة: تحويل وقت "HH:MM" إلى "HH:MM:00" أو العكس
+const normalizeTimeForDb = (time: string | null): string | null => {
+  if (!time) return null;
+  if (time.length === 5) return `${time}:00`;     // "14:30" → "14:30:00"
+  if (time.length === 8) return time.slice(0, 5); // "14:30:00" → "14:30"
+  return time;
+};
+
+const displayTime = (time: string | null): string => {
+  if (!time) return '—';
+  const short = normalizeTimeForDb(time); // يضمن "HH:MM"
+  const date = new Date(`2000-01-01T${short}`);
+  return date
+    .toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true })
+    .replace('ص', 'صباحاً')
+    .replace('م', 'مساءً');
+};
+
 export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
@@ -42,9 +59,7 @@ export default function AppointmentsTable({
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => {
-      map[wh.day_of_week] = wh;
-    });
+    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
     return map;
   }, [initialWorkingHours]);
 
@@ -79,11 +94,9 @@ export default function AppointmentsTable({
 
     const dateObj = new Date(selectedDate);
     const dayOfWeek = dateObj.getDay();
-
     const wh = workingHoursByDay[dayOfWeek];
-    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) {
-      return [];
-    }
+
+    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
     const end = new Date(`2000-01-01T${wh.end_time}`);
@@ -100,37 +113,24 @@ export default function AppointmentsTable({
 
     const times: string[] = [];
 
-    for (
-      let current = start.getTime();
-      current < end.getTime();
-      current += slotMs
-    ) {
+    for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
       const slotStart = current;
       const slotEnd = current + slotMs;
 
-      if (slotStart < breakEndMs && slotEnd > breakStartMs) {
-        continue;
-      }
+      if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
 
       const timeDate = new Date(slotStart);
-      const isoTime = timeDate.toTimeString().slice(0, 5);
+      const isoTime = timeDate.toTimeString().slice(0, 5); // "14:30"
 
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
-        a.appointment_time === isoTime &&
+        normalizeTimeForDb(a.appointment_time) === isoTime &&
         a.status !== 'cancelled' &&
         a.id !== editingId
       );
 
       if (!isBooked) {
-        const formatted = timeDate.toLocaleTimeString('ar-EG', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        })
-          .replace('ص', 'صباحاً')
-          .replace('م', 'مساءً');
-
+        const formatted = displayTime(isoTime);
         times.push(`${isoTime}|${formatted}`);
       }
     }
@@ -138,21 +138,19 @@ export default function AppointmentsTable({
     return times;
   };
 
-  const toggleEdit = (id: string, initialAppt?: Appointment) => {
+  const toggleEdit = (id: string, initialValues: Appointment) => {
     if (editingId === id) {
       setEditingId(null);
       setFormValues({});
     } else {
       setEditingId(id);
-      if (initialAppt) {
-        setFormValues({
-          full_name: initialAppt.full_name || '',
-          phone: initialAppt.phone || '',
-          date: initialAppt.appointment_date || '',
-          time: initialAppt.appointment_time || '',
-          status: initialAppt.status || 'confirmed',
-        });
-      }
+      setFormValues({
+        full_name: initialValues.full_name || '',
+        phone: initialValues.phone || '',
+        date: initialValues.appointment_date || '',
+        time: normalizeTimeForDb(initialValues.appointment_time) || '', // "HH:MM"
+        status: initialValues.status || 'confirmed',
+      });
     }
   };
 
@@ -171,26 +169,19 @@ export default function AppointmentsTable({
   const handleSubmit = (formData: FormData) => {
     startTransition(async () => {
       const appointmentId = formData.get('appointment_id') as string;
-      const newStatus = formData.get('status') as string;
-      const newDate = formData.get('date') as string | null;
-      const newTime = formData.get('time') as string | null;
-      const fullName = formData.get('full_name') as string | null;
-      const phone = formData.get('phone') as string | null;
+      const originalAppt = appointments.find(a => a.id === appointmentId);
 
-      // حفظ القيم الحالية للتراجع في حالة الفشل
-      const previousAppt = appointments.find(a => a.id === appointmentId);
-
-      // Optimistic update
+      // Optimistic
       setAppointments(prev =>
         prev.map(appt =>
           appt.id === appointmentId
             ? {
                 ...appt,
-                full_name: fullName?.trim() || appt.full_name,
-                phone: phone?.trim() || appt.phone,
-                status: newStatus,
-                appointment_date: newStatus === 'cancelled' ? null : (newDate || appt.appointment_date),
-                appointment_time: newStatus === 'cancelled' ? null : (newTime || appt.appointment_time),
+                status: formData.get('status') as string,
+                appointment_date: formData.get('date') as string | null,
+                appointment_time: formData.get('time') as string | null,
+                full_name: formData.get('full_name') as string | null,
+                phone: formData.get('phone') as string | null,
               }
             : appt
         )
@@ -199,23 +190,15 @@ export default function AppointmentsTable({
       const result = await updateAppointment(formData);
 
       if ('success' in result) {
-        // إعادة جلب البيانات من السيرفر للتأكد من التحديث
         const fetchResult = await fetchAppointments();
-
         if ('appointments' in fetchResult) {
           setAppointments(fetchResult.appointments ?? []);
-        } else {
-          console.error('فشل في إعادة جلب المواعيد بعد التحديث');
         }
       } else {
-        alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-        // إعادة الـ state إلى السابق في حالة الفشل
-        if (previousAppt) {
-          setAppointments(prev =>
-            prev.map(appt => (appt.id === appointmentId ? previousAppt : appt))
-          );
+        alert('خطأ: ' + (result.error || 'غير معروف'));
+        if (originalAppt) {
+          setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
         }
-        window.location.reload(); // أو يمكن تجنب reload إذا أردت
       }
 
       setEditingId(null);
@@ -241,10 +224,10 @@ export default function AppointmentsTable({
                 </tr>
               </thead>
               <tbody>
-                {appointments.map((appt) => {
+                {appointments.map(appt => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
-                  const currentDate = isEditing ? (formValues.date || '') : appt.appointment_date || '';
+                  const currentDate = isEditing ? formValues.date : appt.appointment_date;
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
                   return (
@@ -255,9 +238,8 @@ export default function AppointmentsTable({
                             type="text"
                             name="full_name"
                             form={formId}
-                            value={formValues.full_name || ''}
+                            value={formValues.full_name}
                             onChange={e => setFormValues({ ...formValues, full_name: e.target.value })}
-                            placeholder="الاسم الكامل"
                           />
                         ) : (
                           <span className="readable-cell">{appt.full_name || '—'}</span>
@@ -270,9 +252,8 @@ export default function AppointmentsTable({
                             type="tel"
                             name="phone"
                             form={formId}
-                            value={formValues.phone || ''}
+                            value={formValues.phone}
                             onChange={e => setFormValues({ ...formValues, phone: e.target.value })}
-                            placeholder="01xxxxxxxxx"
                           />
                         ) : (
                           <span className="readable-cell">{appt.phone || '—'}</span>
@@ -284,7 +265,7 @@ export default function AppointmentsTable({
                           <select
                             name="date"
                             form={formId}
-                            value={formValues.date || ''}
+                            value={formValues.date}
                             onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
                           >
                             <option value="">اختر تاريخاً</option>
@@ -297,10 +278,7 @@ export default function AppointmentsTable({
                           <span className="readable-cell">
                             {appt.appointment_date
                               ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
+                                  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
                                 })
                               : '—'}
                           </span>
@@ -312,7 +290,7 @@ export default function AppointmentsTable({
                           <select
                             name="time"
                             form={formId}
-                            value={formValues.time || ''}
+                            value={formValues.time}
                             onChange={e => setFormValues({ ...formValues, time: e.target.value })}
                           >
                             <option value="">اختر وقتاً</option>
@@ -322,30 +300,19 @@ export default function AppointmentsTable({
                             })}
                           </select>
                         ) : (
-                          <span className="readable-cell">
-                            {appt.appointment_time
-                              ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true,
-                                }).replace('ص', 'صباحاً').replace('م', 'مساءً')
-                              : '—'}
-                          </span>
+                          <span className="readable-cell">{displayTime(appt.appointment_time)}</span>
                         )}
                       </td>
 
-                      <td>
-                        <span className="readable-cell">{appt.reason || '—'}</span>
-                      </td>
+                      <td><span className="readable-cell">{appt.reason || '—'}</span></td>
 
                       <td>
                         {isEditing ? (
                           <select
                             name="status"
                             form={formId}
-                            value={formValues.status || 'confirmed'}
+                            value={formValues.status}
                             onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                            className={`status-${formValues.status || 'confirmed'}`}
                           >
                             <option value="pending">معلق</option>
                             <option value="confirmed">مؤكد</option>
@@ -364,28 +331,15 @@ export default function AppointmentsTable({
                       <td className="actions-cell">
                         {isEditing ? (
                           <div className="edit-actions">
-                            <button
-                              type="submit"
-                              form={formId}
-                              className="save-btn"
-                              disabled={isPending}
-                            >
+                            <button type="submit" form={formId} disabled={isPending}>
                               {isPending ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => toggleEdit(appt.id)}
-                              className="cancel-btn"
-                            >
+                            <button type="button" onClick={() => toggleEdit(appt.id, appt)}>
                               إلغاء
                             </button>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => toggleEdit(appt.id, appt)}
-                            className="edit-btn"
-                          >
+                          <button type="button" onClick={() => toggleEdit(appt.id, appt)}>
                             تعديل
                           </button>
                         )}
@@ -402,9 +356,7 @@ export default function AppointmentsTable({
           </div>
         </div>
       ) : (
-        <div className="no-appointments">
-          لا توجد مواعيد مسجلة حاليًا
-        </div>
+        <div className="no-appointments">لا توجد مواعيد مسجلة حاليًا</div>
       )}
     </>
   );
