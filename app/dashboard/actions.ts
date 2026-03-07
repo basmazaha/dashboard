@@ -1,4 +1,3 @@
-// app/dashboard/actions.ts
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -46,7 +45,6 @@ export async function updateAppointment(formData: FormData) {
   return { success: true };
 }
 
-// إضافة action جديد لإعادة جلب المواعيد
 export async function fetchAppointments() {
   const { data: appointments, error } = await supabaseServer
     .from('appointments')
@@ -56,8 +54,8 @@ export async function fetchAppointments() {
 
   if (error) {
     console.error('خطأ في جلب المواعيد:', error);
-    return { error: error.message };
+    return { error: error.message, appointments: [] as Appointment[] };
   }
 
-  return { appointments };
+  return { appointments: appointments ?? [] };
 }
