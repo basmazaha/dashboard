@@ -2,28 +2,13 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
-
-export type WorkingHourInput = {
-  day_of_week: number;
-  is_open: boolean;
-  start_time?: string | null;
-  end_time?: string | null;
-  slot_duration_minutes?: number | null;
-  break_start?: string | null;
-  break_end?: string | null;
-};
-
-export type OffDay = {
-  id: string;
-  date: string;
-  description: string | null;
-};
+import type { WorkingHour, OffDay } from './types';
 
 type ActionResult<T = unknown> =
   | { success: true; data: T }
   | { success: false; error: string };
 
-export async function upsertWorkingHours(hours: WorkingHourInput[]): Promise<ActionResult<null>> {
+export async function upsertWorkingHours(hours: WorkingHour[]): Promise<ActionResult<null>> {
   try {
     const { error } = await supabaseServer
       .from('working_hours')
@@ -94,7 +79,7 @@ export async function deleteOffDay(id: string): Promise<ActionResult<null>> {
 }
 
 export async function getWorkingHoursAndOffDays(): Promise<
-  ActionResult<{ workingHours: WorkingHourInput[]; offDays: OffDay[] }>
+  ActionResult<{ workingHours: WorkingHour[]; offDays: OffDay[] }>
 > {
   const { data: hours, error: hoursError } = await supabaseServer
     .from('working_hours')
