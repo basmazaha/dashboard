@@ -1,6 +1,7 @@
 import { getWorkingHoursAndOffDays } from './actions';
 import WorkingHoursForm from './WorkingHoursForm';
 import OffDaysSection from './OffDaysSection';
+import type { WorkingHour, OffDay } from './types';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,16 +16,14 @@ export default async function WorkingHoursPage() {
     );
   }
 
-  // هنا نأخذ البيانات من result.data
   const { workingHours, offDays } = result.data;
 
-  // ضمان أن workingHours و offDays دائمًا مصفوفة (حتى لو فارغة)
   const safeWorkingHours = workingHours ?? [];
   const safeOffDays = offDays ?? [];
 
   const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
 
-  const defaultHours = daysOfWeek.map((dow) => {
+  const defaultHours: WorkingHour[] = daysOfWeek.map((dow) => {
     const existing = safeWorkingHours.find((h) => h.day_of_week === dow);
     return (
       existing || {
