@@ -15,14 +15,17 @@ export default async function WorkingHoursPage() {
     );
   }
 
+  // هنا نأخذ البيانات من result.data
+  const { workingHours, offDays } = result.data;
+
   // ضمان أن workingHours و offDays دائمًا مصفوفة (حتى لو فارغة)
-  const workingHours = result.workingHours ?? [];
-  const offDays = result.offDays ?? [];
+  const safeWorkingHours = workingHours ?? [];
+  const safeOffDays = offDays ?? [];
 
   const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
 
   const defaultHours = daysOfWeek.map((dow) => {
-    const existing = workingHours.find((h) => h.day_of_week === dow);
+    const existing = safeWorkingHours.find((h) => h.day_of_week === dow);
     return (
       existing || {
         day_of_week: dow,
@@ -39,7 +42,7 @@ export default async function WorkingHoursPage() {
   return (
     <div style={{ padding: '1.5rem' }}>
       <WorkingHoursForm initialHours={defaultHours} />
-      <OffDaysSection initialOffDays={offDays} />
+      <OffDaysSection initialOffDays={safeOffDays} />
     </div>
   );
 }
