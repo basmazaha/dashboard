@@ -1,4 +1,3 @@
-// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useTransition, useMemo } from 'react';
@@ -33,7 +32,7 @@ export default function AppointmentsTable({
   initialOffDays: string[];
   initialWorkingHours: WorkingHour[];
 }) {
-  const [appointments, setAppointments] = useState(initialAppointments);
+  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -47,7 +46,6 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
-  // التواريخ المتاحة (30 يوم قادمة)
   const availableDates = useMemo(() => {
     const dates: string[] = [];
     const today = new Date();
@@ -115,12 +113,11 @@ export default function AppointmentsTable({
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5);
 
-      // التحقق من الحجوزات بناءً على الحالة الحالية في الـ state (استبعاد الملغية)
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
         a.appointment_time === isoTime &&
         a.status !== 'cancelled' &&
-        a.id !== editingId  // استبعاد الموعد الحالي أثناء التعديل
+        a.id !== editingId  // استبعاد الموعد الذي نعدله حاليًا
       );
 
       if (!isBooked) {
@@ -162,7 +159,7 @@ export default function AppointmentsTable({
       const newDate = formData.get('date') as string | null;
       const newTime = formData.get('time') as string | null;
 
-      // تحديث متفائل محلي (optimistic update)
+      // Optimistic update محلي
       setAppointments(prev =>
         prev.map(appt =>
           appt.id === appointmentId
@@ -179,17 +176,18 @@ export default function AppointmentsTable({
       const result = await updateAppointment(formData);
 
       if ('success' in result) {
-        // إعادة جلب المواعيد من السيرفر للتأكد من المزامنة
+        // إعادة جلب البيانات الفعلية من السيرفر
         const fetchResult = await fetchAppointments();
+
         if ('appointments' in fetchResult) {
           setAppointments(fetchResult.appointments);
-        } else if ('error' in fetchResult) {
-          console.error('خطأ في إعادة جلب المواعيد:', fetchResult.error);
-          alert('حدث خطأ في إعادة تحميل المواعيد.');
+        } else {
+          console.error('فشل في إعادة جلب المواعيد بعد التحديث');
+          // لا نرجع للخلف هنا لأن الـ optimistic update جيد عادة
         }
-      } else if ('error' in result) {
-        // إعادة التحميل إذا فشل
-        alert('حدث خطأ أثناء الحفظ: ' + result.error);
+      } else {
+        alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
+        // إعادة تحميل كامل إذا فشل
         window.location.reload();
       }
 
