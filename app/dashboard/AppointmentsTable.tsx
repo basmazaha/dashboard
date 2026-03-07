@@ -38,6 +38,63 @@ function toFullTimeFormat(time: string | null): string {
   return '00:00:00';
 }
 
+// ── Server Action لإضافة موعد جديد ────────────────────────────────────────
+async function createAppointment(formData: FormData) {
+  'use server';
+
+  const full_name = (formData.get('full_name') as string)?.trim() || '';
+  const phone = (formData.get('phone') as string)?.trim() || '';
+  let appointment_date = formData.get('date') as string | null;
+  let appointment_time = formData.get('time') as string | null;
+  const reason = (formData.get('reason') as string)?.trim() || null;
+
+  const errors: Record<string, string> = {};
+
+  if (!full_name) errors.full_name = 'الاسم مطلوب';
+  else if (full_name.length < 3) errors.full_name = 'الاسم يجب أن يكون 3 حروف على الأقل';
+
+  if (!phone) errors.phone = 'رقم التليفون مطلوب';
+  else {
+    const cleaned = phone.replace(/\s+/g, '');
+    if (!/^\+?[0-9]+$/.test(cleaned)) {
+      errors.phone = 'رقم التليفون يجب أن يحتوي أرقام فقط أو + في البداية';
+    } else if (cleaned.length > 20) {
+      errors.phone = 'رقم التليفون لا يجب أن يتجاوز 20 رقم';
+    }
+  }
+
+  if (!appointment_date) errors.date = 'التاريخ مطلوب';
+  if (!appointment_time) errors.time = 'الوقت مطلوب';
+
+  if (Object.keys(errors).length > 0) {
+    return { errors };
+  }
+
+  // تحويل الوقت إلى صيغة PostgreSQL time
+  if (appointment_time) {
+    appointment_time = toFullTimeFormat(appointment_time);
+  }
+
+  const { error } = await supabaseServer
+    .from('appointments')
+    .insert({
+      full_name,
+      phone,
+      appointment_date,
+      appointment_time,
+      reason,
+      status: 'pending',
+      reminder_sent_6h: false,
+    });
+
+  if (error) {
+    console.error('خطأ إضافة الموعد:', error);
+    return { error: error.message || 'فشل في إضافة الموعد' };
+  }
+
+  return { success: true };
+}
+
 export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
@@ -53,13 +110,22 @@ export default function AppointmentsTable({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // حالة نافذة إضافة موعد جديد
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    full_name: '',
+    phone: '',
+    date: '',
+    time: '',
+    reason: '',
+  });
+  const [addErrors, setAddErrors] = useState<Record<string, string>>({});
+
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => {
-      map[wh.day_of_week] = wh;
-    });
+    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
     return map;
   }, [initialWorkingHours]);
 
@@ -94,8 +160,8 @@ export default function AppointmentsTable({
 
     const dateObj = new Date(selectedDate);
     const dayOfWeek = dateObj.getDay();
-
     const wh = workingHoursByDay[dayOfWeek];
+
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
@@ -173,7 +239,7 @@ export default function AppointmentsTable({
     return map[status ?? 'confirmed'] ?? 'مؤكد';
   };
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleUpdateSubmit = async (formData: FormData) => {
     setIsSubmitting(true);
     setFormErrors({});
 
@@ -182,19 +248,15 @@ export default function AppointmentsTable({
 
     const localErrors: Record<string, string> = {};
 
-    if (!full_name) {
-      localErrors.full_name = 'الاسم مطلوب';
-    } else if (full_name.length < 3) {
-      localErrors.full_name = 'الاسم يجب أن يكون 3 حروف على الأقل';
-    }
+    if (!full_name) localErrors.full_name = 'الاسم مطلوب';
+    else if (full_name.length < 3) localErrors.full_name = 'الاسم يجب أن يكون 3 حروف على الأقل';
 
-    if (!phone) {
-      localErrors.phone = 'رقم التليفون مطلوب';
-    } else {
-      const phoneDigits = phone.replace(/\s+/g, '');
-      if (!/^\+?[0-9]+$/.test(phoneDigits)) {
+    if (!phone) localErrors.phone = 'رقم التليفون مطلوب';
+    else {
+      const cleaned = phone.replace(/\s+/g, '');
+      if (!/^\+?[0-9]+$/.test(cleaned)) {
         localErrors.phone = 'رقم التليفون يجب أن يحتوي أرقام فقط أو +';
-      } else if (phoneDigits.length > 20) {
+      } else if (cleaned.length > 20) {
         localErrors.phone = 'رقم التليفون لا يجب أن يتجاوز 20 رقم';
       }
     }
@@ -208,7 +270,6 @@ export default function AppointmentsTable({
     const appointmentId = formData.get('appointment_id') as string;
     const originalAppt = appointments.find(a => a.id === appointmentId);
 
-    // Optimistic update
     setAppointments(prev =>
       prev.map(appt =>
         appt.id === appointmentId
@@ -240,7 +301,7 @@ export default function AppointmentsTable({
       setEditingId(null);
       setFormValues({});
     } else {
-      alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
+      alert('حدث خطأ أثناء الحفظ: ' + ((result as any).error || 'غير معروف'));
       if (originalAppt) {
         setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
       }
@@ -249,8 +310,54 @@ export default function AppointmentsTable({
     setIsSubmitting(false);
   };
 
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddErrors({});
+
+    const formData = new FormData();
+    formData.append('full_name', addForm.full_name);
+    formData.append('phone', addForm.phone);
+    formData.append('date', addForm.date);
+    formData.append('time', addForm.time);
+    formData.append('reason', addForm.reason);
+
+    const result = await createAppointment(formData);
+
+    if ('success' in result) {
+      const freshData = await fetchAppointments();
+      if ('appointments' in freshData) {
+        setAppointments(freshData.appointments ?? []);
+      }
+      setShowAddModal(false);
+      setAddForm({ full_name: '', phone: '', date: '', time: '', reason: '' });
+      setAddErrors({});
+    } else if ('errors' in result) {
+      setAddErrors(result.errors as Record<string, string>);
+    } else {
+      alert('حدث خطأ: ' + ((result as any).error || 'غير معروف'));
+    }
+  };
+
   return (
     <>
+      <div className="mb-6 flex justify-end">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="
+            px-6 py-2.5
+            bg-indigo-600
+            hover:bg-indigo-700
+            text-white
+            font-medium
+            rounded-md
+            shadow-sm
+            transition-all
+          "
+        >
+          + إضافة حجز جديد
+        </button>
+      </div>
+
       {appointments.length > 0 ? (
         <div className="appointments-table-container">
           <div className="overflow-x-auto">
@@ -267,7 +374,7 @@ export default function AppointmentsTable({
                 </tr>
               </thead>
               <tbody>
-                {appointments.map(appt => {
+                {appointments.map((appt) => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : appt.appointment_date;
@@ -311,7 +418,7 @@ export default function AppointmentsTable({
                                 setFormValues({ ...formValues, phone: e.target.value });
                                 setFormErrors(prev => ({ ...prev, phone: '' }));
                               }}
-                              placeholder="01xxxxxxxxx أو +201..."
+                              placeholder="01xxxxxxxxx أو +20..."
                               className={formErrors.phone ? 'input-error' : ''}
                             />
                             {formErrors.phone && (
@@ -464,7 +571,7 @@ export default function AppointmentsTable({
                           </button>
                         )}
 
-                        <form id={formId} action={handleSubmit} className="hidden">
+                        <form id={formId} action={handleUpdateSubmit} className="hidden">
                           <input type="hidden" name="appointment_id" value={appt.id} />
                         </form>
                       </td>
@@ -478,6 +585,126 @@ export default function AppointmentsTable({
       ) : (
         <div className="no-appointments">
           لا توجد مواعيد مسجلة حاليًا
+        </div>
+      )}
+
+      {/* نافذة إضافة موعد جديد */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-xl font-bold mb-5 text-gray-800">إضافة موعد جديد</h3>
+
+              <form onSubmit={handleAddSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    الاسم الكامل <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.full_name}
+                    onChange={e => setAddForm({ ...addForm, full_name: e.target.value })}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      addErrors.full_name ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {addErrors.full_name && (
+                    <p className="mt-1 text-sm text-red-600">{addErrors.full_name}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    رقم التليفون <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={addForm.phone}
+                    onChange={e => setAddForm({ ...addForm, phone: e.target.value })}
+                    placeholder="01xxxxxxxxx أو +201..."
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      addErrors.phone ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  />
+                  {addErrors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{addErrors.phone}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    التاريخ <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={addForm.date}
+                    onChange={e => setAddForm({ ...addForm, date: e.target.value, time: '' })}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      addErrors.date ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">اختر التاريخ</option>
+                    {availableDates.map(d => {
+                      const [iso, label] = d.split('|');
+                      return <option key={iso} value={iso}>{label}</option>;
+                    })}
+                  </select>
+                  {addErrors.date && (
+                    <p className="mt-1 text-sm text-red-600">{addErrors.date}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    الوقت <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={addForm.time}
+                    onChange={e => setAddForm({ ...addForm, time: e.target.value })}
+                    disabled={!addForm.date}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                      addErrors.time ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    <option value="">اختر الوقت</option>
+                    {getAvailableTimesForDate(addForm.date).map(t => {
+                      const [iso, label] = t.split('|');
+                      return <option key={iso} value={iso}>{label}</option>;
+                    })}
+                  </select>
+                  {addErrors.time && (
+                    <p className="mt-1 text-sm text-red-600">{addErrors.time}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">السبب (اختياري)</label>
+                  <textarea
+                    value={addForm.reason}
+                    onChange={e => setAddForm({ ...addForm, reason: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-4 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-6 py-2.5 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'جاري الإضافة...' : 'إضافة الموعد'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
     </>
