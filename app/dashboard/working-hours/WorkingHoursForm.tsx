@@ -1,19 +1,18 @@
-// app/dashboard/working-hours/WorkingHoursForm.tsx
 'use client';
 
 import { useState } from 'react';
 import { upsertWorkingHours } from './actions';
 import './working-hours.css';
 
-const DAY_NAMES = [
-  'السبت',    // 6
-  'الأحد',    // 0
-  'الإثنين',  // 1
-  'الثلاثاء', // 2
-  'الأربعاء', // 3
-  'الخميس',   // 4
-  'الجمعة',   // 5
-];
+const DAY_NAMES: Record<number, string> = {
+  0: 'الأحد',
+  1: 'الإثنين',
+  2: 'الثلاثاء',
+  3: 'الأربعاء',
+  4: 'الخميس',
+  5: 'الجمعة',
+  6: 'السبت',
+};
 
 type WorkingHour = {
   day_of_week: number;
@@ -43,25 +42,14 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     );
   };
 
-  const handleTimeChange = (
+  const handleChange = (
     dayOfWeek: number,
-    field: 'start_time' | 'end_time' | 'break_start' | 'break_end',
-    value: string
+    field: keyof WorkingHour,
+    value: string | number | null
   ) => {
     setHours((prev) =>
       prev.map((h) =>
-        h.day_of_week === dayOfWeek ? { ...h, [field]: value || null } : h
-      )
-    );
-  };
-
-  const handleDurationChange = (dayOfWeek: number, value: string) => {
-    const num = parseInt(value, 10);
-    setHours((prev) =>
-      prev.map((h) =>
-        h.day_of_week === dayOfWeek
-          ? { ...h, slot_duration_minutes: isNaN(num) ? null : num }
-          : h
+        h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h
       )
     );
   };
@@ -73,145 +61,117 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     const result = await upsertWorkingHours(hours);
 
     if (result.success) {
-      setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
+      setMessage({ type: 'success', text: 'تم الحفظ بنجاح' });
       setIsEditing(false);
     } else {
-      setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
+      setMessage({ type: 'error', text: result.error || 'فشل الحفظ' });
     }
 
     setSaving(false);
   };
 
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-    setMessage(null);
-  };
-
   return (
-    <section className="working-hours-section">
+    <div className="working-hours-section">
       <div className="section-header">
-        <h2 className="section-title">ساعات العمل الأسبوعية</h2>
-        <div className="header-buttons">
+        <h2>ساعات العمل الأسبوعية</h2>
+        <div>
           {isEditing ? (
             <>
-              <button
-                onClick={toggleEdit}
-                className="btn btn-cancel"
-                disabled={saving}
-              >
+              <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
                 إلغاء
               </button>
-              <button
-                onClick={handleSave}
-                className="btn btn-save"
-                disabled={saving}
-              >
+              <button className="btn btn-save" onClick={handleSave} disabled={saving}>
                 {saving ? 'جاري الحفظ...' : 'حفظ'}
               </button>
             </>
           ) : (
-            <button
-              onClick={toggleEdit}
-              className="btn btn-edit"
-            >
+            <button className="btn btn-edit" onClick={() => setIsEditing(true)}>
               تعديل
             </button>
           )}
         </div>
       </div>
 
-      {message && (
-        <p className={`message ${message.type}`}>{message.text}</p>
-      )}
+      {message && <div className={`message ${message.type}`}>{message.text}</div>}
 
-      <div className="table-container">
-        <table className="working-hours-table">
+      <div className="table-responsive">
+        <table className="data-table">
           <thead>
             <tr>
               <th>يوم الأسبوع</th>
               <th>مفتوح</th>
-              <th>وقت البداية</th>
-              <th>وقت النهاية</th>
-              <th>مدة الفتحة (دقائق)</th>
-              <th>بداية الاستراحة</th>
-              <th>نهاية الاستراحة</th>
+              <th>start_time</th>
+              <th>end_time</th>
+              <th>slot_duration_minutes</th>
+              <th>break_start</th>
+              <th>break_end</th>
             </tr>
           </thead>
           <tbody>
-            {hours.sort((a, b) => a.day_of_week - b.day_of_week).map((day) => (
-              <tr key={day.day_of_week}>
-                <td>{DAY_NAMES[day.day_of_week]}</td>
+            {hours.map((row) => (
+              <tr key={row.day_of_week}>
+                <td>{DAY_NAMES[row.day_of_week]}</td>
                 <td>
                   {isEditing ? (
                     <input
                       type="checkbox"
-                      checked={day.is_open}
-                      onChange={() => handleToggleOpen(day.day_of_week)}
+                      checked={row.is_open}
+                      onChange={() => handleToggleOpen(row.day_of_week)}
                     />
-                  ) : (
-                    day.is_open ? 'نعم' : 'لا'
-                  )}
+                  ) : row.is_open ? 'TRUE' : 'FALSE'}
                 </td>
                 <td>
                   {isEditing ? (
                     <input
                       type="time"
-                      value={day.start_time || ''}
-                      onChange={(e) => handleTimeChange(day.day_of_week, 'start_time', e.target.value)}
+                      value={row.start_time || ''}
+                      onChange={(e) => handleChange(row.day_of_week, 'start_time', e.target.value)}
                     />
-                  ) : (
-                    day.start_time || '—'
-                  )}
+                  ) : row.start_time || '—'}
                 </td>
                 <td>
                   {isEditing ? (
                     <input
                       type="time"
-                      value={day.end_time || ''}
-                      onChange={(e) => handleTimeChange(day.day_of_week, 'end_time', e.target.value)}
+                      value={row.end_time || ''}
+                      onChange={(e) => handleChange(row.day_of_week, 'end_time', e.target.value)}
                     />
-                  ) : (
-                    day.end_time || '—'
-                  )}
+                  ) : row.end_time || '—'}
                 </td>
                 <td>
                   {isEditing ? (
                     <input
                       type="number"
-                      value={day.slot_duration_minutes || ''}
-                      onChange={(e) => handleDurationChange(day.day_of_week, e.target.value)}
+                      value={row.slot_duration_minutes ?? ''}
+                      onChange={(e) =>
+                        handleChange(row.day_of_week, 'slot_duration_minutes', e.target.value ? Number(e.target.value) : null)
+                      }
                     />
-                  ) : (
-                    day.slot_duration_minutes || '—'
-                  )}
+                  ) : row.slot_duration_minutes ?? '—'}
                 </td>
                 <td>
                   {isEditing ? (
                     <input
                       type="time"
-                      value={day.break_start || ''}
-                      onChange={(e) => handleTimeChange(day.day_of_week, 'break_start', e.target.value)}
+                      value={row.break_start || ''}
+                      onChange={(e) => handleChange(row.day_of_week, 'break_start', e.target.value)}
                     />
-                  ) : (
-                    day.break_start || '—'
-                  )}
+                  ) : row.break_start || '—'}
                 </td>
                 <td>
                   {isEditing ? (
                     <input
                       type="time"
-                      value={day.break_end || ''}
-                      onChange={(e) => handleTimeChange(day.day_of_week, 'break_end', e.target.value)}
+                      value={row.break_end || ''}
+                      onChange={(e) => handleChange(row.day_of_week, 'break_end', e.target.value)}
                     />
-                  ) : (
-                    day.break_end || '—'
-                  )}
+                  ) : row.break_end || '—'}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </section>
+    </div>
   );
 }
