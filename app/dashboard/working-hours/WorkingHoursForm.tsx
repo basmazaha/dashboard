@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { upsertWorkingHours } from './actions';
+import type { WorkingHour } from './types';
 import './working-hours.css';
 
 const DAY_NAMES: Record<number, string> = {
@@ -12,16 +13,6 @@ const DAY_NAMES: Record<number, string> = {
   4: 'الخميس',
   5: 'الجمعة',
   6: 'السبت',
-};
-
-type WorkingHour = {
-  day_of_week: number;
-  is_open: boolean;
-  start_time: string | null;
-  end_time: string | null;
-  slot_duration_minutes: number | null;
-  break_start: string | null;
-  break_end: string | null;
 };
 
 type Props = {
@@ -39,7 +30,7 @@ function formatArabicTime(time: string | null): string {
   const displayHour = hours % 12 || 12;
   const displayMinutes = minutes.toString().padStart(2, '0');
 
-  return `${displayHour}:${displayMinutes} ${period}`;
+  return `\( {displayHour}: \){displayMinutes} ${period}`;
 }
 
 export default function WorkingHoursForm({ initialHours }: Props) {
@@ -145,9 +136,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.start_time || ''}
                       onChange={e => handleChange(day.day_of_week, 'start_time', e.target.value)}
                     />
-                  ) : (
-                    formatArabicTime(day.start_time)
-                  )}
+                  ) : formatArabicTime(day.start_time)}
                 </td>
 
                 <td className="time-cell">
@@ -158,9 +147,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.end_time || ''}
                       onChange={e => handleChange(day.day_of_week, 'end_time', e.target.value)}
                     />
-                  ) : (
-                    formatArabicTime(day.end_time)
-                  )}
+                  ) : formatArabicTime(day.end_time)}
                 </td>
 
                 <td className="duration-cell">
@@ -179,9 +166,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                         )
                       }
                     />
-                  ) : (
-                    day.slot_duration_minutes ?? '—'
-                  )}
+                  ) : day.slot_duration_minutes ?? '—'}
                 </td>
 
                 <td className="time-cell">
@@ -192,9 +177,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.break_start || ''}
                       onChange={e => handleChange(day.day_of_week, 'break_start', e.target.value)}
                     />
-                  ) : (
-                    formatArabicTime(day.break_start)
-                  )}
+                  ) : formatArabicTime(day.break_start)}
                 </td>
 
                 <td className="time-cell">
@@ -205,9 +188,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.break_end || ''}
                       onChange={e => handleChange(day.day_of_week, 'break_end', e.target.value)}
                     />
-                  ) : (
-                    formatArabicTime(day.break_end)
-                  )}
+                  ) : formatArabicTime(day.break_end)}
                 </td>
               </tr>
             ))}
