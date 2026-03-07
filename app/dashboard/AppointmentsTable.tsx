@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react';
 import { updateAppointment, fetchAppointments } from './actions';
 
+// تعريف النوع هنا أيضًا للـ client component
 type Appointment = {
   id: string;
   full_name: string | null;
@@ -50,7 +51,7 @@ export default function AppointmentsTable({
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | undefined>>({});
   const [isPending, startTransition] = useTransition();
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
@@ -96,7 +97,9 @@ export default function AppointmentsTable({
     const dayOfWeek = dateObj.getDay();
 
     const wh = workingHoursByDay[dayOfWeek];
-    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
+    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) {
+      return [];
+    }
 
     const start = new Date(`2000-01-01T${wh.start_time}`);
     const end = new Date(`2000-01-01T${wh.end_time}`);
@@ -113,11 +116,17 @@ export default function AppointmentsTable({
 
     const times: string[] = [];
 
-    for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
+    for (
+      let current = start.getTime();
+      current < end.getTime();
+      current += slotMs
+    ) {
       const slotStart = current;
       const slotEnd = current + slotMs;
 
-      if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
+      if (slotStart < breakEndMs && slotEnd > breakStartMs) {
+        continue;
+      }
 
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5);
@@ -134,7 +143,9 @@ export default function AppointmentsTable({
           hour: '2-digit',
           minute: '2-digit',
           hour12: true,
-        }).replace('ص', 'صباحاً').replace('م', 'مساءً');
+        })
+          .replace('ص', 'صباحاً')
+          .replace('م', 'مساءً');
 
         times.push(`${isoTime}|${formatted}`);
       }
@@ -226,8 +237,8 @@ export default function AppointmentsTable({
         }
         setFieldErrors({});
       } else {
-        // نعرض الخطأ من السيرفر تحت الحقول المناسبة إن أمكن
         const serverError = result.error || 'حدث خطأ أثناء الحفظ';
+
         if (serverError.includes('اسم')) {
           setFieldErrors(prev => ({ ...prev, full_name: serverError }));
         } else if (serverError.includes('تليفون')) {
@@ -246,7 +257,7 @@ export default function AppointmentsTable({
     });
   };
 
-  const hasErrors = Object.keys(fieldErrors).length > 0;
+  const hasErrors = Object.values(fieldErrors).some(Boolean);
   const isFormValid = formValues.full_name?.trim() && formValues.phone?.trim() && !hasErrors;
 
   return (
@@ -485,7 +496,9 @@ export default function AppointmentsTable({
                           </button>
                         )}
 
-                        <form id={formId} action={handleSubmit} className="hidden" />
+                        <form id={formId} action={handleSubmit} className="hidden">
+                          <input type="hidden" name="appointment_id" value={appt.id} />
+                        </form>
                       </td>
                     </tr>
                   );
