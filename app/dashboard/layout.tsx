@@ -1,4 +1,4 @@
-// app/dashboard/layout.tsx
+//  app/dashboard/layout.tsx
 import type { ReactNode } from 'react';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { SignOutButton } from '@clerk/nextjs';
