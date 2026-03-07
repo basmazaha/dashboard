@@ -1,4 +1,3 @@
-// app/dashboard/working-hours/OffDaysSection.tsx
 'use client';
 
 import { useState } from 'react';
@@ -33,14 +32,21 @@ export default function OffDaysSection({ initialOffDays }: Props) {
 
     const formData = new FormData();
     formData.append('date', newDate);
-    formData.append('description', newDescription.trim() || null);
+
+    // حل الخطأ: لا نضيف الحقل إطلاقًا إذا كان فارغًا، أو نضيفه كـ ''
+    const trimmedDesc = newDescription.trim();
+    if (trimmedDesc) {
+      formData.append('description', trimmedDesc);
+    }
+    // لو عايز دايمًا تضيفه حتى لو فارغ → استخدم:
+    // formData.append('description', trimmedDesc || '');
 
     const result = await addOffDay(formData);
 
     if (result.success) {
       setOffDays(prev => [
         ...prev,
-        { id: `temp-${Date.now()}`, date: newDate, description: newDescription || null }
+        { id: `temp-${Date.now()}`, date: newDate, description: trimmedDesc || null }
       ]);
       setNewDate('');
       setNewDescription('');
