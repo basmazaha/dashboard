@@ -1,3 +1,4 @@
+// app/dashboard/working-hours/WorkingHoursForm.tsx
 'use client';
 
 import { useState } from 'react';
@@ -5,13 +6,13 @@ import { upsertWorkingHours } from './actions';
 import './working-hours.css';
 
 const DAY_NAMES = [
-  'الأحد',
-  'الإثنين',
-  'الثلاثاء',
-  'الأربعاء',
-  'الخميس',
-  'الجمعة',
-  'السبت',
+  'السبت',    // 6
+  'الأحد',    // 0
+  'الإثنين',  // 1
+  'الثلاثاء', // 2
+  'الأربعاء', // 3
+  'الخميس',   // 4
+  'الجمعة',   // 5
 ];
 
 type WorkingHour = {
@@ -19,7 +20,7 @@ type WorkingHour = {
   is_open: boolean;
   start_time: string | null;
   end_time: string | null;
-  slot_duration_minutes: number;
+  slot_duration_minutes: number | null;
   break_start: string | null;
   break_end: string | null;
 };
@@ -59,7 +60,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     setHours((prev) =>
       prev.map((h) =>
         h.day_of_week === dayOfWeek
-          ? { ...h, slot_duration_minutes: isNaN(num) ? 15 : num }
+          ? { ...h, slot_duration_minutes: isNaN(num) ? null : num }
           : h
       )
     );
@@ -82,155 +83,135 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   };
 
   const toggleEdit = () => {
-    if (isEditing) {
-      // إلغاء التعديل بدون حفظ
-      setIsEditing(false);
-      setMessage(null);
-    } else {
-      setIsEditing(true);
-    }
+    setIsEditing(!isEditing);
+    setMessage(null);
   };
 
   return (
-    <div className="working-hours-container">
+    <section className="working-hours-section">
       <div className="section-header">
         <h2 className="section-title">ساعات العمل الأسبوعية</h2>
-        <div className="header-actions">
+        <div className="header-buttons">
           {isEditing ? (
             <>
               <button
-                type="button"
                 onClick={toggleEdit}
-                className="btn btn-secondary"
+                className="btn btn-cancel"
                 disabled={saving}
               >
                 إلغاء
               </button>
               <button
-                type="button"
                 onClick={handleSave}
+                className="btn btn-save"
                 disabled={saving}
-                className="btn btn-primary"
               >
-                {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                {saving ? 'جاري الحفظ...' : 'حفظ'}
               </button>
             </>
           ) : (
             <button
-              type="button"
               onClick={toggleEdit}
               className="btn btn-edit"
             >
-              تعديل ساعات العمل
+              تعديل
             </button>
           )}
         </div>
       </div>
 
       {message && (
-        <div className={`message ${message.type}`}>
-          {message.text}
-        </div>
+        <p className={`message ${message.type}`}>{message.text}</p>
       )}
 
-      <div className="days-list">
-        {hours.map((day) => (
-          <div key={day.day_of_week} className="day-item">
-            <div className="day-header">
-              <h3 className="day-name">{DAY_NAMES[day.day_of_week]}</h3>
-              {isEditing ? (
-                <label className="open-toggle">
-                  <input
-                    type="checkbox"
-                    checked={day.is_open}
-                    onChange={() => handleToggleOpen(day.day_of_week)}
-                  />
-                  <span>مفتوح</span>
-                </label>
-              ) : (
-                <span className={`status-badge ${day.is_open ? 'status-open' : 'status-closed'}`}>
-                  {day.is_open ? 'مفتوح' : 'مغلق'}
-                </span>
-              )}
-            </div>
-
-            <div className="day-details">
-              <div className="detail-row">
-                <span className="label">من:</span>
-                {isEditing && day.is_open ? (
-                  <input
-                    type="time"
-                    value={day.start_time || ''}
-                    onChange={(e) => handleTimeChange(day.day_of_week, 'start_time', e.target.value)}
-                    className="time-input"
-                  />
-                ) : (
-                  <span className="value">{day.start_time || '—'}</span>
-                )}
-              </div>
-
-              <div className="detail-row">
-                <span className="label">إلى:</span>
-                {isEditing && day.is_open ? (
-                  <input
-                    type="time"
-                    value={day.end_time || ''}
-                    onChange={(e) => handleTimeChange(day.day_of_week, 'end_time', e.target.value)}
-                    className="time-input"
-                  />
-                ) : (
-                  <span className="value">{day.end_time || '—'}</span>
-                )}
-              </div>
-
-              <div className="detail-row">
-                <span className="label">مدة الكشف:</span>
-                {isEditing && day.is_open ? (
-                  <input
-                    type="number"
-                    min="5"
-                    max="60"
-                    step="5"
-                    value={day.slot_duration_minutes}
-                    onChange={(e) => handleDurationChange(day.day_of_week, e.target.value)}
-                    className="duration-input"
-                  />
-                ) : (
-                  <span className="value">{day.slot_duration_minutes} دقيقة</span>
-                )}
-              </div>
-
-              <div className="detail-row">
-                <span className="label">استراحة من:</span>
-                {isEditing && day.is_open ? (
-                  <input
-                    type="time"
-                    value={day.break_start || ''}
-                    onChange={(e) => handleTimeChange(day.day_of_week, 'break_start', e.target.value)}
-                    className="time-input"
-                  />
-                ) : (
-                  <span className="value">{day.break_start || '—'}</span>
-                )}
-              </div>
-
-              <div className="detail-row">
-                <span className="label">استراحة إلى:</span>
-                {isEditing && day.is_open ? (
-                  <input
-                    type="time"
-                    value={day.break_end || ''}
-                    onChange={(e) => handleTimeChange(day.day_of_week, 'break_end', e.target.value)}
-                    className="time-input"
-                  />
-                ) : (
-                  <span className="value">{day.break_end || '—'}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+      <div className="table-container">
+        <table className="working-hours-table">
+          <thead>
+            <tr>
+              <th>يوم الأسبوع</th>
+              <th>مفتوح</th>
+              <th>وقت البداية</th>
+              <th>وقت النهاية</th>
+              <th>مدة الفتحة (دقائق)</th>
+              <th>بداية الاستراحة</th>
+              <th>نهاية الاستراحة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {hours.sort((a, b) => a.day_of_week - b.day_of_week).map((day) => (
+              <tr key={day.day_of_week}>
+                <td>{DAY_NAMES[day.day_of_week]}</td>
+                <td>
+                  {isEditing ? (
+                    <input
+                      type="checkbox"
+                      checked={day.is_open}
+                      onChange={() => handleToggleOpen(day.day_of_week)}
+                    />
+                  ) : (
+                    day.is_open ? 'نعم' : 'لا'
+                  )}
+                </td>
+                <td>
+                  {isEditing ? (
+                    <input
+                      type="time"
+                      value={day.start_time || ''}
+                      onChange={(e) => handleTimeChange(day.day_of_week, 'start_time', e.target.value)}
+                    />
+                  ) : (
+                    day.start_time || '—'
+                  )}
+                </td>
+                <td>
+                  {isEditing ? (
+                    <input
+                      type="time"
+                      value={day.end_time || ''}
+                      onChange={(e) => handleTimeChange(day.day_of_week, 'end_time', e.target.value)}
+                    />
+                  ) : (
+                    day.end_time || '—'
+                  )}
+                </td>
+                <td>
+                  {isEditing ? (
+                    <input
+                      type="number"
+                      value={day.slot_duration_minutes || ''}
+                      onChange={(e) => handleDurationChange(day.day_of_week, e.target.value)}
+                    />
+                  ) : (
+                    day.slot_duration_minutes || '—'
+                  )}
+                </td>
+                <td>
+                  {isEditing ? (
+                    <input
+                      type="time"
+                      value={day.break_start || ''}
+                      onChange={(e) => handleTimeChange(day.day_of_week, 'break_start', e.target.value)}
+                    />
+                  ) : (
+                    day.break_start || '—'
+                  )}
+                </td>
+                <td>
+                  {isEditing ? (
+                    <input
+                      type="time"
+                      value={day.break_end || ''}
+                      onChange={(e) => handleTimeChange(day.day_of_week, 'break_end', e.target.value)}
+                    />
+                  ) : (
+                    day.break_end || '—'
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </section>
   );
 }
