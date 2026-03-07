@@ -1,8 +1,9 @@
-// app/dashboard/working-hours/page.tsx
-
 import { getWorkingHoursAndOffDays } from './actions';
 import WorkingHoursForm from './WorkingHoursForm';
 import OffDaysSection from './OffDaysSection';
+
+// يمكنك إضافة السطر التالي إذا أردت أن يتم تحميل الـ CSS حتى لو لم يُرندر WorkingHoursForm
+// import './working-hours.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,6 @@ export default async function WorkingHoursPage() {
 
   const daysOfWeek = [0, 1, 2, 3, 4, 5, 6];
 
-  // هنا TypeScript متأكد إن workingHours هو array
   const defaultHours = daysOfWeek.map((dow) => {
     const existing = workingHours.find((h) => h.day_of_week === dow);
     return (
