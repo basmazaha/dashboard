@@ -1,9 +1,7 @@
-// app/dashboard/working-hours/OffDaysSection.tsx
-
 'use client';
 
 import { useState } from 'react';
-import { addOffDay, deleteOffDay } from './actions';
+import { addOffDay, deleteOffDay, upsertOffDays } from './actions';
 
 type OffDay = {
   id: string;
@@ -17,10 +15,12 @@ type Props = {
 
 export default function OffDaysSection({ initialOffDays }: Props) {
   const [offDays, setOffDays] = useState<OffDay[]>(initialOffDays);
+  const [originalOffDays, setOriginalOffDays] = useState<OffDay[]>(initialOffDays); // للإلغاء
   const [isEditing, setIsEditing] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleAdd = async () => {
@@ -34,22 +34,14 @@ export default function OffDaysSection({ initialOffDays }: Props) {
 
     const formData = new FormData();
     formData.append('date', newDate);
-
-    // حل الخطأ: لا نضيف الحقل إطلاقًا إذا كان فارغًا، أو نضيفه كـ ''
-    const trimmedDesc = newDescription.trim();
-    if (trimmedDesc) {
-      formData.append('description', trimmedDesc);
-    }
-    // لو عايز دايمًا تضيفه حتى لو فارغ → استخدم:
-    // formData.append('description', trimmedDesc || '');
+    const trimmed = newDescription.trim();
+    if (trimmed) formData.append('description', trimmed);
 
     const result = await addOffDay(formData);
 
-    if (result.success) {
-      setOffDays(prev => [
-        ...prev,
-        { id: `temp-${Date.now()}`, date: newDate, description: trimmedDesc || null }
-      ]);
+    if (result.success && result.newDay) {
+      setOffDays(prev => [...prev, result.newDay]);
+      setOriginalOffDays(prev => [...prev, result.newDay]);
       setNewDate('');
       setNewDescription('');
       setMessage({ type: 'success', text: 'تم إضافة اليوم المغلق بنجاح' });
@@ -67,27 +59,68 @@ export default function OffDaysSection({ initialOffDays }: Props) {
 
     if (result.success) {
       setOffDays(prev => prev.filter(d => d.id !== id));
+      setOriginalOffDays(prev => prev.filter(d => d.id !== id));
       setMessage({ type: 'success', text: 'تم الحذف بنجاح' });
     } else {
       setMessage({ type: 'error', text: result.error || 'فشل الحذف' });
     }
   };
 
+  const handleChange = (id: string, field: 'date' | 'description', value: string) => {
+    setOffDays(prev =>
+      prev.map(d =>
+        d.id === id
+          ? { ...d, [field]: field === 'description' ? (value.trim() || null) : value }
+          : d
+      )
+    );
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    const result = await upsertOffDays(offDays);
+
+    if (result.success) {
+      setOriginalOffDays(offDays);
+      setMessage({ type: 'success', text: 'تم حفظ التغييرات بنجاح' });
+      setIsEditing(false);
+    } else {
+      setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
+    }
+
+    setSaving(false);
+  };
+
+  const handleCancel = () => {
+    setOffDays(originalOffDays);
+    setIsEditing(false);
+    setMessage(null);
+  };
+
   return (
     <section className="off-days-section">
       <div className="section-header">
         <h2>الأيام المغلقة (العطلات الاستثنائية)</h2>
-        <button
-          className="btn btn-edit"
-          onClick={() => setIsEditing(!isEditing)}
-        >
-          {isEditing ? 'إنهاء التعديل' : 'تعديل'}
-        </button>
+
+        {isEditing ? (
+          <div className="edit-controls">
+            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving || adding}>
+              إلغاء
+            </button>
+            <button className="btn btn-save" onClick={handleSave} disabled={saving || adding}>
+              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+            </button>
+          </div>
+        ) : (
+          <button className="btn btn-edit" onClick={() => setIsEditing(true)}>
+            تعديل
+          </button>
+        )}
       </div>
 
-      {message && (
-        <div className={`message ${message.type}`}>{message.text}</div>
-      )}
+      {message && <div className={`message ${message.type}`}>{message.text}</div>}
 
       <div className="table-wrapper">
         <table className="data-table">
@@ -105,20 +138,16 @@ export default function OffDaysSection({ initialOffDays }: Props) {
                   {isEditing ? (
                     <input
                       type="date"
-                      defaultValue={day.date}
-                      onChange={e => {
-                        const newVal = e.target.value;
-                        setOffDays(prev =>
-                          prev.map(d => d.id === day.id ? { ...d, date: newVal } : d)
-                        );
-                      }}
+                      className="form-input"
+                      value={day.date}
+                      onChange={e => handleChange(day.id, 'date', e.target.value)}
                     />
                   ) : (
                     new Date(day.date).toLocaleDateString('ar-EG', {
                       weekday: 'long',
                       year: 'numeric',
                       month: 'long',
-                      day: 'numeric'
+                      day: 'numeric',
                     })
                   )}
                 </td>
@@ -126,22 +155,18 @@ export default function OffDaysSection({ initialOffDays }: Props) {
                   {isEditing ? (
                     <input
                       type="text"
-                      defaultValue={day.description || ''}
-                      onChange={e => {
-                        const newVal = e.target.value;
-                        setOffDays(prev =>
-                          prev.map(d => d.id === day.id ? { ...d, description: newVal || null } : d)
-                        );
-                      }}
+                      className="form-input"
+                      value={day.description || ''}
+                      onChange={e => handleChange(day.id, 'description', e.target.value)}
+                      placeholder="اختياري"
                     />
-                  ) : day.description || '—'}
+                  ) : (
+                    day.description || '—'
+                  )}
                 </td>
                 {isEditing && (
                   <td>
-                    <button
-                      className="btn btn-delete small"
-                      onClick={() => handleDelete(day.id)}
-                    >
+                    <button className="btn btn-delete small" onClick={() => handleDelete(day.id)}>
                       حذف
                     </button>
                   </td>
@@ -158,12 +183,14 @@ export default function OffDaysSection({ initialOffDays }: Props) {
           <div className="add-form">
             <input
               type="date"
+              className="form-input"
               value={newDate}
               onChange={e => setNewDate(e.target.value)}
               required
             />
             <input
               type="text"
+              className="form-input"
               placeholder="الوصف (اختياري)"
               value={newDescription}
               onChange={e => setNewDescription(e.target.value)}
@@ -171,7 +198,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
             <button
               className="btn btn-add"
               onClick={handleAdd}
-              disabled={adding}
+              disabled={adding || saving}
             >
               {adding ? 'جاري الإضافة...' : 'إضافة'}
             </button>
