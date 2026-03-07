@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from 'react';
 import { updateAppointment, fetchAppointments } from './actions';
 
+// تعريف النوع هنا أيضًا للـ client component
 type Appointment = {
   id: string;
   full_name: string | null;
@@ -117,7 +118,7 @@ export default function AppointmentsTable({
         a.appointment_date === selectedDate &&
         a.appointment_time === isoTime &&
         a.status !== 'cancelled' &&
-        a.id !== editingId  // استبعاد الموعد الذي نعدله حاليًا
+        a.id !== editingId
       );
 
       if (!isBooked) {
@@ -159,7 +160,7 @@ export default function AppointmentsTable({
       const newDate = formData.get('date') as string | null;
       const newTime = formData.get('time') as string | null;
 
-      // Optimistic update محلي
+      // Optimistic update
       setAppointments(prev =>
         prev.map(appt =>
           appt.id === appointmentId
@@ -176,18 +177,16 @@ export default function AppointmentsTable({
       const result = await updateAppointment(formData);
 
       if ('success' in result) {
-        // إعادة جلب البيانات الفعلية من السيرفر
+        // إعادة جلب البيانات من السيرفر
         const fetchResult = await fetchAppointments();
 
         if ('appointments' in fetchResult) {
-          setAppointments(fetchResult.appointments);
+          setAppointments(fetchResult.appointments ?? []);
         } else {
           console.error('فشل في إعادة جلب المواعيد بعد التحديث');
-          // لا نرجع للخلف هنا لأن الـ optimistic update جيد عادة
         }
       } else {
         alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-        // إعادة تحميل كامل إذا فشل
         window.location.reload();
       }
 
