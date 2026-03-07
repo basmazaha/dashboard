@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useTransition, useMemo } from 'react';
+import { useState, useTransition, useMemo, useEffect } from 'react';
 import { updateAppointment, fetchAppointments } from './actions';
 
-// تعريف النوع هنا أيضًا للـ client component
 type Appointment = {
   id: string;
   full_name: string | null;
@@ -53,6 +52,13 @@ export default function AppointmentsTable({
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string | undefined>>({});
   const [isPending, startTransition] = useTransition();
+
+  // تشغيل التحقق تلقائياً كلما تغيرت القيم أثناء التحرير
+  useEffect(() => {
+    if (editingId) {
+      validateForm();
+    }
+  }, [formValues, editingId]);
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
@@ -155,7 +161,7 @@ export default function AppointmentsTable({
   };
 
   const validateForm = () => {
-    const errors: Record<string, string> = {};
+    const errors: Record<string, string | undefined> = {};
 
     if (!formValues.full_name?.trim()) {
       errors.full_name = 'الاسم الكامل مطلوب';
@@ -170,7 +176,7 @@ export default function AppointmentsTable({
     }
 
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    return Object.keys(errors).filter(key => errors[key] !== undefined).length === 0;
   };
 
   const toggleEdit = (id: string, initialValues: Appointment) => {
@@ -204,7 +210,7 @@ export default function AppointmentsTable({
   };
 
   const handleSubmit = (formData: FormData) => {
-    // التحقق قبل الإرسال
+    // التحقق قبل الإرسال (للدقة الإضافية)
     if (!validateForm()) {
       return;
     }
@@ -238,7 +244,6 @@ export default function AppointmentsTable({
         setFieldErrors({});
       } else {
         const serverError = result.error || 'حدث خطأ أثناء الحفظ';
-
         if (serverError.includes('اسم')) {
           setFieldErrors(prev => ({ ...prev, full_name: serverError }));
         } else if (serverError.includes('تليفون')) {
@@ -257,8 +262,12 @@ export default function AppointmentsTable({
     });
   };
 
-  const hasErrors = Object.values(fieldErrors).some(Boolean);
-  const isFormValid = formValues.full_name?.trim() && formValues.phone?.trim() && !hasErrors;
+  // تحديد إذا كان النموذج صالحًا أم لا
+  const hasErrors = Object.values(fieldErrors).some(error => error !== undefined);
+  const isFormValid = 
+    formValues.full_name?.trim() &&
+    formValues.phone?.trim() &&
+    !hasErrors;
 
   return (
     <>
@@ -302,7 +311,7 @@ export default function AppointmentsTable({
                               value={formValues.full_name}
                               onChange={e => {
                                 setFormValues({ ...formValues, full_name: e.target.value });
-                                setFieldErrors(prev => ({ ...prev, full_name: undefined }));
+                                // سيتم التحقق تلقائياً عبر useEffect
                               }}
                               placeholder="الاسم الكامل"
                               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
@@ -328,7 +337,7 @@ export default function AppointmentsTable({
                               value={formValues.phone}
                               onChange={e => {
                                 setFormValues({ ...formValues, phone: e.target.value });
-                                setFieldErrors(prev => ({ ...prev, phone: undefined }));
+                                // سيتم التحقق تلقائياً عبر useEffect
                               }}
                               placeholder="01xxxxxxxxx"
                               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
@@ -453,7 +462,7 @@ export default function AppointmentsTable({
                                 text-white
                                 transition-all
                                 ${isFormValid 
-                                  ? 'bg-emerald-600 hover:bg-emerald-700' 
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 cursor-pointer' 
                                   : 'bg-gray-400 cursor-not-allowed opacity-70'}
                               `}
                             >
