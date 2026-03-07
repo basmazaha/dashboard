@@ -2,7 +2,6 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 
-// تعريف النوع هنا لأن الملف server-only ولا يشارك الـ types مع client تلقائيًا
 type Appointment = {
   id: string;
   full_name: string | null;
@@ -25,6 +24,32 @@ export async function updateAppointment(formData: FormData) {
     return { error: 'لا يوجد معرف للموعد' };
   }
 
+  // ────────────────────────────────────────────────
+  // التحقق من عدم وجود حجز متداخل (server-side validation)
+  // ────────────────────────────────────────────────
+  if (status !== 'cancelled' && date && time) {
+    const { data: existing, error: checkError } = await supabaseServer
+      .from('appointments')
+      .select('id, status')
+      .eq('appointment_date', date)
+      .eq('appointment_time', time)
+      .neq('id', id);
+
+    if (checkError) {
+      console.error('خطأ أثناء التحقق من التداخل:', checkError);
+      return { error: 'خطأ في التحقق من توافر الموعد' };
+    }
+
+    const isAlreadyBooked = existing?.some(appt => appt.status !== 'cancelled');
+
+    if (isAlreadyBooked) {
+      return { error: 'هذا الموعد (التاريخ والوقت) محجوز بالفعل من قبل شخص آخر' };
+    }
+  }
+
+  // ────────────────────────────────────────────────
+  // بناء التحديثات
+  // ────────────────────────────────────────────────
   const updates: Record<string, any> = {};
 
   if (status === 'cancelled') {
