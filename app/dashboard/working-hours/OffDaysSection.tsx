@@ -1,8 +1,8 @@
+// app/dashboard/working-hours/OffDaysSection.tsx
 'use client';
 
 import { useState } from 'react';
 import { addOffDay, deleteOffDay } from './actions';
-import './working-hours.css'; // يمكن استيراد نفس الملف أو إنشاء واحد جديد
 
 type OffDay = {
   id: string;
@@ -23,31 +23,30 @@ export default function OffDaysSection({ initialOffDays }: Props) {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const handleAdd = async () => {
-    if (!newDate) return;
+    if (!newDate) {
+      setMessage({ type: 'error', text: 'يرجى اختيار تاريخ' });
+      return;
+    }
 
     setAdding(true);
     setMessage(null);
 
     const formData = new FormData();
     formData.append('date', newDate);
-    formData.append('description', newDescription);
+    formData.append('description', newDescription.trim() || null);
 
     const result = await addOffDay(formData);
 
     if (result.success) {
-      setOffDays((prev) => [
+      setOffDays(prev => [
         ...prev,
-        {
-          id: Date.now().toString(), // مؤقت حتى يتم تحديث
-          date: newDate,
-          description: newDescription || null,
-        },
+        { id: `temp-${Date.now()}`, date: newDate, description: newDescription || null }
       ]);
       setNewDate('');
       setNewDescription('');
       setMessage({ type: 'success', text: 'تم إضافة اليوم المغلق بنجاح' });
     } else {
-      setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الإضافة' });
+      setMessage({ type: 'error', text: result.error || 'فشل الإضافة' });
     }
 
     setAdding(false);
@@ -59,90 +58,86 @@ export default function OffDaysSection({ initialOffDays }: Props) {
     const result = await deleteOffDay(id);
 
     if (result.success) {
-      setOffDays((prev) => prev.filter((d) => d.id !== id));
+      setOffDays(prev => prev.filter(d => d.id !== id));
       setMessage({ type: 'success', text: 'تم الحذف بنجاح' });
     } else {
-      setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحذف' });
+      setMessage({ type: 'error', text: result.error || 'فشل الحذف' });
     }
-  };
-
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-    setMessage(null);
   };
 
   return (
     <section className="off-days-section">
       <div className="section-header">
-        <h2 className="section-title">الأيام المغلقة (العطلات الاستثنائية)</h2>
+        <h2>الأيام المغلقة (العطلات الاستثنائية)</h2>
         <button
-          onClick={toggleEdit}
           className="btn btn-edit"
+          onClick={() => setIsEditing(!isEditing)}
         >
-          {isEditing ? 'إنهاء التعديل' : 'تعديل العطلات'}
+          {isEditing ? 'إنهاء التعديل' : 'تعديل'}
         </button>
       </div>
 
       {message && (
-        <p className={`message ${message.type}`}>{message.text}</p>
+        <div className={`message ${message.type}`}>{message.text}</div>
       )}
 
-      <div className="table-container">
-        <table className="off-days-table">
+      <div className="table-wrapper">
+        <table className="data-table">
           <thead>
             <tr>
               <th>التاريخ</th>
               <th>الوصف</th>
-              <th>إجراء</th>
+              {isEditing && <th>إجراء</th>}
             </tr>
           </thead>
           <tbody>
-            {offDays.map((day) => (
+            {offDays.map(day => (
               <tr key={day.id}>
                 <td>
                   {isEditing ? (
                     <input
                       type="date"
-                      value={day.date}
-                      onChange={(e) => {
-                        setOffDays((prev) =>
-                          prev.map((d) =>
-                            d.id === day.id ? { ...d, date: e.target.value } : d
-                          )
+                      defaultValue={day.date}
+                      onChange={e => {
+                        const newVal = e.target.value;
+                        setOffDays(prev =>
+                          prev.map(d => d.id === day.id ? { ...d, date: newVal } : d)
                         );
                       }}
                     />
                   ) : (
-                    day.date
+                    new Date(day.date).toLocaleDateString('ar-EG', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })
                   )}
                 </td>
                 <td>
                   {isEditing ? (
                     <input
                       type="text"
-                      value={day.description || ''}
-                      onChange={(e) => {
-                        setOffDays((prev) =>
-                          prev.map((d) =>
-                            d.id === day.id ? { ...d, description: e.target.value || null } : d
-                          )
+                      defaultValue={day.description || ''}
+                      onChange={e => {
+                        const newVal = e.target.value;
+                        setOffDays(prev =>
+                          prev.map(d => d.id === day.id ? { ...d, description: newVal || null } : d)
                         );
                       }}
                     />
-                  ) : (
-                    day.description || '—'
-                  )}
+                  ) : day.description || '—'}
                 </td>
-                <td>
-                  {isEditing && (
+                {isEditing && (
+                  <td>
                     <button
+                      className="btn btn-delete small"
                       onClick={() => handleDelete(day.id)}
-                      className="btn btn-delete"
                     >
                       حذف
                     </button>
-                  )}
-                </td>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -150,27 +145,29 @@ export default function OffDaysSection({ initialOffDays }: Props) {
       </div>
 
       {isEditing && (
-        <div className="add-form">
+        <div className="add-new-row">
           <h3>إضافة يوم مغلق جديد</h3>
-          <input
-            type="date"
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-            placeholder="التاريخ"
-          />
-          <input
-            type="text"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            placeholder="الوصف"
-          />
-          <button
-            onClick={handleAdd}
-            disabled={adding}
-            className="btn btn-add"
-          >
-            {adding ? 'جاري الإضافة...' : 'إضافة'}
-          </button>
+          <div className="add-form">
+            <input
+              type="date"
+              value={newDate}
+              onChange={e => setNewDate(e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              placeholder="الوصف (اختياري)"
+              value={newDescription}
+              onChange={e => setNewDescription(e.target.value)}
+            />
+            <button
+              className="btn btn-add"
+              onClick={handleAdd}
+              disabled={adding}
+            >
+              {adding ? 'جاري الإضافة...' : 'إضافة'}
+            </button>
+          </div>
         </div>
       )}
     </section>
