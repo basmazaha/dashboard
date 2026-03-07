@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     .from('off_days')
     .select('date');
 
-  // جلب ساعات العمل بالهيكل الفعلي
+  // جلب ساعات العمل
   const { data: workingHours, error: hoursError } = await supabaseServer
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
@@ -50,6 +50,7 @@ export default async function DashboardPage() {
     <div>
       <div className="dashboard-page-header">
         <h2 className="dashboard-page-title">المواعيد</h2>
+
         <div className="current-user-info">
           المستخدم الحالي: <strong>{user?.firstName || user?.username || 'غير معروف'}</strong> 
           (ID: {userId.slice(0, 8)}...)
