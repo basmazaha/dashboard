@@ -2,7 +2,34 @@
 
 import { useState, useMemo } from 'react';
 import { updateAppointment, insertAppointment, fetchAppointments, fetchOffDays, fetchWorkingHours } from './actions';
-import { type Appointment, type WorkingHour } from './types';  // استيراد من types.ts (نفس المجلد)
+
+// ────────────────────────────────────────────────
+// تعريف الأنواع داخل الملف نفسه (بدون استيراد خارجي)
+// ────────────────────────────────────────────────
+
+type Appointment = {
+  id: string;
+  full_name: string | null;
+  appointment_date: string | null;
+  appointment_time: string | null;
+  phone: string | null;
+  reason: string | null;
+  status: string | null;
+};
+
+interface WorkingHour {
+  day_of_week: number;
+  is_open: boolean;
+  start_time: string | null;
+  end_time: string | null;
+  slot_duration_minutes: number | null;
+  break_start: string | null;
+  break_end: string | null;
+}
+
+// ────────────────────────────────────────────────
+// دوال مساعدة
+// ────────────────────────────────────────────────
 
 function normalizeTime(time: string | null): string {
   if (!time) return '';
@@ -28,6 +55,10 @@ function getStatusText(status: string | null): string {
   }
 }
 
+// ────────────────────────────────────────────────
+// الكومبوننت الرئيسي
+// ────────────────────────────────────────────────
+
 export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
@@ -40,6 +71,7 @@ export default function AppointmentsTable({
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [offDays, setOffDays] = useState<string[]>(initialOffDays);
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>(initialWorkingHours);
+
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [originalDate, setOriginalDate] = useState<string>('');
@@ -118,6 +150,7 @@ export default function AppointmentsTable({
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
+
     if (editingId) {
       formData.append('appointment_id', editingId);
       formData.append('status', formValues.status);
@@ -149,7 +182,7 @@ export default function AppointmentsTable({
 
   function getAvailableTimesForDate(date: string | null): string[] {
     if (!date) return [];
-    const dayOfWeek = new Date(date).getDay() + 1; // Sunday 1, ..., Saturday 7
+    const dayOfWeek = new Date(date).getDay() + 1; // Sunday = 1, Saturday = 7
     const workingHour = workingHours.find(wh => wh.day_of_week === dayOfWeek);
     if (!workingHour || !workingHour.is_open || offDays.includes(date)) return [];
 
@@ -163,8 +196,14 @@ export default function AppointmentsTable({
     let current = start;
 
     while (current < end) {
-      const currentTimeStr = current.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-      const isInBreak = breakStart && breakEnd && current >= breakStart && current < breakEnd;
+      const currentTimeStr = current.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const isInBreak =
+        breakStart && breakEnd && current >= breakStart && current < breakEnd;
 
       if (!isInBreak) {
         availableTimes.push(currentTimeStr);
@@ -174,13 +213,20 @@ export default function AppointmentsTable({
     }
 
     const bookedTimes = appointments
-      .filter(appt => appt.appointment_date === date && !(editingId && appt.id === editingId && date === originalDate))
+      .filter(
+        appt =>
+          appt.appointment_date === date &&
+          !(editingId && appt.id === editingId && date === originalDate)
+      )
       .map(appt => normalizeTime(appt.appointment_time));
 
     return availableTimes.filter(time => !bookedTimes.includes(time));
   }
 
-  const availableTimes = useMemo(() => getAvailableTimesForDate(formValues.date), [formValues.date, appointments, offDays, workingHours, editingId, originalDate]);
+  const availableTimes = useMemo(
+    () => getAvailableTimesForDate(formValues.date),
+    [formValues.date, appointments, offDays, workingHours, editingId, originalDate]
+  );
 
   const minDate = new Date().toISOString().split('T')[0];
 
@@ -193,6 +239,7 @@ export default function AppointmentsTable({
       {isAdding && (
         <form onSubmit={handleSubmit} className="add-appointment-form">
           <h3>إضافة موعد جديد</h3>
+
           <input
             type="text"
             name="full_name"
@@ -256,7 +303,7 @@ export default function AppointmentsTable({
             value={formValues.reason}
             onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
             className="form-input"
-            placeholder="سبب الحجز"
+            placeholder="سبب الحجز (اختياري)"
           />
 
           <div className="form-actions">
@@ -312,6 +359,7 @@ export default function AppointmentsTable({
                       appt.full_name || '—'
                     )}
                   </td>
+
                   <td>
                     {isEditing ? (
                       <>
@@ -323,7 +371,7 @@ export default function AppointmentsTable({
                             setFormValues({ ...formValues, phone: e.target.value });
                             setFormErrors(prev => ({ ...prev, phone: '' }));
                           }}
-                          placeholder="01xxxxxxxxx أو +201..."
+                          placeholder="01xxxxxxxxx"
                           className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                         />
                         {formErrors.phone && <p className="form-error">{formErrors.phone}</p>}
@@ -332,6 +380,7 @@ export default function AppointmentsTable({
                       appt.phone || '—'
                     )}
                   </td>
+
                   <td>
                     {isEditing ? (
                       <>
@@ -359,6 +408,7 @@ export default function AppointmentsTable({
                         : '—'
                     )}
                   </td>
+
                   <td>
                     {isEditing ? (
                       <>
@@ -386,11 +436,15 @@ export default function AppointmentsTable({
                             hour: '2-digit',
                             minute: '2-digit',
                             hour12: true,
-                          }).replace('ص', 'صباحاً').replace('م', 'مساءً')
+                          })
+                            .replace('ص', 'صباحًا')
+                            .replace('م', 'مساءً')
                         : '—'
                     )}
                   </td>
+
                   <td>{appt.reason || '—'}</td>
+
                   <td>
                     {isEditing ? (
                       <select
@@ -407,13 +461,18 @@ export default function AppointmentsTable({
                       getStatusText(appt.status)
                     )}
                   </td>
+
                   <td>
                     {isEditing ? (
                       <form onSubmit={handleSubmit}>
                         <button type="submit" disabled={isSubmitting} className="btn btn--submit">
                           {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                         </button>
-                        <button type="button" onClick={() => toggleEdit(appt.id, appt)} className="btn btn--cancel">
+                        <button
+                          type="button"
+                          onClick={() => toggleEdit(appt.id, appt)}
+                          className="btn btn--cancel"
+                        >
                           إلغاء
                         </button>
                       </form>
