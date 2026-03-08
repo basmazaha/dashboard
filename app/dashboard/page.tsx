@@ -17,10 +17,10 @@ export default async function DashboardPage() {
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
-    .gte('appointment_date', today)                          // ← من اليوم فصاعدًا فقط
-    .order('appointment_date', { ascending: true })          // الأقرب أولاً
-    .order('appointment_time', { ascending: true })          // ثم حسب الوقت داخل اليوم
-    .limit(100);                                             // زيادة الحد قليلاً إذا لزم
+    .gte('appointment_date', today)                          // من اليوم فصاعدًا فقط
+    .order('appointment_date', { ascending: true })          // التاريخ الأقرب أولاً
+    .order('appointment_time', { ascending: true })          // ثم الوقت داخل اليوم
+    .limit(100);
 
   const { data: offDaysData, error: offError } = await supabaseServer
     .from('off_days')
