@@ -1,13 +1,8 @@
-// app/dashboard/actions.ts
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
 
-// ────────────────────────────────────────────────
-// تعريف الأنواع هنا مباشرة داخل الملف
-// ────────────────────────────────────────────────
-
-export type Appointment = {
+type Appointment = {
   id: string;
   full_name: string | null;
   appointment_date: string | null;
@@ -16,20 +11,6 @@ export type Appointment = {
   reason: string | null;
   status: string | null;
 };
-
-export interface WorkingHour {
-  day_of_week: number;
-  is_open: boolean;
-  start_time: string | null;
-  end_time: string | null;
-  slot_duration_minutes: number | null;
-  break_start: string | null;
-  break_end: string | null;
-}
-
-// ────────────────────────────────────────────────
-// دوال مساعدة لتنسيق الوقت
-// ────────────────────────────────────────────────
 
 function normalizeTime(time: string | null): string {
   if (!time) return '';
@@ -40,15 +21,11 @@ function toFullTimeFormat(time: string | null): string {
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
-    return `\( {parts[0].padStart(2, '0')}: \){parts[1].padStart(2, '0')}:00`;
+    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
   }
   if (parts.length === 3) return time;
   return '00:00:00';
 }
-
-// ────────────────────────────────────────────────
-// تعديل موعد موجود
-// ────────────────────────────────────────────────
 
 export async function updateAppointment(formData: FormData) {
   const id = formData.get('appointment_id') as string;
@@ -58,42 +35,71 @@ export async function updateAppointment(formData: FormData) {
   const time = formData.get('time') as string | null;
   const status = formData.get('status') as string | null;
 
-  if (!id) {
-    return { error: 'لا يوجد معرف للموعد' };
-  }
+  if (!id) return { error: 'لا يوجد معرف للموعد' };
 
   const errors: Record<string, string> = {};
 
-  if (!full_name) errors.full_name = 'الاسم الكامل مطلوب';
-  if (!phone) errors.phone = 'رقم التليفون مطلوب';
-  if (!date) errors.date = 'التاريخ مطلوب';
-  if (!time) errors.time = 'الوقت مطلوب';
+  if (!full_name) errors.full_name = 'الاسم مطلوب';
+  else if (full_name.length < 3) errors.full_name = 'الاسم يجب أن يكون 3 حروف على الأقل';
 
-  if (Object.keys(errors).length > 0) {
-    return { errors };
+  if (!phone) errors.phone = 'رقم التليفون مطلوب';
+  else {
+    const digits = phone.replace(/\s+/g, '');
+    if (!/^\+?[0-9]+$/.test(digits)) errors.phone = 'رقم التليفون يجب أن يحتوي أرقام فقط أو +';
+    else if (digits.length > 20) errors.phone = 'رقم التليفون لا يجب أن يتجاوز 20 رقم';
+  }
+
+  if (Object.keys(errors).length > 0) return { errors };
+
+  const dbTime = time ? toFullTimeFormat(time) : null;
+
+  // التحقق من عدم التداخل
+  if (status !== 'cancelled' && date && dbTime) {
+    const { data: existing, error } = await supabaseServer
+      .from('appointments')
+      .select('id, status, appointment_time')
+      .eq('appointment_date', date);
+
+    if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
+
+    if (existing?.some(a => 
+      a.status !== 'cancelled' && 
+      a.id !== id && 
+      normalizeTime(a.appointment_time) === normalizeTime(time)
+    )) {
+      return { error: 'هذا الوقت محجوز بالفعل' };
+    }
+  }
+
+  const updates: Record<string, any> = { full_name, phone };
+
+  if (status === 'cancelled') {
+    updates.status = 'cancelled';
+    updates.appointment_date = null;
+    updates.appointment_time = null;
+    updates.reminder_sent_6h = false;
+  } else {
+    if (date) updates.appointment_date = date;
+    if (dbTime) updates.appointment_time = dbTime;
+    if (status) {
+      updates.status = status;
+      if (status === 'rescheduled') updates.reminder_sent_6h = false;
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return { message: 'لا توجد تغييرات' };
   }
 
   const { error } = await supabaseServer
     .from('appointments')
-    .update({
-      full_name,
-      phone,
-      appointment_date: date,
-      appointment_time: toFullTimeFormat(time),
-      status: status || 'pending',
-    })
+    .update(updates)
     .eq('id', id);
 
-  if (error) {
-    return { error: error.message };
-  }
+  if (error) return { error: error.message || 'فشل التحديث' };
 
   return { success: true };
 }
-
-// ────────────────────────────────────────────────
-// إضافة موعد جديد
-// ────────────────────────────────────────────────
 
 export async function insertAppointment(formData: FormData) {
   const full_name = (formData.get('full_name') as string)?.trim() || '';
@@ -101,89 +107,81 @@ export async function insertAppointment(formData: FormData) {
   const date = formData.get('date') as string | null;
   const time = formData.get('time') as string | null;
   const reason = formData.get('reason') as string | null;
+  const status = (formData.get('status') as string) || 'confirmed';
 
   const errors: Record<string, string> = {};
 
-  if (!full_name) errors.full_name = 'الاسم الكامل مطلوب';
+  if (!full_name) errors.full_name = 'الاسم مطلوب';
+  else if (full_name.length < 3) errors.full_name = 'الاسم يجب أن يكون 3 حروف على الأقل';
+
   if (!phone) errors.phone = 'رقم التليفون مطلوب';
+  else {
+    const digits = phone.replace(/\s+/g, '');
+    if (!/^\+?[0-9]+$/.test(digits)) errors.phone = 'رقم التليفون يجب أن يحتوي أرقام فقط أو +';
+    else if (digits.length > 20) errors.phone = 'رقم التليفون لا يجب أن يتجاوز 20 رقم';
+  }
+
   if (!date) errors.date = 'التاريخ مطلوب';
   if (!time) errors.time = 'الوقت مطلوب';
 
-  if (Object.keys(errors).length > 0) {
-    return { errors };
+  if (Object.keys(errors).length > 0) return { errors };
+
+  const dbTime = time ? toFullTimeFormat(time) : null;
+
+  // التحقق من عدم التداخل
+  if (date && dbTime) {
+    const { data: existing, error } = await supabaseServer
+      .from('appointments')
+      .select('id, status, appointment_time')
+      .eq('appointment_date', date);
+
+    if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
+
+    if (existing?.some(a => 
+      a.status !== 'cancelled' && 
+      normalizeTime(a.appointment_time) === normalizeTime(time)
+    )) {
+      return { error: 'هذا الوقت محجوز بالفعل' };
+    }
   }
+
+  const insertData = {
+    full_name,
+    phone,
+    appointment_date: date,
+    appointment_time: dbTime,
+    reason: reason || null,
+    status,
+    reminder_sent_6h: false,
+  };
 
   const { data, error } = await supabaseServer
     .from('appointments')
-    .insert({
-      full_name,
-      phone,
-      appointment_date: date,
-      appointment_time: toFullTimeFormat(time),
-      reason,
-      status: 'pending',
-    })
-    .select('id')
+    .insert([insertData])
+    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .single();
 
-  if (error) {
-    return { error: error.message };
-  }
+  if (error) return { error: error.message || 'فشل إضافة الموعد' };
 
-  return { success: true, id: data?.id };
+  return { success: true, newAppointment: data };
 }
 
-// ────────────────────────────────────────────────
-// جلب جميع المواعيد
-// ────────────────────────────────────────────────
-
-export async function fetchAppointments(): Promise<Appointment[]> {
+export async function fetchAppointments() {
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .order('appointment_date', { ascending: true })
-    .limit(100);   // يمكنك تعديل الحد حسب الحاجة
+    .limit(50);
 
   if (error) {
     console.error('خطأ في جلب المواعيد:', error);
-    return [];
+    return { error: error.message, appointments: [] as Appointment[] };
   }
 
-  return data || [];
-}
+  const normalized = (data ?? []).map(appt => ({
+    ...appt,
+    appointment_time: normalizeTime(appt.appointment_time),
+  }));
 
-// ────────────────────────────────────────────────
-// جلب أيام العطل
-// ────────────────────────────────────────────────
-
-export async function fetchOffDays(): Promise<string[]> {
-  const { data, error } = await supabaseServer
-    .from('off_days')
-    .select('date')
-    .order('date', { ascending: true });
-
-  if (error) {
-    console.error('خطأ في جلب أيام العطل:', error);
-    return [];
-  }
-
-  return data?.map(row => row.date) || [];
-}
-
-// ────────────────────────────────────────────────
-// جلب ساعات العمل
-// ────────────────────────────────────────────────
-
-export async function fetchWorkingHours(): Promise<WorkingHour[]> {
-  const { data, error } = await supabaseServer
-    .from('working_hours')
-    .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end')
-    .order('day_of_week', { ascending: true });
-
-  if (error) {
-    console.error('خطأ في جلب ساعات العمل:', error);
-    return [];
-  }
-
-  return data || [];
+  return { appointments: normalized };
 }
