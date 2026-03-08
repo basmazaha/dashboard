@@ -1,0 +1,119 @@
+/* app/dashboard/settings/timezone/SettingsPage.css */
+
+/* ==========================================================================
+   Block: settings-page
+   ========================================================================== */
+
+.settings-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 2rem 1rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  direction: rtl;
+  text-align: right;
+}
+
+.settings-page__container {
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.settings-page__header {
+  padding: 2rem 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.settings-page__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.settings-page__description {
+  margin: 0;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+/* ==========================================================================
+   Block: settings-form
+   ========================================================================== */
+
+.settings-form {
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settings-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-form__label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.settings-form__select {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #f9fafb;
+  color: #1f2937;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 12 12'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m1 4 5 4 5-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 1rem center;
+  background-size: 12px;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.settings-form__select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.settings-form__submit {
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.settings-form__submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+.settings-form__submit:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .settings-page__container {
+    margin: 0 1rem;
+  }
+
+  .settings-page__title {
+    font-size: 1.5rem;
+  }
+}
