@@ -56,7 +56,7 @@
 .btn--logout {
   padding: 0.5rem 1.2rem;
   font-size: 0.95rem;
-  backgroud color: red;
+  backgroud: #ef4444;
 }
 
 /* Sidebar */
