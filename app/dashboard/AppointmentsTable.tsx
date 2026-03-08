@@ -1,8 +1,7 @@
-// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
-import { updateAppointment, insertAppointment, fetchAppointments } from './actions';
+import { updateAppointment, insertAppointment, fetchAppointments, fetchOffDays, fetchWorkingHours } from './actions';
 
 type Appointment = {
   id: string;
@@ -33,10 +32,19 @@ function toFullTimeFormat(time: string | null): string {
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
-    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+    return `\( {parts[0].padStart(2, '0')}: \){parts[1].padStart(2, '0')}:00`;
   }
   if (parts.length === 3) return time;
   return '00:00:00';
+}
+
+function getStatusText(status: string | null): string {
+  switch (status) {
+    case 'pending': return 'في الانتظار';
+    case 'confirmed': return 'مؤكد';
+    case 'cancelled': return 'ملغى';
+    default: return 'غير معروف';
+  }
 }
 
 export default function AppointmentsTable({
@@ -49,575 +57,397 @@ export default function AppointmentsTable({
   initialWorkingHours: WorkingHour[];
 }) {
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [offDays, setOffDays] = useState<string[]>(initialOffDays);
+  const [workingHours, setWorkingHours] = useState<WorkingHour[]>(initialWorkingHours);
   const [isAdding, setIsAdding] = useState(false);
-  const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [originalDate, setOriginalDate] = useState<string>('');
+  const [formValues, setFormValues] = useState({
+    full_name: '',
+    phone: '',
+    date: '',
+    time: '',
+    reason: '',
+    status: 'pending',
+  });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
+  async function refetchAll() {
+    try {
+      const [newAppointments, newOffDays, newWorkingHours] = await Promise.all([
+        fetchAppointments(),
+        fetchOffDays(),
+        fetchWorkingHours(),
+      ]);
+      setAppointments(newAppointments);
+      setOffDays(newOffDays);
+      setWorkingHours(newWorkingHours);
+    } catch (error) {
+      console.error('Error refetching data:', error);
+    }
+  }
 
-  const workingHoursByDay = useMemo(() => {
-    const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => {
-      map[wh.day_of_week] = wh;
+  function toggleAdd() {
+    const newIsAdding = !isAdding;
+    setIsAdding(newIsAdding);
+    setFormValues({
+      full_name: '',
+      phone: '',
+      date: '',
+      time: '',
+      reason: '',
+      status: 'pending',
     });
-    return map;
-  }, [initialWorkingHours]);
-
-  const availableDates = useMemo(() => {
-    const dates: string[] = [];
-    const today = new Date();
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const isoDate = d.toISOString().split('T')[0];
-
-      if (offDaysSet.has(isoDate)) continue;
-
-      const dayOfWeek = d.getDay();
-      const wh = workingHoursByDay[dayOfWeek];
-
-      if (wh?.is_open && wh.start_time && wh.end_time) {
-        const formatted = d.toLocaleDateString('ar-EG', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
-        dates.push(`${isoDate}|${formatted}`);
-      }
+    setFormErrors({});
+    if (newIsAdding) {
+      refetchAll();
     }
-    return dates;
-  }, [offDaysSet, workingHoursByDay]);
+  }
 
-  const getAvailableTimesForDate = (selectedDate: string | null) => {
-    if (!selectedDate) return [];
-
-    const dateObj = new Date(selectedDate);
-    const dayOfWeek = dateObj.getDay();
-
-    const wh = workingHoursByDay[dayOfWeek];
-    if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
-
-    const start = new Date(`2000-01-01T${wh.start_time}`);
-    const end = new Date(`2000-01-01T${wh.end_time}`);
-
-    const slotDuration = wh.slot_duration_minutes ?? 15;
-    const slotMs = slotDuration * 60 * 1000;
-
-    let breakStartMs = Infinity;
-    let breakEndMs = -Infinity;
-    if (wh.break_start && wh.break_end) {
-      breakStartMs = new Date(`2000-01-01T${wh.break_start}`).getTime();
-      breakEndMs = new Date(`2000-01-01T${wh.break_end}`).getTime();
-    }
-
-    const times: string[] = [];
-
-    for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
-      const slotStart = current;
-      const slotEnd = current + slotMs;
-
-      if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
-
-      const timeDate = new Date(slotStart);
-      const isoTime = timeDate.toTimeString().slice(0, 5);
-
-      const isBooked = appointments.some(a =>
-        a.appointment_date === selectedDate &&
-        normalizeTime(a.appointment_time) === isoTime &&
-        a.status !== 'cancelled' &&
-        a.id !== editingId
-      );
-
-      if (!isBooked) {
-        const formatted = timeDate.toLocaleTimeString('ar-EG', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        }).replace('ص', 'صباحاً').replace('م', 'مساءً');
-
-        times.push(`${isoTime}|${formatted}`);
-      }
-    }
-
-    return times;
-  };
-
-  const toggleEdit = (id: string, initialValues: Appointment) => {
-    if (editingId === id) {
-      setEditingId(null);
-      setFormValues({});
-      setFormErrors({});
-    } else {
-      setEditingId(id);
+  function toggleEdit(id: string, currentAppt: Appointment) {
+    const newEditingId = editingId === id ? null : id;
+    setEditingId(newEditingId);
+    if (newEditingId) {
       setFormValues({
-        full_name: initialValues.full_name || '',
-        phone: initialValues.phone || '',
-        date: initialValues.appointment_date || '',
-        time: normalizeTime(initialValues.appointment_time),
-        status: initialValues.status || 'confirmed',
+        full_name: currentAppt.full_name || '',
+        phone: currentAppt.phone || '',
+        date: currentAppt.appointment_date || '',
+        time: normalizeTime(currentAppt.appointment_time),
+        reason: currentAppt.reason || '',
+        status: currentAppt.status || 'pending',
       });
+      setOriginalDate(currentAppt.appointment_date || '');
       setFormErrors({});
-    }
-  };
-
-  const toggleAdd = () => {
-    if (isAdding) {
-      setIsAdding(false);
-      setFormValues({});
-      setFormErrors({});
+      refetchAll();
     } else {
-      setIsAdding(true);
       setFormValues({
         full_name: '',
         phone: '',
         date: '',
         time: '',
-        status: 'confirmed',
         reason: '',
+        status: 'pending',
       });
-      setFormErrors({});
+      setOriginalDate('');
     }
-  };
+  }
 
-  const getStatusText = (status: string | null) => {
-    const map: Record<string, string> = {
-      pending: 'معلق',
-      confirmed: 'مؤكد',
-      cancelled: 'ملغي',
-      rescheduled: 'معاد جدولته',
-      completed: 'مكتمل',
-      absent: 'متغيب',
-    };
-    return map[status ?? 'confirmed'] ?? 'مؤكد';
-  };
-
-  const handleUpdate = async (formData: FormData) => {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setIsSubmitting(true);
-    setFormErrors({});
-
-    const appointmentId = formData.get('appointment_id') as string;
-    const originalAppt = appointments.find(a => a.id === appointmentId);
-
-    setAppointments(prev =>
-      prev.map(appt =>
-        appt.id === appointmentId
-          ? {
-              ...appt,
-              full_name: formData.get('full_name') as string | null,
-              phone: formData.get('phone') as string | null,
-              appointment_date: formData.get('date') as string | null,
-              appointment_time: formData.get('time') as string | null,
-              status: formData.get('status') as string | null,
-            }
-          : appt
-      )
-    );
-
-    const result = await updateAppointment(formData);
-
-    if ('errors' in result) {
-      setFormErrors(result.errors as Record<string, string>);
-      if (originalAppt) {
-        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
+    const formData = new FormData(e.currentTarget);
+    if (editingId) {
+      formData.append('appointment_id', editingId);
+      formData.append('status', formValues.status);
+      const result = await updateAppointment(formData);
+      if (result.errors) {
+        setFormErrors(result.errors);
+      } else if (result.success) {
+        await refetchAll();
+        setEditingId(null);
+        setFormErrors({});
+      } else {
+        console.error(result.error);
       }
-    } else if ('success' in result) {
-      const fetchResult = await fetchAppointments();
-      if ('appointments' in fetchResult) {
-        setAppointments(fetchResult.appointments ?? []);
-      }
-      setFormErrors({});
-      setEditingId(null);
-      setFormValues({});
     } else {
-      alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-      if (originalAppt) {
-        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
+      formData.append('status', formValues.status);
+      const result = await insertAppointment(formData);
+      if (result.errors) {
+        setFormErrors(result.errors);
+      } else if (result.success) {
+        await refetchAll();
+        setIsAdding(false);
+        setFormErrors({});
+      } else {
+        console.error(result.error);
       }
     }
-
     setIsSubmitting(false);
-  };
+  }
 
-  const handleInsert = async (formData: FormData) => {
-    setIsSubmitting(true);
-    setFormErrors({});
+  function getAvailableTimesForDate(date: string | null): string[] {
+    if (!date) return [];
+    const dayOfWeek = new Date(date).getDay() + 1; // Sunday 1, ..., Saturday 7
+    const workingHour = workingHours.find(wh => wh.day_of_week === dayOfWeek);
+    if (!workingHour || !workingHour.is_open || offDays.includes(date)) return [];
 
-    const tempId = 'temp-' + Date.now().toString();
-    const optimisticAppt: Appointment = {
-      id: tempId,
-      full_name: formData.get('full_name') as string | null,
-      phone: formData.get('phone') as string | null,
-      appointment_date: formData.get('date') as string | null,
-      appointment_time: formData.get('time') as string | null,
-      reason: formData.get('reason') as string | null,
-      status: formData.get('status') as string | null ?? 'confirmed',
-    };
+    const start = new Date(`2000-01-01T${workingHour.start_time}`);
+    const end = new Date(`2000-01-01T${workingHour.end_time}`);
+    const breakStart = workingHour.break_start ? new Date(`2000-01-01T${workingHour.break_start}`) : null;
+    const breakEnd = workingHour.break_end ? new Date(`2000-01-01T${workingHour.break_end}`) : null;
+    const duration = workingHour.slot_duration_minutes || 30;
 
-    setAppointments(prev => [optimisticAppt, ...prev]);
+    const availableTimes: string[] = [];
+    let current = start;
 
-    const result = await insertAppointment(formData);
+    while (current < end) {
+      const currentTimeStr = current.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+      const isInBreak = breakStart && breakEnd && current >= breakStart && current < breakEnd;
 
-    if ('errors' in result) {
-      setFormErrors(result.errors as Record<string, string>);
-      setAppointments(prev => prev.filter(a => a.id !== tempId));
-    } else if ('success' in result) {
-      const fetchResult = await fetchAppointments();
-      if ('appointments' in fetchResult) {
-        setAppointments(fetchResult.appointments ?? []);
+      if (!isInBreak) {
+        availableTimes.push(currentTimeStr);
       }
-      setFormErrors({});
-      setIsAdding(false);
-      setFormValues({});
-    } else {
-      alert('حدث خطأ أثناء الإضافة: ' + (result.error || 'غير معروف'));
-      setAppointments(prev => prev.filter(a => a.id !== tempId));
+
+      current = new Date(current.getTime() + duration * 60000);
     }
 
-    setIsSubmitting(false);
-  };
+    const bookedTimes = appointments
+      .filter(appt => appt.appointment_date === date && !(editingId && appt.id === editingId && date === originalDate))
+      .map(appt => normalizeTime(appt.appointment_time));
+
+    return availableTimes.filter(time => !bookedTimes.includes(time));
+  }
+
+  const availableTimes = useMemo(() => getAvailableTimesForDate(formValues.date), [formValues.date, appointments, offDays, workingHours, editingId, originalDate]);
+
+  const minDate = new Date().toISOString().split('T')[0];
 
   return (
-    <>
-      <div className="appointments__actions">
-        <button
-          type="button"
-          onClick={toggleAdd}
-          className={`btn btn--${isAdding ? 'danger' : 'success'}`}
-        >
-          {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
-        </button>
-      </div>
+    <div className="appointments-table-container">
+      <button onClick={toggleAdd} className="btn btn--add">
+        {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
+      </button>
 
       {isAdding && (
-        <div className="appointment-form appointment-form--new">
-          <h3 className="appointment-form__title">إضافة موعد جديد</h3>
+        <form onSubmit={handleSubmit} className="add-appointment-form">
+          <h3>إضافة موعد جديد</h3>
+          <input
+            type="text"
+            name="full_name"
+            value={formValues.full_name}
+            onChange={e => {
+              setFormValues({ ...formValues, full_name: e.target.value });
+              setFormErrors(prev => ({ ...prev, full_name: '' }));
+            }}
+            className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
+            placeholder="الاسم الكامل"
+          />
+          {formErrors.full_name && <p className="form-error">{formErrors.full_name}</p>}
 
-          <form action={handleInsert} id="add-appointment-form">
-            <div className="form-grid">
-              <div className="form-field">
-                <label className="form-label">الاسم الكامل</label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={formValues.full_name || ''}
-                  onChange={e => {
-                    setFormValues({ ...formValues, full_name: e.target.value });
-                    setFormErrors(prev => ({ ...prev, full_name: '' }));
-                  }}
-                  className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
-                  placeholder="الاسم الكامل"
-                />
-                {formErrors.full_name && (
-                  <p className="form-error">{formErrors.full_name}</p>
-                )}
-              </div>
+          <input
+            type="tel"
+            name="phone"
+            value={formValues.phone}
+            onChange={e => {
+              setFormValues({ ...formValues, phone: e.target.value });
+              setFormErrors(prev => ({ ...prev, phone: '' }));
+            }}
+            className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
+            placeholder="01xxxxxxxxx"
+          />
+          {formErrors.phone && <p className="form-error">{formErrors.phone}</p>}
 
-              <div className="form-field">
-                <label className="form-label">رقم التليفون</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formValues.phone || ''}
-                  onChange={e => {
-                    setFormValues({ ...formValues, phone: e.target.value });
-                    setFormErrors(prev => ({ ...prev, phone: '' }));
-                  }}
-                  className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
-                  placeholder="01xxxxxxxxx"
-                />
-                {formErrors.phone && <p className="form-error">{formErrors.phone}</p>}
-              </div>
+          <input
+            type="date"
+            name="date"
+            value={formValues.date}
+            min={minDate}
+            onChange={e => {
+              setFormValues({ ...formValues, date: e.target.value });
+              setFormErrors(prev => ({ ...prev, date: '' }));
+            }}
+            className={`form-input ${formErrors.date ? 'form-input--error' : ''}`}
+          />
+          {formErrors.date && <p className="form-error">{formErrors.date}</p>}
 
-              <div className="form-field">
-                <label className="form-label">التاريخ</label>
-                <select
-                  name="date"
-                  value={formValues.date || ''}
-                  onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
-                  className={`form-select ${formErrors.date ? 'form-select--error' : ''}`}
-                >
-                  <option value="">اختر التاريخ</option>
-                  {availableDates.map(d => {
-                    const [iso, label] = d.split('|');
-                    return <option key={iso} value={iso}>{label}</option>;
-                  })}
-                </select>
-                {formErrors.date && <p className="form-error">{formErrors.date}</p>}
-              </div>
+          <select
+            name="time"
+            value={formValues.time}
+            onChange={e => {
+              setFormValues({ ...formValues, time: e.target.value });
+              setFormErrors(prev => ({ ...prev, time: '' }));
+            }}
+            className={`form-input ${formErrors.time ? 'form-input--error' : ''}`}
+          >
+            <option value="">اختر الوقت</option>
+            {availableTimes.map(time => (
+              <option key={time} value={time}>
+                {time}
+              </option>
+            ))}
+          </select>
+          {formErrors.time && <p className="form-error">{formErrors.time}</p>}
 
-              <div className="form-field">
-                <label className="form-label">الوقت</label>
-                <select
-                  name="time"
-                  value={formValues.time || ''}
-                  onChange={e => setFormValues({ ...formValues, time: e.target.value })}
-                  className={`form-select ${formErrors.time ? 'form-select--error' : ''}`}
-                  disabled={!formValues.date}
-                >
-                  <option value="">اختر الوقت</option>
-                  {getAvailableTimesForDate(formValues.date).map(t => {
-                    const [iso, label] = t.split('|');
-                    return <option key={iso} value={iso}>{label}</option>;
-                  })}
-                </select>
-                {formErrors.time && <p className="form-error">{formErrors.time}</p>}
-              </div>
+          <input
+            type="text"
+            name="reason"
+            value={formValues.reason}
+            onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
+            className="form-input"
+            placeholder="سبب الحجز"
+          />
 
-              <div className="form-field">
-                <label className="form-label">السبب (اختياري)</label>
-                <input
-                  type="text"
-                  name="reason"
-                  value={formValues.reason || ''}
-                  onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
-                  className="form-input"
-                  placeholder="سبب الحجز"
-                />
-              </div>
-
-              <div className="form-field">
-                <label className="form-label">الحالة</label>
-                <select
-                  name="status"
-                  value={formValues.status || 'confirmed'}
-                  onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                  className={`form-select form-select--status-${formValues.status || 'confirmed'}`}
-                >
-                  <option value="pending">معلق</option>
-                  <option value="confirmed">مؤكد</option>
-                  <option value="cancelled">ملغي</option>
-                  <option value="rescheduled">معاد جدولته</option>
-                  <option value="completed">مكتمل</option>
-                  <option value="absent">متغيب</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-actions">
-              <button
-                type="button"
-                onClick={toggleAdd}
-                className="btn btn--secondary"
-              >
-                إلغاء
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className={`btn btn--primary ${isSubmitting ? 'btn--disabled' : ''}`}
-              >
-                {isSubmitting ? 'جاري الإضافة...' : 'حفظ الموعد'}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {appointments.length === 0 && !isAdding ? (
-        <div className="no-appointments">
-          لا توجد مواعيد مسجلة حاليًا
-        </div>
-      ) : (
-        <div className="appointments-table-wrapper">
-          <div className="table-container">
-            <table className="appointments-table">
-              <thead>
-                <tr>
-                  <th>الاسم</th>
-                  <th>التليفون</th>
-                  <th>التاريخ</th>
-                  <th>الوقت</th>
-                  <th>السبب</th>
-                  <th>الحالة</th>
-                  <th>إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.map(appt => {
-                  const isEditing = editingId === appt.id;
-                  const formId = `form-${appt.id}`;
-                  const currentDate = isEditing ? formValues.date : appt.appointment_date;
-                  const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
-
-                  return (
-                    <tr key={appt.id} className={`appointment-row ${isEditing ? 'appointment-row--editing' : ''}`}>
-                      <td>
-                        {isEditing ? (
-                          <div className="input-wrapper">
-                            <input
-                              type="text"
-                              name="full_name"
-                              form={formId}
-                              value={formValues.full_name || ''}
-                              onChange={e => {
-                                setFormValues({ ...formValues, full_name: e.target.value });
-                                setFormErrors(prev => ({ ...prev, full_name: '' }));
-                              }}
-                              placeholder="الاسم الكامل"
-                              className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
-                            />
-                            {formErrors.full_name && (
-                              <span className="form-error">{formErrors.full_name}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="cell-content">{appt.full_name || '—'}</span>
-                        )}
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <div className="input-wrapper">
-                            <input
-                              type="tel"
-                              name="phone"
-                              form={formId}
-                              value={formValues.phone || ''}
-                              onChange={e => {
-                                setFormValues({ ...formValues, phone: e.target.value });
-                                setFormErrors(prev => ({ ...prev, phone: '' }));
-                              }}
-                              placeholder="01xxxxxxxxx أو +201..."
-                              className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
-                            />
-                            {formErrors.phone && (
-                              <span className="form-error">{formErrors.phone}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="cell-content">{appt.phone || '—'}</span>
-                        )}
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="date"
-                            form={formId}
-                            value={formValues.date || ''}
-                            onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
-                            className="form-select"
-                          >
-                            <option value="">اختر تاريخاً</option>
-                            {availableDates.map(d => {
-                              const [iso, label] = d.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
-                            })}
-                          </select>
-                        ) : (
-                          <span className="cell-content">
-                            {appt.appointment_date
-                              ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                })
-                              : '—'}
-                          </span>
-                        )}
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="time"
-                            form={formId}
-                            value={formValues.time || ''}
-                            onChange={e => setFormValues({ ...formValues, time: e.target.value })}
-                            className="form-select"
-                          >
-                            <option value="">اختر وقتاً</option>
-                            {availTimes.map(t => {
-                              const [iso, label] = t.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
-                            })}
-                          </select>
-                        ) : (
-                          <span className="cell-content">
-                            {appt.appointment_time
-                              ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true,
-                                }).replace('ص', 'صباحاً').replace('م', 'مساءً')
-                              : '—'}
-                          </span>
-                        )}
-                      </td>
-
-                      <td>
-                        <span className="cell-content">{appt.reason || '—'}</span>
-                      </td>
-
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="status"
-                            form={formId}
-                            value={formValues.status || 'confirmed'}
-                            onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                            className={`form-select form-select--status-${formValues.status || 'confirmed'}`}
-                          >
-                            <option value="pending">معلق</option>
-                            <option value="confirmed">مؤكد</option>
-                            <option value="cancelled">ملغي</option>
-                            <option value="rescheduled">معاد جدولته</option>
-                            <option value="completed">مكتمل</option>
-                            <option value="absent">متغيب</option>
-                          </select>
-                        ) : (
-                          <span className={`status-badge status-badge--${appt.status || 'confirmed'}`}>
-                            {getStatusText(appt.status)}
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="actions-cell">
-                        {isEditing ? (
-                          <div className="edit-actions">
-                            <button
-                              type="submit"
-                              form={formId}
-                              disabled={isSubmitting}
-                              className={`btn btn--save ${isSubmitting ? 'btn--disabled' : ''}`}
-                            >
-                              {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => toggleEdit(appt.id, appt)}
-                              className="btn btn--cancel"
-                            >
-                              إلغاء
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => toggleEdit(appt.id, appt)}
-                            className="btn btn--edit"
-                          >
-                            تعديل
-                          </button>
-                        )}
-
-                        <form id={formId} action={handleUpdate} className="form--hidden">
-                          <input type="hidden" name="appointment_id" value={appt.id} />
-                        </form>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="form-actions">
+            <button type="button" onClick={toggleAdd} className="btn btn--cancel">
+              إلغاء
+            </button>
+            <button type="submit" disabled={isSubmitting} className="btn btn--submit">
+              {isSubmitting ? 'جاري الإضافة...' : 'حفظ الموعد'}
+            </button>
           </div>
-        </div>
+        </form>
       )}
-    </>
+
+      {appointments.length === 0 ? (
+        <div className="no-appointments">لا توجد مواعيد مسجلة حاليًا</div>
+      ) : (
+        <table className="appointments-table">
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>التليفون</th>
+              <th>التاريخ</th>
+              <th>الوقت</th>
+              <th>السبب</th>
+              <th>الحالة</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {appointments.map(appt => {
+              const isEditing = editingId === appt.id;
+              const availableTimesForEdit = isEditing ? getAvailableTimesForDate(formValues.date) : [];
+
+              return (
+                <tr key={appt.id}>
+                  <td>
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="text"
+                          name="full_name"
+                          value={formValues.full_name}
+                          onChange={e => {
+                            setFormValues({ ...formValues, full_name: e.target.value });
+                            setFormErrors(prev => ({ ...prev, full_name: '' }));
+                          }}
+                          placeholder="الاسم الكامل"
+                          className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
+                        />
+                        {formErrors.full_name && <p className="form-error">{formErrors.full_name}</p>}
+                      </>
+                    ) : (
+                      appt.full_name || '—'
+                    )}
+                  </td>
+                  <td>
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formValues.phone}
+                          onChange={e => {
+                            setFormValues({ ...formValues, phone: e.target.value });
+                            setFormErrors(prev => ({ ...prev, phone: '' }));
+                          }}
+                          placeholder="01xxxxxxxxx أو +201..."
+                          className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
+                        />
+                        {formErrors.phone && <p className="form-error">{formErrors.phone}</p>}
+                      </>
+                    ) : (
+                      appt.phone || '—'
+                    )}
+                  </td>
+                  <td>
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="date"
+                          name="date"
+                          value={formValues.date}
+                          min={minDate}
+                          onChange={e => {
+                            setFormValues({ ...formValues, date: e.target.value });
+                            setFormErrors(prev => ({ ...prev, date: '' }));
+                          }}
+                          className={`form-input ${formErrors.date ? 'form-input--error' : ''}`}
+                        />
+                        {formErrors.date && <p className="form-error">{formErrors.date}</p>}
+                      </>
+                    ) : (
+                      appt.appointment_date
+                        ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })
+                        : '—'
+                    )}
+                  </td>
+                  <td>
+                    {isEditing ? (
+                      <>
+                        <select
+                          name="time"
+                          value={formValues.time}
+                          onChange={e => {
+                            setFormValues({ ...formValues, time: e.target.value });
+                            setFormErrors(prev => ({ ...prev, time: '' }));
+                          }}
+                          className={`form-input ${formErrors.time ? 'form-input--error' : ''}`}
+                        >
+                          <option value="">اختر الوقت</option>
+                          {availableTimesForEdit.map(time => (
+                            <option key={time} value={time}>
+                              {time}
+                            </option>
+                          ))}
+                        </select>
+                        {formErrors.time && <p className="form-error">{formErrors.time}</p>}
+                      </>
+                    ) : (
+                      appt.appointment_time
+                        ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true,
+                          }).replace('ص', 'صباحاً').replace('م', 'مساءً')
+                        : '—'
+                    )}
+                  </td>
+                  <td>{appt.reason || '—'}</td>
+                  <td>
+                    {isEditing ? (
+                      <select
+                        name="status"
+                        value={formValues.status}
+                        onChange={e => setFormValues({ ...formValues, status: e.target.value })}
+                        className="form-input"
+                      >
+                        <option value="pending">في الانتظار</option>
+                        <option value="confirmed">مؤكد</option>
+                        <option value="cancelled">ملغى</option>
+                      </select>
+                    ) : (
+                      getStatusText(appt.status)
+                    )}
+                  </td>
+                  <td>
+                    {isEditing ? (
+                      <form onSubmit={handleSubmit}>
+                        <button type="submit" disabled={isSubmitting} className="btn btn--submit">
+                          {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
+                        </button>
+                        <button type="button" onClick={() => toggleEdit(appt.id, appt)} className="btn btn--cancel">
+                          إلغاء
+                        </button>
+                      </form>
+                    ) : (
+                      <button onClick={() => toggleEdit(appt.id, appt)} className="btn btn--edit">
+                        تعديل
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
-}
+      }
