@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -12,14 +11,14 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  const today = new Date().toISOString().split('T')[0]; // مثل: "2025-03-08"
+  const today = new Date().toISOString().split('T')[0];
 
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
-    .gte('appointment_date', today)                          // من اليوم فصاعدًا فقط
-    .order('appointment_date', { ascending: true })          // التاريخ الأقرب أولاً
-    .order('appointment_time', { ascending: true })          // ثم الوقت داخل اليوم
+    .gte('appointment_date', today)
+    .order('appointment_date', { ascending: true })
+    .order('appointment_time', { ascending: true })
     .limit(100);
 
   const { data: offDaysData, error: offError } = await supabaseServer
