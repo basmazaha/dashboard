@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { upsertWorkingHours } from './actions';
 import type { WorkingHour } from './types';
 import './working-hours.css';
+import { formatArabicTime } from '@/lib/timeFormatters';   // ← أضف هذا السطر
 
 const DAY_NAMES: Record<number, string> = {
   0: 'الأحد',
@@ -118,7 +119,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.start_time || ''}
                       onChange={e => handleChange(day.day_of_week, 'start_time', e.target.value)}
                     />
-                  ) : (day.start_time || '—')}
+                  ) : formatArabicTime(day.start_time)}
                 </td>
 
                 <td>
@@ -129,7 +130,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.end_time || ''}
                       onChange={e => handleChange(day.day_of_week, 'end_time', e.target.value)}
                     />
-                  ) : (day.end_time || '—')}
+                  ) : formatArabicTime(day.end_time)}
                 </td>
 
                 <td>
@@ -159,7 +160,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.break_start || ''}
                       onChange={e => handleChange(day.day_of_week, 'break_start', e.target.value)}
                     />
-                  ) : (day.break_start || '—')}
+                  ) : formatArabicTime(day.break_start)}
                 </td>
 
                 <td>
@@ -170,7 +171,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       value={day.break_end || ''}
                       onChange={e => handleChange(day.day_of_week, 'break_end', e.target.value)}
                     />
-                  ) : (day.break_end || '—')}
+                  ) : formatArabicTime(day.break_end)}
                 </td>
               </tr>
             ))}
