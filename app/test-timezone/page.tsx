@@ -1,6 +1,7 @@
 // app/test-timezone/page.tsx
 import { supabaseServer } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache'; // ← أضف هذا الاستيراد (كان مفقودًا)
 
 export const dynamic = 'force-dynamic';
 
@@ -155,7 +156,7 @@ export default async function TestTimezonePage({
             redirect('/test-timezone?error=' + encodeURIComponent(error.message || 'فشل في حفظ الموعد'));
           }
 
-          // نجاح
+          // نجاح: تحديث البيانات وإعادة توجيه مع رسالة
           revalidatePath('/test-timezone');
           redirect('/test-timezone?success=true');
         }}
