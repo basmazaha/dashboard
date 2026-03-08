@@ -1,10 +1,16 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { updateAppointment, insertAppointment, fetchAppointments, fetchOffDays, fetchWorkingHours } from './actions';
+import {
+  updateAppointment,
+  insertAppointment,
+  fetchAppointments,
+  fetchOffDays,
+  fetchWorkingHours,
+} from './actions';
 
 // ────────────────────────────────────────────────
-// تعريف الأنواع داخل الملف نفسه (بدون استيراد خارجي)
+// Types defined locally (no external import)
 // ────────────────────────────────────────────────
 
 type Appointment = {
@@ -27,10 +33,6 @@ interface WorkingHour {
   break_end: string | null;
 }
 
-// ────────────────────────────────────────────────
-// دوال مساعدة
-// ────────────────────────────────────────────────
-
 function normalizeTime(time: string | null): string {
   if (!time) return '';
   return time.split(':').slice(0, 2).join(':');
@@ -48,16 +50,16 @@ function toFullTimeFormat(time: string | null): string {
 
 function getStatusText(status: string | null): string {
   switch (status) {
-    case 'pending': return 'في الانتظار';
-    case 'confirmed': return 'مؤكد';
-    case 'cancelled': return 'ملغى';
-    default: return 'غير معروف';
+    case 'pending':
+      return 'في الانتظار';
+    case 'confirmed':
+      return 'مؤكد';
+    case 'cancelled':
+      return 'ملغى';
+    default:
+      return 'غير معروف';
   }
 }
-
-// ────────────────────────────────────────────────
-// الكومبوننت الرئيسي
-// ────────────────────────────────────────────────
 
 export default function AppointmentsTable({
   initialAppointments,
@@ -75,6 +77,7 @@ export default function AppointmentsTable({
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [originalDate, setOriginalDate] = useState<string>('');
+
   const [formValues, setFormValues] = useState({
     full_name: '',
     phone: '',
@@ -83,6 +86,7 @@ export default function AppointmentsTable({
     reason: '',
     status: 'pending',
   });
+
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -113,14 +117,13 @@ export default function AppointmentsTable({
       status: 'pending',
     });
     setFormErrors({});
-    if (newIsAdding) {
-      refetchAll();
-    }
+    if (newIsAdding) refetchAll();
   }
 
   function toggleEdit(id: string, currentAppt: Appointment) {
     const newEditingId = editingId === id ? null : id;
     setEditingId(newEditingId);
+
     if (newEditingId) {
       setFormValues({
         full_name: currentAppt.full_name || '',
@@ -149,13 +152,16 @@ export default function AppointmentsTable({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
+
     const formData = new FormData(e.currentTarget);
 
     if (editingId) {
       formData.append('appointment_id', editingId);
       formData.append('status', formValues.status);
+
       const result = await updateAppointment(formData);
-      if (result.errors) {
+
+      if ('errors' in result) {
         setFormErrors(result.errors);
       } else if (result.success) {
         await refetchAll();
@@ -166,8 +172,10 @@ export default function AppointmentsTable({
       }
     } else {
       formData.append('status', formValues.status);
+
       const result = await insertAppointment(formData);
-      if (result.errors) {
+
+      if ('errors' in result) {
         setFormErrors(result.errors);
       } else if (result.success) {
         await refetchAll();
@@ -177,14 +185,19 @@ export default function AppointmentsTable({
         console.error(result.error);
       }
     }
+
     setIsSubmitting(false);
   }
 
   function getAvailableTimesForDate(date: string | null): string[] {
     if (!date) return [];
-    const dayOfWeek = new Date(date).getDay() + 1; // Sunday = 1, Saturday = 7
-    const workingHour = workingHours.find(wh => wh.day_of_week === dayOfWeek);
-    if (!workingHour || !workingHour.is_open || offDays.includes(date)) return [];
+
+    const dayOfWeek = new Date(date).getDay() + 1; // Sunday=1 ... Saturday=7
+    const workingHour = workingHours.find((wh) => wh.day_of_week === dayOfWeek);
+
+    if (!workingHour || !workingHour.is_open || offDays.includes(date)) {
+      return [];
+    }
 
     const start = new Date(`2000-01-01T${workingHour.start_time}`);
     const end = new Date(`2000-01-01T${workingHour.end_time}`);
@@ -214,13 +227,13 @@ export default function AppointmentsTable({
 
     const bookedTimes = appointments
       .filter(
-        appt =>
+        (appt) =>
           appt.appointment_date === date &&
           !(editingId && appt.id === editingId && date === originalDate)
       )
-      .map(appt => normalizeTime(appt.appointment_time));
+      .map((appt) => normalizeTime(appt.appointment_time));
 
-    return availableTimes.filter(time => !bookedTimes.includes(time));
+    return availableTimes.filter((time) => !bookedTimes.includes(time));
   }
 
   const availableTimes = useMemo(
@@ -244,9 +257,9 @@ export default function AppointmentsTable({
             type="text"
             name="full_name"
             value={formValues.full_name}
-            onChange={e => {
+            onChange={(e) => {
               setFormValues({ ...formValues, full_name: e.target.value });
-              setFormErrors(prev => ({ ...prev, full_name: '' }));
+              setFormErrors((prev) => ({ ...prev, full_name: '' }));
             }}
             className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
             placeholder="الاسم الكامل"
@@ -257,9 +270,9 @@ export default function AppointmentsTable({
             type="tel"
             name="phone"
             value={formValues.phone}
-            onChange={e => {
+            onChange={(e) => {
               setFormValues({ ...formValues, phone: e.target.value });
-              setFormErrors(prev => ({ ...prev, phone: '' }));
+              setFormErrors((prev) => ({ ...prev, phone: '' }));
             }}
             className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
             placeholder="01xxxxxxxxx"
@@ -271,9 +284,9 @@ export default function AppointmentsTable({
             name="date"
             value={formValues.date}
             min={minDate}
-            onChange={e => {
+            onChange={(e) => {
               setFormValues({ ...formValues, date: e.target.value });
-              setFormErrors(prev => ({ ...prev, date: '' }));
+              setFormErrors((prev) => ({ ...prev, date: '' }));
             }}
             className={`form-input ${formErrors.date ? 'form-input--error' : ''}`}
           />
@@ -282,14 +295,14 @@ export default function AppointmentsTable({
           <select
             name="time"
             value={formValues.time}
-            onChange={e => {
+            onChange={(e) => {
               setFormValues({ ...formValues, time: e.target.value });
-              setFormErrors(prev => ({ ...prev, time: '' }));
+              setFormErrors((prev) => ({ ...prev, time: '' }));
             }}
             className={`form-input ${formErrors.time ? 'form-input--error' : ''}`}
           >
             <option value="">اختر الوقت</option>
-            {availableTimes.map(time => (
+            {availableTimes.map((time) => (
               <option key={time} value={time}>
                 {time}
               </option>
@@ -301,9 +314,9 @@ export default function AppointmentsTable({
             type="text"
             name="reason"
             value={formValues.reason}
-            onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
+            onChange={(e) => setFormValues({ ...formValues, reason: e.target.value })}
             className="form-input"
-            placeholder="سبب الحجز (اختياري)"
+            placeholder="سبب الحجز"
           />
 
           <div className="form-actions">
@@ -333,7 +346,7 @@ export default function AppointmentsTable({
             </tr>
           </thead>
           <tbody>
-            {appointments.map(appt => {
+            {appointments.map((appt) => {
               const isEditing = editingId === appt.id;
               const availableTimesForEdit = isEditing ? getAvailableTimesForDate(formValues.date) : [];
 
@@ -346,9 +359,9 @@ export default function AppointmentsTable({
                           type="text"
                           name="full_name"
                           value={formValues.full_name}
-                          onChange={e => {
+                          onChange={(e) => {
                             setFormValues({ ...formValues, full_name: e.target.value });
-                            setFormErrors(prev => ({ ...prev, full_name: '' }));
+                            setFormErrors((prev) => ({ ...prev, full_name: '' }));
                           }}
                           placeholder="الاسم الكامل"
                           className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
@@ -367,11 +380,11 @@ export default function AppointmentsTable({
                           type="tel"
                           name="phone"
                           value={formValues.phone}
-                          onChange={e => {
+                          onChange={(e) => {
                             setFormValues({ ...formValues, phone: e.target.value });
-                            setFormErrors(prev => ({ ...prev, phone: '' }));
+                            setFormErrors((prev) => ({ ...prev, phone: '' }));
                           }}
-                          placeholder="01xxxxxxxxx"
+                          placeholder="01xxxxxxxxx أو +201..."
                           className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                         />
                         {formErrors.phone && <p className="form-error">{formErrors.phone}</p>}
@@ -389,9 +402,9 @@ export default function AppointmentsTable({
                           name="date"
                           value={formValues.date}
                           min={minDate}
-                          onChange={e => {
+                          onChange={(e) => {
                             setFormValues({ ...formValues, date: e.target.value });
-                            setFormErrors(prev => ({ ...prev, date: '' }));
+                            setFormErrors((prev) => ({ ...prev, date: '' }));
                           }}
                           className={`form-input ${formErrors.date ? 'form-input--error' : ''}`}
                         />
@@ -415,14 +428,14 @@ export default function AppointmentsTable({
                         <select
                           name="time"
                           value={formValues.time}
-                          onChange={e => {
+                          onChange={(e) => {
                             setFormValues({ ...formValues, time: e.target.value });
-                            setFormErrors(prev => ({ ...prev, time: '' }));
+                            setFormErrors((prev) => ({ ...prev, time: '' }));
                           }}
                           className={`form-input ${formErrors.time ? 'form-input--error' : ''}`}
                         >
                           <option value="">اختر الوقت</option>
-                          {availableTimesForEdit.map(time => (
+                          {availableTimesForEdit.map((time) => (
                             <option key={time} value={time}>
                               {time}
                             </option>
@@ -432,12 +445,13 @@ export default function AppointmentsTable({
                       </>
                     ) : (
                       appt.appointment_time
-                        ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true,
-                          })
-                            .replace('ص', 'صباحًا')
+                        ? new Date(`2000-01-01T${appt.appointment_time}`)
+                            .toLocaleTimeString('ar-EG', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true,
+                            })
+                            .replace('ص', 'صباحاً')
                             .replace('م', 'مساءً')
                         : '—'
                     )}
@@ -450,7 +464,9 @@ export default function AppointmentsTable({
                       <select
                         name="status"
                         value={formValues.status}
-                        onChange={e => setFormValues({ ...formValues, status: e.target.value })}
+                        onChange={(e) =>
+                          setFormValues({ ...formValues, status: e.target.value })
+                        }
                         className="form-input"
                       >
                         <option value="pending">في الانتظار</option>
@@ -465,7 +481,11 @@ export default function AppointmentsTable({
                   <td>
                     {isEditing ? (
                       <form onSubmit={handleSubmit}>
-                        <button type="submit" disabled={isSubmitting} className="btn btn--submit">
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="btn btn--submit"
+                        >
                           {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                         </button>
                         <button
@@ -477,7 +497,10 @@ export default function AppointmentsTable({
                         </button>
                       </form>
                     ) : (
-                      <button onClick={() => toggleEdit(appt.id, appt)} className="btn btn--edit">
+                      <button
+                        onClick={() => toggleEdit(appt.id, appt)}
+                        className="btn btn--edit"
+                      >
                         تعديل
                       </button>
                     )}
