@@ -1,6 +1,5 @@
 // app/dashboard/settings/page.tsx
 import Link from 'next/link';
-import { usePathname } from 'next/navigation'; // لست بحاجة إليه هنا، لكن يمكن إضافته لاحقًا
 import './SettingsDashboard.css'; // ملف CSS منفصل إذا أردت
 
 export default function SettingsDashboard() {
