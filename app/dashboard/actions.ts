@@ -2,7 +2,6 @@
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
-import { type Appointment, type WorkingHour } from './types';
 
 // ────────────────────────────────────────────────
 // تعريف الأنواع هنا مباشرة داخل الملف
