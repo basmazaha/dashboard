@@ -3,7 +3,6 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { updateTimezone } from './actions';
-import './SettingsPage.css';
 
 const COMMON_TIMEZONES = [
   { value: 'Africa/Cairo', label: 'القاهرة (UTC+2/+3)' },
@@ -24,18 +23,18 @@ const initialState: FormState = {
   message: '',
 };
 
-interface TimezoneFormProps {
+interface Props {
   initialTimezone: string;
 }
 
-export default function TimezoneForm({ initialTimezone }: TimezoneFormProps) {
+export default function TimezoneForm({ initialTimezone }: Props) {
   const [state, formAction] = useFormState(updateTimezone, initialState);
   const { pending } = useFormStatus();
 
   return (
     <>
       {state.message && (
-        <div className={`form-message ${state.success ? 'success' : 'error'}`}>
+        <div className={`settings-message ${state.success ? 'success' : 'error'}`}>
           {state.message}
         </div>
       )}
@@ -45,7 +44,6 @@ export default function TimezoneForm({ initialTimezone }: TimezoneFormProps) {
           <label htmlFor="timezone" className="settings-form__label">
             المنطقة الزمنية
           </label>
-
           <select
             id="timezone"
             name="timezone"
