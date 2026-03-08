@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { upsertWorkingHours } from './actions';
 import type { WorkingHour } from './types';
 import './working-hours.css';
-import { formatArabicTime } from '@lib/timeFormatters';   // ← أضف هذا السطر
+import { formatArabicTime } from './lib/timeFormatters';   // ← أضف هذا السطر
 
 const DAY_NAMES: Record<number, string> = {
   0: 'الأحد',
