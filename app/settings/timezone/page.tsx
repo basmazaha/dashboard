@@ -1,10 +1,7 @@
 // app/settings/timezone/page.tsx
-import { createClient } from '@/lib/supabase/server'; // افترض أنك عندك client server-side
+import { supabaseServer } from '@/lib/supabaseServer';
 import { redirect } from 'next/navigation';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import './SettingsPage.css';
 
 const COMMON_TIMEZONES = [
   { value: 'Africa/Cairo', label: 'القاهرة (UTC+2/+3)' },
@@ -13,74 +10,73 @@ const COMMON_TIMEZONES = [
   { value: 'Europe/Istanbul', label: 'إسطنبول (UTC+3)' },
   { value: 'America/New_York', label: 'نيويورك (UTC-5/-4)' },
   { value: 'UTC', label: 'UTC' },
-  // أضف المزيد حسب احتياج العملاء
+  // يمكنك إضافة المزيد حسب الحاجة
 ];
 
 export default async function SettingsPage() {
-  const supabase = createClient();
+  const supabase = supabaseServer;
 
-  // جلب الإعدادات الحالية
-  const { data: settings, error } = await supabase
+  const { data: settings } = await supabase
     .from('business_settings')
     .select('timezone')
     .eq('id', 1)
     .single();
 
-  if (error || !settings) {
-    // يمكنك إنشاء الصف تلقائيًا إذا مش موجود
-    await supabase.from('business_settings').insert({ id: 1, timezone: 'Africa/Cairo' });
-    return <div>جاري إنشاء الإعدادات...</div>;
-  }
-
-  const currentTz = settings.timezone;
+  const currentTz = settings?.timezone || 'Africa/Cairo';
 
   return (
-    <div className="container max-w-4xl py-10">
-      <Card>
-        <CardHeader>
-          <CardTitle>إعدادات الشركة</CardTitle>
-          <CardDescription>تعديل التوقيت المحلي الافتراضي للأعمال</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form
-            action={async (formData) => {
-              'use server';
+    <div className="settings-page">
+      <div className="settings-page__container">
+        <header className="settings-page__header">
+          <h1 className="settings-page__title">إعدادات الشركة</h1>
+          <p className="settings-page__description">
+            تعديل المنطقة الزمنية الافتراضية للأعمال
+          </p>
+        </header>
 
-              const supabase = createClient();
-              const newTz = formData.get('timezone') as string;
+        <form
+          className="settings-form"
+          action={async (formData: FormData) => {
+            'use server';
 
-              const { error } = await supabase
-                .from('business_settings')
-                .update({ timezone: newTz, updated_at: new Date().toISOString() })
-                .eq('id', 1);
+            const newTz = formData.get('timezone') as string;
 
-              if (!error) {
-                redirect('/settings?updated=true');
-              }
-            }}
-          >
-            <div className="grid gap-4">
-              <Label htmlFor="timezone">المنطقة الزمنية للشركة</Label>
-              <Select name="timezone" defaultValue={currentTz}>
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر المنطقة الزمنية" />
-                </SelectTrigger>
-                <SelectContent>
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <SelectItem key={tz.value} value={tz.value}>
-                      {tz.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            const { error } = await supabaseServer
+              .from('business_settings')
+              .update({ timezone: newTz })
+              .eq('id', 1);
 
-              <Button type="submit" className="mt-6 w-full md:w-auto">
-                حفظ التغييرات
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+            if (!error) {
+              redirect('/settings/timezone?success=true');
+            } else {
+              console.error('خطأ أثناء حفظ الإعدادات:', error);
+              // يمكنك إضافة طريقة عرض خطأ لاحقًا (مثل إعادة توجيه مع ?error)
+            }
+          }}
+        >
+          <div className="settings-form__group">
+            <label htmlFor="timezone" className="settings-form__label">
+              المنطقة الزمنية
+            </label>
+            <select
+              id="timezone"
+              name="timezone"
+              defaultValue={currentTz}
+              className="settings-form__select"
+            >
+              {COMMON_TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button type="submit" className="settings-form__submit">
+            حفظ التغييرات
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
