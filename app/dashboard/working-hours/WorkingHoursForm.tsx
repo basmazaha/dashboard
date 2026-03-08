@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { upsertWorkingHours } from './actions';
 import type { WorkingHour } from './types';
 import './working-hours.css';
-import { formatArabicTime } from '@/lib/timeFormatters';
 
 const DAY_NAMES: Record<number, string> = {
   0: 'الأحد',
@@ -20,9 +19,39 @@ type Props = {
   initialHours: WorkingHour[];
 };
 
+function normalizeTime(time: string | null): string {
+  if (!time) return '';
+  return time.split(':').slice(0, 2).join(':');
+}
+
+function formatArabicTime(time: string | null): string {
+  if (!time) return '—';
+
+  // نحول الوقت إلى صيغة كاملة إذا كان HH:MM فقط
+  let fullTime = time;
+  if (time.split(':').length === 2) {
+    fullTime = `${time}:00`;
+  }
+
+  try {
+    const date = new Date(`2000-01-01T${fullTime}`);
+    if (isNaN(date.getTime())) return time;
+
+    return date
+      .toLocaleTimeString('ar-EG', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })
+      .replace('ص', 'صباحاً')
+      .replace('م', 'مساءً');
+  } catch {
+    return time || '—';
+  }
+}
+
 export default function WorkingHoursForm({ initialHours }: Props) {
   const [hours, setHours] = useState<WorkingHour[]>(initialHours);
-  const [originalHours] = useState<WorkingHour[]>(initialHours); // للإلغاء
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -55,12 +84,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     setSaving(false);
   };
 
-  const handleCancel = () => {
-    setHours(originalHours);
-    setIsEditing(false);
-    setMessage(null);
-  };
-
   return (
     <section className="hours-section">
       <div className="section-header">
@@ -68,7 +91,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
 
         {isEditing ? (
           <div className="edit-controls">
-            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
+            <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
               إلغاء
             </button>
             <button className="btn btn-save" onClick={handleSave} disabled={saving}>
@@ -118,26 +141,30 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   )}
                 </td>
 
-                <td>
+                <td className="time-cell">
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
                       className="form-input"
-                      value={day.start_time || ''}
+                      value={normalizeTime(day.start_time)}
                       onChange={e => handleChange(day.day_of_week, 'start_time', e.target.value)}
                     />
-                  ) : formatArabicTime(day.start_time)}
+                  ) : (
+                    formatArabicTime(day.start_time)
+                  )}
                 </td>
 
-                <td>
+                <td className="time-cell">
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
                       className="form-input"
-                      value={day.end_time || ''}
+                      value={normalizeTime(day.end_time)}
                       onChange={e => handleChange(day.day_of_week, 'end_time', e.target.value)}
                     />
-                  ) : formatArabicTime(day.end_time)}
+                  ) : (
+                    formatArabicTime(day.end_time)
+                  )}
                 </td>
 
                 <td>
@@ -159,26 +186,30 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   ) : (day.slot_duration_minutes ?? '—')}
                 </td>
 
-                <td>
+                <td className="time-cell">
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
                       className="form-input"
-                      value={day.break_start || ''}
+                      value={normalizeTime(day.break_start)}
                       onChange={e => handleChange(day.day_of_week, 'break_start', e.target.value)}
                     />
-                  ) : formatArabicTime(day.break_start)}
+                  ) : (
+                    formatArabicTime(day.break_start)
+                  )}
                 </td>
 
-                <td>
+                <td className="time-cell">
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
                       className="form-input"
-                      value={day.break_end || ''}
+                      value={normalizeTime(day.break_end)}
                       onChange={e => handleChange(day.day_of_week, 'break_end', e.target.value)}
                     />
-                  ) : formatArabicTime(day.break_end)}
+                  ) : (
+                    formatArabicTime(day.break_end)
+                  )}
                 </td>
               </tr>
             ))}
