@@ -11,12 +11,28 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString();
 
+  // جلب timezone الشركة (من الجدول)
+  const { data: settings, error: settingsError } = await supabaseServer
+    .from('business_settings')
+    .select('timezone')
+    .eq('id', 1)
+    .single();
+
+  if (settingsError || !settings) {
+    console.error('خطأ في جلب timezone:', settingsError);
+    // fallback إذا لم يوجد
+    const fallbackTz = 'Africa/Cairo';
+  }
+
+  const timezone = settings?.timezone || 'Africa/Cairo';
+
+  // جلب المواعيد (مع التحويل إلى التوقيت المحلي إذا أردت، لكن هنا نجلب الأصلي فقط)
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
-    .gte('appointment_date', today)
+    .gte('appointment_date', today.split('T')[0])
     .order('appointment_date', { ascending: true })
     .order('appointment_time', { ascending: true })
     .limit(100);
@@ -46,12 +62,16 @@ export default async function DashboardPage() {
     <div>
       <div className="dashboard-page-header">
         <h2 className="dashboard-page-title">المواعيد</h2>
+        <p style={{ color: '#6b7280', marginTop: '0.5rem' }}>
+          المنطقة الزمنية للشركة: <strong>{timezone}</strong>
+        </p>
       </div>
 
       <AppointmentsTable 
         initialAppointments={appointments || []} 
         initialOffDays={offDays}
-        initialWorkingHours={workingHours || []} 
+        initialWorkingHours={workingHours || []}
+        businessTimezone={timezone}  // ← تمرير timezone للمكون
       />
     </div>
   );
