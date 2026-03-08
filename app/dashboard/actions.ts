@@ -1,3 +1,5 @@
+// app/dashboard/actions.ts
+
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -21,7 +23,7 @@ function toFullTimeFormat(time: string | null): string {
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
-    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+    return `\( {parts[0].padStart(2, '0')}: \){parts[1].padStart(2, '0')}:00`;
   }
   if (parts.length === 3) return time;
   return '00:00:00';
