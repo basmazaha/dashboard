@@ -86,7 +86,8 @@ export default function AppointmentsTable({
           month: 'long',
           day: 'numeric',
         });
-        dates.push(`\( {isoDate}| \){formatted}`);
+        // الصيغة المصححة – بسيطة وآمنة
+        dates.push(isoDate + '|' + formatted);
       }
     }
     return dates;
@@ -139,7 +140,8 @@ export default function AppointmentsTable({
           hour12: true,
         }).replace('ص', 'صباحاً').replace('م', 'مساءً');
 
-        times.push(`\( {isoTime}| \){formatted}`);
+        // الصيغة المصححة – بسيطة وآمنة
+        times.push(isoTime + '|' + formatted);
       }
     }
 
@@ -619,4 +621,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-}
+                                }
