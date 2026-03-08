@@ -59,28 +59,19 @@ export default function AppointmentsTable({
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => {
-      map[wh.day_of_week] = wh;
-    });
+    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
     return map;
   }, [initialWorkingHours]);
 
-  // ── ترتيب المواعيد: الأقرب أولاً (اليوم → المستقبل) ───────────────────────────────
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
-      // المواعيد بدون تاريخ → في الأسفل
       if (!a.appointment_date && b.appointment_date) return 1;
       if (b.appointment_date && !a.appointment_date) return -1;
       if (!a.appointment_date && !b.appointment_date) return 0;
 
-      const dateTimeA = new Date(
-        a.appointment_date + 'T' + (a.appointment_time || '00:00:00')
-      );
-      const dateTimeB = new Date(
-        b.appointment_date + 'T' + (b.appointment_time || '00:00:00')
-      );
-
-      return dateTimeA.getTime() - dateTimeB.getTime();
+      const dtA = new Date(a.appointment_date + 'T' + (a.appointment_time || '00:00:00'));
+      const dtB = new Date(b.appointment_date + 'T' + (b.appointment_time || '00:00:00'));
+      return dtA.getTime() - dtB.getTime();
     });
   }, [appointments]);
 
@@ -329,9 +320,7 @@ export default function AppointmentsTable({
                   className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                   placeholder="الاسم الكامل"
                 />
-                {formErrors.full_name && (
-                  <p className="form-error">{formErrors.full_name}</p>
-                )}
+                {formErrors.full_name && <p className="form-error">{formErrors.full_name}</p>}
               </div>
 
               <div className="form-field">
@@ -360,8 +349,8 @@ export default function AppointmentsTable({
                 >
                   <option value="">اختر التاريخ</option>
                   {availableDates.map(d => {
-                    const [iso, label] = d.split('|');
-                    return <option key={iso} value={iso}>{label}</option>;
+                    const [iso, displayText] = d.split('|');
+                    return <option key={iso} value={iso}>{displayText}</option>;
                   })}
                 </select>
                 {formErrors.date && <p className="form-error">{formErrors.date}</p>}
@@ -378,8 +367,8 @@ export default function AppointmentsTable({
                 >
                   <option value="">اختر الوقت</option>
                   {getAvailableTimesForDate(formValues.date).map(t => {
-                    const [iso, label] = t.split('|');
-                    return <option key={iso} value={iso}>{label}</option>;
+                    const [iso, displayText] = t.split('|');
+                    return <option key={iso} value={iso}>{displayText}</option>;
                   })}
                 </select>
                 {formErrors.time && <p className="form-error">{formErrors.time}</p>}
@@ -416,11 +405,7 @@ export default function AppointmentsTable({
             </div>
 
             <div className="form-actions">
-              <button
-                type="button"
-                onClick={toggleAdd}
-                className="btn btn--secondary"
-              >
+              <button type="button" onClick={toggleAdd} className="btn btn--secondary">
                 إلغاء
               </button>
               <button
@@ -478,9 +463,7 @@ export default function AppointmentsTable({
                               placeholder="الاسم الكامل"
                               className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.full_name && (
-                              <span className="form-error">{formErrors.full_name}</span>
-                            )}
+                            {formErrors.full_name && <span className="form-error">{formErrors.full_name}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.full_name || '—'}</span>
@@ -502,9 +485,7 @@ export default function AppointmentsTable({
                               placeholder="01xxxxxxxxx أو +201..."
                               className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.phone && (
-                              <span className="form-error">{formErrors.phone}</span>
-                            )}
+                            {formErrors.phone && <span className="form-error">{formErrors.phone}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.phone || '—'}</span>
@@ -522,8 +503,8 @@ export default function AppointmentsTable({
                           >
                             <option value="">اختر تاريخاً</option>
                             {availableDates.map(d => {
-                              const [iso, label] = d.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
+                              const [iso, displayText] = d.split('|');
+                              return <option key={iso} value={iso}>{displayText}</option>;
                             })}
                           </select>
                         ) : (
@@ -551,8 +532,8 @@ export default function AppointmentsTable({
                           >
                             <option value="">اختر وقتاً</option>
                             {availTimes.map(t => {
-                              const [iso, label] = t.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
+                              const [iso, displayText] = t.split('|');
+                              return <option key={iso} value={iso}>{displayText}</option>;
                             })}
                           </select>
                         ) : (
