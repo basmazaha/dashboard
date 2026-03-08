@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { upsertWorkingHours } from './actions';
 import type { WorkingHour } from './types';
 import './working-hours.css';
-import { formatArabicTime } from '@/lib/timeFormatters';  // ← تأكد من وجود الملف في lib/
+import { formatArabicTime } from '@/lib/timeFormatters';
 
 const DAY_NAMES: Record<number, string> = {
   0: 'الأحد',
@@ -22,7 +22,7 @@ type Props = {
 
 export default function WorkingHoursForm({ initialHours }: Props) {
   const [hours, setHours] = useState<WorkingHour[]>(initialHours);
-  const [originalHours, setOriginalHours] = useState<WorkingHour[]>(initialHours);
+  const [originalHours] = useState<WorkingHour[]>(initialHours); // للإلغاء
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -33,7 +33,9 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     value: string | number | boolean | null
   ) => {
     setHours(prev =>
-      prev.map(h => (h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h))
+      prev.map(h =>
+        h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h
+      )
     );
   };
 
@@ -44,7 +46,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     const result = await upsertWorkingHours(hours);
 
     if (result.success) {
-      setOriginalHours(hours);
       setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
       setIsEditing(false);
     } else {
@@ -81,7 +82,9 @@ export default function WorkingHoursForm({ initialHours }: Props) {
         )}
       </div>
 
-      {message && <div className={`message ${message.type}`}>{message.text}</div>}
+      {message && (
+        <div className={`message ${message.type}`}>{message.text}</div>
+      )}
 
       <div className="table-wrapper">
         <table className="hours-table">
