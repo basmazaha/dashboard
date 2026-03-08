@@ -169,21 +169,25 @@ export default function WorkingHoursForm({ initialHours }: Props) {
 
                 <td>
                   {isEditing && day.is_open ? (
-                    <input
-                      type="number"
-                      min="5"
-                      step="5"
+                    <select
                       className="form-input"
                       value={day.slot_duration_minutes ?? ''}
-                      onChange={e =>
+                      onChange={(e) =>
                         handleChange(
                           day.day_of_week,
                           'slot_duration_minutes',
                           e.target.value ? Number(e.target.value) : null
                         )
                       }
-                    />
-                  ) : (day.slot_duration_minutes ?? '—')}
+                    >
+                      <option value="">—</option>
+                      <option value="15">15 دقيقة</option>
+                      <option value="30">30 دقيقة</option>
+                      <option value="60">60 دقيقة</option>
+                    </select>
+                  ) : (
+                    day.slot_duration_minutes ? `${day.slot_duration_minutes} د` : '—'
+                  )}
                 </td>
 
                 <td className="time-cell">
