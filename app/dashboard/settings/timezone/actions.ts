@@ -10,12 +10,11 @@ export type FormState = {
 };
 
 export async function updateTimezone(
-  prevState: FormState,
+  prevState: FormState,     // ← أضف ده (حتى لو مش مستخدم)
   formData: FormData
 ): Promise<FormState> {
   const newTz = formData.get('timezone') as string;
 
-  // تحقق بسيط
   if (!newTz || !newTz.trim()) {
     return {
       success: false,
