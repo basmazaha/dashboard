@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { upsertWorkingHours } from './actions';
 import type { WorkingHour } from './types';
 import './working-hours.css';
-import { formatArabicTime } from '@/lib/timeFormatters';   // ← أضف هذا السطر
+import { formatArabicTime } from '@/lib/timeFormatters';  // ← تأكد من وجود الملف في lib/
 
 const DAY_NAMES: Record<number, string> = {
   0: 'الأحد',
@@ -22,6 +22,7 @@ type Props = {
 
 export default function WorkingHoursForm({ initialHours }: Props) {
   const [hours, setHours] = useState<WorkingHour[]>(initialHours);
+  const [originalHours, setOriginalHours] = useState<WorkingHour[]>(initialHours);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -32,9 +33,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     value: string | number | boolean | null
   ) => {
     setHours(prev =>
-      prev.map(h =>
-        h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h
-      )
+      prev.map(h => (h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h))
     );
   };
 
@@ -45,6 +44,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     const result = await upsertWorkingHours(hours);
 
     if (result.success) {
+      setOriginalHours(hours);
       setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
       setIsEditing(false);
     } else {
@@ -54,6 +54,12 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     setSaving(false);
   };
 
+  const handleCancel = () => {
+    setHours(originalHours);
+    setIsEditing(false);
+    setMessage(null);
+  };
+
   return (
     <section className="hours-section">
       <div className="section-header">
@@ -61,7 +67,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
 
         {isEditing ? (
           <div className="edit-controls">
-            <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
+            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
               إلغاء
             </button>
             <button className="btn btn-save" onClick={handleSave} disabled={saving}>
@@ -75,9 +81,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
         )}
       </div>
 
-      {message && (
-        <div className={`message ${message.type}`}>{message.text}</div>
-      )}
+      {message && <div className={`message ${message.type}`}>{message.text}</div>}
 
       <div className="table-wrapper">
         <table className="hours-table">
