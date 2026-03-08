@@ -33,7 +33,7 @@ function toFullTimeFormat(time: string | null): string {
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
-    return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
+    return `\( {parts[0].padStart(2, '0')}: \){parts[1].padStart(2, '0')}:00`;
   }
   if (parts.length === 3) return time;
   return '00:00:00';
@@ -65,6 +65,25 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
+  // ── ترتيب المواعيد: الأقرب أولاً (اليوم → المستقبل) ───────────────────────────────
+  const sortedAppointments = useMemo(() => {
+    return [...appointments].sort((a, b) => {
+      // المواعيد بدون تاريخ → في الأسفل
+      if (!a.appointment_date && b.appointment_date) return 1;
+      if (b.appointment_date && !a.appointment_date) return -1;
+      if (!a.appointment_date && !b.appointment_date) return 0;
+
+      const dateTimeA = new Date(
+        a.appointment_date + 'T' + (a.appointment_time || '00:00:00')
+      );
+      const dateTimeB = new Date(
+        b.appointment_date + 'T' + (b.appointment_time || '00:00:00')
+      );
+
+      return dateTimeA.getTime() - dateTimeB.getTime();
+    });
+  }, [appointments]);
+
   const availableDates = useMemo(() => {
     const dates: string[] = [];
     const today = new Date();
@@ -85,7 +104,7 @@ export default function AppointmentsTable({
           month: 'long',
           day: 'numeric',
         });
-        dates.push(`${isoDate}|${formatted}`);
+        dates.push(`\( {isoDate}| \){formatted}`);
       }
     }
     return dates;
@@ -138,7 +157,7 @@ export default function AppointmentsTable({
           hour12: true,
         }).replace('ص', 'صباحاً').replace('م', 'مساءً');
 
-        times.push(`${isoTime}|${formatted}`);
+        times.push(`\( {isoTime}| \){formatted}`);
       }
     }
 
@@ -416,9 +435,9 @@ export default function AppointmentsTable({
         </div>
       )}
 
-      {appointments.length === 0 && !isAdding ? (
+      {sortedAppointments.length === 0 && !isAdding ? (
         <div className="no-appointments">
-          لا توجد مواعيد مسجلة حاليًا
+          لا توجد مواعيد مسجلة حاليًا (اليوم أو المستقبل)
         </div>
       ) : (
         <div className="appointments-table-wrapper">
@@ -436,7 +455,7 @@ export default function AppointmentsTable({
                 </tr>
               </thead>
               <tbody>
-                {appointments.map(appt => {
+                {sortedAppointments.map(appt => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : appt.appointment_date;
@@ -621,4 +640,3 @@ export default function AppointmentsTable({
     </>
   );
 }
-
