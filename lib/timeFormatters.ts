@@ -3,16 +3,29 @@
 export function formatArabicTime(timeStr: string | null): string {
   if (!timeStr) return '—';
 
-  const cleaned = timeStr.replace(/:\d{2}$/, '').trim(); // إزالة الثواني إن وجدت
+  // إزالة الثواني إذا وُجدت (Supabase يرسل HH:MM:SS)
+  const cleaned = timeStr.replace(/:\d{2}$/, '').trim();
 
-  const [h, m] = cleaned.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) return '—';
+  const [hoursStr, minutesStr] = cleaned.split(':');
+  const hours = parseInt(hoursStr, 10);
+  const minutes = parseInt(minutesStr || '0', 10);
 
-  const period = h >= 12 ? 'م' : 'ص';
-  const hours12 = h % 12 || 12;
+  if (isNaN(hours) || isNaN(minutes)) return '—';
 
-  const toArabic = (n: number) =>
-    n.toString().replace(/\d/g, d => '٠١٢٣٤٥٦٧٨٩'[d as any]);
+  const period = hours >= 12 ? 'م' : 'ص';
+  const displayHours = hours % 12 || 12;
 
-  return `\( {toArabic(hours12)}: \){toArabic(m).padStart(2, '٠')} ${period}`;
+  // تحويل الأرقام إلى عربية شرقية
+  const toArabicDigits = (num: number): string =>
+    num
+      .toString()
+      .split('')
+      .map(digit => '٠١٢٣٤٥٦٧٨٩'[parseInt(digit)])
+      .join('');
+
+  // ضمان صفرين للدقائق
+  const formattedHours = toArabicDigits(displayHours);
+  const formattedMinutes = toArabicDigits(minutes).padStart(2, '٠');
+
+  return `\( {formattedHours}: \){formattedMinutes} ${period}`;
 }
