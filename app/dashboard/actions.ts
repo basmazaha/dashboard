@@ -7,8 +7,7 @@ import { supabaseServer } from '@/lib/supabaseServer';
 type Appointment = {
   id: string;
   full_name: string | null;
-  appointment_date: string | null;
-  appointment_time: string | null;
+  date_time: string | null; // ISO string in UTC
   phone: string | null;
   reason: string | null;
   status: string | null;
@@ -23,11 +22,24 @@ function toFullTimeFormat(time: string | null): string {
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
-    // الصيغة المصححة – بدون أخطاء الـ escape
     return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0') + ':00';
   }
   if (parts.length === 3) return time;
   return '00:00:00';
+}
+
+async function getBusinessTimezone() {
+  const { data, error } = await supabaseServer
+    .from('business_settings')
+    .select('timezone')
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching timezone:', error);
+    return 'Africa/Cairo'; // fallback
+  }
+
+  return data?.timezone || 'Africa/Cairo';
 }
 
 export async function updateAppointment(formData: FormData) {
@@ -54,21 +66,28 @@ export async function updateAppointment(formData: FormData) {
 
   if (Object.keys(errors).length > 0) return { errors };
 
-  const dbTime = time ? toFullTimeFormat(time) : null;
+  const timezone = await getBusinessTimezone();
+
+  let date_time = null;
+  if (date && time) {
+    const localDateTime = new Date(`\( {date}T \){toFullTimeFormat(time)}`);
+    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset()); // Adjust to local
+    const zonedDateTime = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(localDateTime);
+    date_time = new Date(zonedDateTime).toISOString(); // To UTC ISO
+  }
 
   // التحقق من عدم التداخل
-  if (status !== 'cancelled' && date && dbTime) {
+  if (status !== 'cancelled' && date_time) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
-      .select('id, status, appointment_time')
-      .eq('appointment_date', date);
+      .select('id, status, date_time')
+      .eq('date_time', date_time);
 
     if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
     if (existing?.some(a => 
       a.status !== 'cancelled' && 
-      a.id !== id && 
-      normalizeTime(a.appointment_time) === normalizeTime(time)
+      a.id !== id
     )) {
       return { error: 'هذا الوقت محجوز بالفعل' };
     }
@@ -78,12 +97,10 @@ export async function updateAppointment(formData: FormData) {
 
   if (status === 'cancelled') {
     updates.status = 'cancelled';
-    updates.appointment_date = null;
-    updates.appointment_time = null;
+    updates.date_time = null;
     updates.reminder_sent_6h = false;
   } else {
-    if (date) updates.appointment_date = date;
-    if (dbTime) updates.appointment_time = dbTime;
+    if (date_time) updates.date_time = date_time;
     if (status) {
       updates.status = status;
       if (status === 'rescheduled') updates.reminder_sent_6h = false;
@@ -129,21 +146,26 @@ export async function insertAppointment(formData: FormData) {
 
   if (Object.keys(errors).length > 0) return { errors };
 
-  const dbTime = time ? toFullTimeFormat(time) : null;
+  const timezone = await getBusinessTimezone();
+
+  let date_time = null;
+  if (date && time) {
+    const localDateTime = new Date(`\( {date}T \){toFullTimeFormat(time)}`);
+    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset()); // Adjust to local
+    const zonedDateTime = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(localDateTime);
+    date_time = new Date(zonedDateTime).toISOString(); // To UTC ISO
+  }
 
   // التحقق من عدم التداخل
-  if (date && dbTime) {
+  if (date_time) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
-      .select('id, status, appointment_time')
-      .eq('appointment_date', date);
+      .select('id, status, date_time')
+      .eq('date_time', date_time);
 
     if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
-    if (existing?.some(a => 
-      a.status !== 'cancelled' && 
-      normalizeTime(a.appointment_time) === normalizeTime(time)
-    )) {
+    if (existing?.length > 0) {
       return { error: 'هذا الوقت محجوز بالفعل' };
     }
   }
@@ -151,8 +173,7 @@ export async function insertAppointment(formData: FormData) {
   const insertData = {
     full_name,
     phone,
-    appointment_date: date,
-    appointment_time: dbTime,
+    date_time,
     reason: reason || null,
     status,
     reminder_sent_6h: false,
@@ -161,7 +182,7 @@ export async function insertAppointment(formData: FormData) {
   const { data, error } = await supabaseServer
     .from('appointments')
     .insert([insertData])
-    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
+    .select('id, full_name, date_time, phone, reason, status')
     .single();
 
   if (error) return { error: error.message || 'فشل إضافة الموعد' };
@@ -170,10 +191,22 @@ export async function insertAppointment(formData: FormData) {
 }
 
 export async function fetchAppointments() {
+  const timezone = await getBusinessTimezone();
+
+  const todayLocal = new Date().toLocaleString('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).split('/').reverse().join('-') + 'T00:00:00';
+
+  const todayUTC = new Date(todayLocal).toISOString();
+
   const { data, error } = await supabaseServer
     .from('appointments')
-    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
-    .order('appointment_date', { ascending: true })
+    .select('id, full_name, date_time, phone, reason, status')
+    .gte('date_time', todayUTC)
+    .order('date_time', { ascending: true })
     .limit(50);
 
   if (error) {
@@ -183,7 +216,7 @@ export async function fetchAppointments() {
 
   const normalized = (data ?? []).map(appt => ({
     ...appt,
-    appointment_time: normalizeTime(appt.appointment_time),
+    // No need to normalize time here, as it's handled in component
   }));
 
   return { appointments: normalized };
