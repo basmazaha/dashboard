@@ -70,19 +70,10 @@ export async function updateAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
+    // إنشاء التاريخ المحلي (بدون Z = local time)
     const localDateTime = new Date(date + 'T' + fullTime);
-    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset());
-    const zonedDateTime = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).format(localDateTime);
-    date_time = new Date(zonedDateTime).toISOString();
+    // تحويل إلى UTC ISO string
+    date_time = localDateTime.toISOString();
   }
 
   // التحقق من عدم التداخل
@@ -157,19 +148,10 @@ export async function insertAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
+    // إنشاء التاريخ المحلي
     const localDateTime = new Date(date + 'T' + fullTime);
-    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset());
-    const zonedDateTime = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    }).format(localDateTime);
-    date_time = new Date(zonedDateTime).toISOString();
+    // تحويل إلى UTC ISO
+    date_time = localDateTime.toISOString();
   }
 
   // التحقق من عدم التداخل
