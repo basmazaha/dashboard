@@ -1,4 +1,3 @@
-// app/dashboard/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -12,34 +11,9 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  // جلب الـ timezone من جدول business_settings
-  const { data: settingsData, error: settingsError } = await supabaseServer
-    .from('business_settings')
-    .select('timezone')
-    .maybeSingle();
+  const today = new Date().toISOString().split('T')[0];
 
-  const timezone = settingsData?.timezone || 'Africa/Cairo';
-
-  if (settingsError) {
-    console.error('خطأ في جلب إعدادات الأعمال:', settingsError);
-  }
-
-  // حساب "اليوم" حسب توقيت النشاط (يصلح المشكلة بعد منتصف الليل)
-  const today = (() => {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const parts = formatter.formatToParts(now);
-    const year = parts.find((p: any) => p.type === 'year')?.value ?? '';
-    const month = parts.find((p: any) => p.type === 'month')?.value ?? '';
-    const day = parts.find((p: any) => p.type === 'day')?.value ?? '';
-    return `\( {year}- \){month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  })();
-
+  // جلب المواعيد المستقبلية
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
@@ -48,16 +22,26 @@ export default async function DashboardPage() {
     .order('appointment_time', { ascending: true })
     .limit(100);
 
+  // جلب أيام الإجازة
   const { data: offDaysData, error: offError } = await supabaseServer
     .from('off_days')
     .select('date');
 
+  // جلب ساعات العمل
   const { data: workingHours, error: hoursError } = await supabaseServer
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
-  if (apptError || offError || hoursError) {
-    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError });
+  // ─── جلب الـ timezone من business_settings ───
+  const { data: settingsData, error: settingsError } = await supabaseServer
+    .from('business_settings')
+    .select('timezone')
+    .maybeSingle(); // إذا كان فيه صف واحد فقط – أو .limit(1) إذا متعدد
+
+  const timezone = settingsData?.timezone || 'Africa/Cairo'; // fallback مهم جداً
+
+  if (apptError || offError || hoursError || settingsError) {
+    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError, settingsError });
     return (
       <div className="no-appointments">
         حدث خطأ أثناء جلب البيانات.
@@ -75,10 +59,10 @@ export default async function DashboardPage() {
         <h2 className="dashboard-page-title">المواعيد</h2>
       </div>
 
-      <AppointmentsTable 
-        initialAppointments={appointments || []} 
+      <AppointmentsTable
+        initialAppointments={appointments || []}
         initialOffDays={offDays}
-        initialWorkingHours={workingHours || []} 
+        initialWorkingHours={workingHours || []}
         timezone={timezone}
       />
     </div>
