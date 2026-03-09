@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -32,13 +33,13 @@ export default async function DashboardPage() {
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
-  // ─── جلب الـ timezone من business_settings ───
+  // جلب الـ timezone
   const { data: settingsData, error: settingsError } = await supabaseServer
     .from('business_settings')
     .select('timezone')
-    .maybeSingle(); // إذا كان فيه صف واحد فقط – أو .limit(1) إذا متعدد
+    .maybeSingle();
 
-  const timezone = settingsData?.timezone || 'Africa/Cairo'; // fallback مهم جداً
+  const timezone = settingsData?.timezone || 'Africa/Cairo';
 
   if (apptError || offError || hoursError || settingsError) {
     console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError, settingsError });
