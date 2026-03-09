@@ -59,11 +59,9 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
-  // تنسيق التاريخ حسب توقيت النشاط
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     try {
-      // استخدام T12:00:00 لتجنب أي مشكلة في حدود اليوم
       const safeDate = new Date(dateStr + 'T12:00:00');
       return safeDate.toLocaleDateString('ar-EG', {
         weekday: 'long',
@@ -78,7 +76,6 @@ export default function AppointmentsTable({
     }
   };
 
-  // تنسيق الوقت (لا يحتاج timezone لأن الوقت مخزن كـ local business time)
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return '—';
     try {
@@ -97,7 +94,6 @@ export default function AppointmentsTable({
     }
   };
 
-  // ترتيب آمن بدون Date (يمنع أي تأثير للـ timezone المحلية للمتصفح)
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
       const strA = `${a.appointment_date || ''} ${normalizeTime(a.appointment_time || '')}`;
@@ -106,11 +102,9 @@ export default function AppointmentsTable({
     });
   }, [appointments]);
 
-  // حساب التواريخ المتاحة (يبدأ من "اليوم" حسب توقيت النشاط)
   const availableDates = useMemo(() => {
     const dates: string[] = [];
 
-    // حساب اليوم الحالي في توقيت النشاط
     const todayStr = (() => {
       const now = new Date();
       const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -136,15 +130,21 @@ export default function AppointmentsTable({
         continue;
       }
 
-      // حساب يوم الأسبوع حسب توقيت النشاط (يصلح مشكلة الـ client timezone)
-      const dayOfWeek = (() => {
-        const dateForDay = new Date(isoDate + 'T12:00:00');
-        const wdStr = new Intl.DateTimeFormat('en-US', {
-          timeZone: timezone,
-          weekday: 'numeric',
-        }).format(dateForDay);
-        return parseInt(wdStr) % 7;
-      })();
+      // تصحيح حساب يوم الأسبوع مع الـ timezone
+      const dayOfWeekStr = new Date(isoDate + 'T12:00:00').toLocaleDateString('en-US', {
+        timeZone: timezone,
+        weekday: 'short',
+      }).toLowerCase();
+
+      const dayOfWeek = {
+        sun: 0,
+        mon: 1,
+        tue: 2,
+        wed: 3,
+        thu: 4,
+        fri: 5,
+        sat: 6,
+      }[dayOfWeekStr as keyof typeof dayOfWeekMap] ?? 0;
 
       const wh = workingHoursByDay[dayOfWeek];
 
@@ -161,15 +161,21 @@ export default function AppointmentsTable({
   const getAvailableTimesForDate = (selectedDate: string | null) => {
     if (!selectedDate) return [];
 
-    // حساب يوم الأسبوع حسب توقيت النشاط
-    const dayOfWeek = (() => {
-      const dateForDay = new Date(selectedDate + 'T12:00:00');
-      const wdStr = new Intl.DateTimeFormat('en-US', {
-        timeZone: timezone,
-        weekday: 'numeric',
-      }).format(dateForDay);
-      return parseInt(wdStr) % 7;
-    })();
+    // تصحيح حساب يوم الأسبوع
+    const dayOfWeekStr = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
+      timeZone: timezone,
+      weekday: 'short',
+    }).toLowerCase();
+
+    const dayOfWeek = {
+      sun: 0,
+      mon: 1,
+      tue: 2,
+      wed: 3,
+      thu: 4,
+      fri: 5,
+      sat: 6,
+    }[dayOfWeekStr as keyof typeof dayOfWeekMap] ?? 0;
 
     const wh = workingHoursByDay[dayOfWeek];
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
@@ -214,7 +220,6 @@ export default function AppointmentsTable({
     return times;
   };
 
-  // باقي الدوال (toggleEdit, toggleAdd, getStatusText, handleUpdate, handleInsert) بدون تغيير
   const toggleEdit = (id: string, initialValues: Appointment) => {
     if (editingId === id) {
       setEditingId(null);
@@ -349,7 +354,6 @@ export default function AppointmentsTable({
     setIsSubmitting(false);
   };
 
-  // باقي JSX بدون أي تغيير (نفس الكود السابق)
   return (
     <>
       <div className="appointments__actions">
@@ -639,6 +643,7 @@ export default function AppointmentsTable({
                             >
                               {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
+
                             <button
                               type="button"
                               onClick={() => toggleEdit(appt.id, appt)}
@@ -671,4 +676,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                              }
+                                            }
