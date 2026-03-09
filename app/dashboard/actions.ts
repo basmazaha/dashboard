@@ -1,5 +1,4 @@
 // app/dashboard/actions.ts
-
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -68,12 +67,22 @@ export async function updateAppointment(formData: FormData) {
 
   const timezone = await getBusinessTimezone();
 
-  let date_time = null;
+  let date_time: string | null = null;
   if (date && time) {
-    const localDateTime = new Date(`\( {date}T \){toFullTimeFormat(time)}`);
-    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset()); // Adjust to local
-    const zonedDateTime = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(localDateTime);
-    date_time = new Date(zonedDateTime).toISOString(); // To UTC ISO
+    const fullTime = toFullTimeFormat(time);
+    const localDateTime = new Date(date + 'T' + fullTime);
+    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset());
+    const zonedDateTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(localDateTime);
+    date_time = new Date(zonedDateTime).toISOString();
   }
 
   // التحقق من عدم التداخل
@@ -85,10 +94,7 @@ export async function updateAppointment(formData: FormData) {
 
     if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
-    if (existing?.some(a => 
-      a.status !== 'cancelled' && 
-      a.id !== id
-    )) {
+    if (existing?.some(a => a.status !== 'cancelled' && a.id !== id)) {
       return { error: 'هذا الوقت محجوز بالفعل' };
     }
   }
@@ -148,12 +154,22 @@ export async function insertAppointment(formData: FormData) {
 
   const timezone = await getBusinessTimezone();
 
-  let date_time = null;
+  let date_time: string | null = null;
   if (date && time) {
-    const localDateTime = new Date(`\( {date}T \){toFullTimeFormat(time)}`);
-    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset()); // Adjust to local
-    const zonedDateTime = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(localDateTime);
-    date_time = new Date(zonedDateTime).toISOString(); // To UTC ISO
+    const fullTime = toFullTimeFormat(time);
+    const localDateTime = new Date(date + 'T' + fullTime);
+    localDateTime.setMinutes(localDateTime.getMinutes() - new Date().getTimezoneOffset());
+    const zonedDateTime = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).format(localDateTime);
+    date_time = new Date(zonedDateTime).toISOString();
   }
 
   // التحقق من عدم التداخل
@@ -216,7 +232,6 @@ export async function fetchAppointments() {
 
   const normalized = (data ?? []).map(appt => ({
     ...appt,
-    // No need to normalize time here, as it's handled in component
   }));
 
   return { appointments: normalized };
