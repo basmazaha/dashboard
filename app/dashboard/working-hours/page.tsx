@@ -1,11 +1,25 @@
-import { getWorkingHoursAndOffDays } from './actions';
+import { supabaseServer } from '@/lib/supabaseServer';
 import WorkingHoursForm from './WorkingHoursForm';
 import OffDaysSection from './OffDaysSection';
+import { getWorkingHoursAndOffDays } from './actions';
 import type { WorkingHour, OffDay } from './types';
 
 export const dynamic = 'force-dynamic';
 
 export default async function WorkingHoursPage() {
+  // جلب timezone من business_settings
+  const { data: settings, error: settingsError } = await supabaseServer
+    .from('business_settings')
+    .select('timezone')
+    .maybeSingle();
+
+  const timezone = settings?.timezone || 'Africa/Cairo';
+
+  if (settingsError) {
+    console.error('خطأ في جلب الـ timezone:', settingsError);
+    // يمكنك عرض رسالة خطأ للمستخدم إذا أردت
+  }
+
   const result = await getWorkingHoursAndOffDays();
 
   if (!result.success) {
@@ -40,8 +54,8 @@ export default async function WorkingHoursPage() {
 
   return (
     <div style={{ padding: '1.5rem' }}>
-      <WorkingHoursForm initialHours={defaultHours} />
-      <OffDaysSection initialOffDays={safeOffDays} />
+      <WorkingHoursForm initialHours={defaultHours} timezone={timezone} />
+      <OffDaysSection initialOffDays={safeOffDays} timezone={timezone} />
     </div>
   );
 }
