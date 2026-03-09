@@ -1,3 +1,4 @@
+// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -35,53 +36,6 @@ function normalizeTime(time: string | null): string {
   return time.split(':').slice(0, 2).join(':');
 }
 
-// ─── دالة عرض التاريخ مع مراعاة الوقت + الـ timezone (الحل الرئيسي) ───
-function formatAppointmentDate(
-  dateStr: string | null,
-  timeStr: string | null,
-  timezone: string
-): string {
-  if (!dateStr) return '—';
-
-  // نضمن صيغة وقت كاملة HH:mm:ss
-  let timePart = timeStr || '00:00:00';
-  if (timePart.length === 5) timePart += ':00';
-
-  try {
-    // نعامل البيانات كـ UTC ثم نطبق timezone المطلوبة
-    const utcDate = new Date(`\( {dateStr}T \){timePart}Z`);
-    return new Intl.DateTimeFormat('ar-EG', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      timeZone: timezone,
-    }).format(utcDate);
-  } catch (e) {
-    console.error('خطأ في تنسيق التاريخ:', e, { dateStr, timeStr, timezone });
-    return dateStr;
-  }
-}
-
-function formatTime(timeStr: string | null, timezone: string): string {
-  if (!timeStr) return '—';
-  try {
-    const date = new Date(`1970-01-01T${timeStr}Z`);
-    return new Intl.DateTimeFormat('ar-EG', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: timezone,
-    })
-      .format(date)
-      .replace('ص', 'صباحاً')
-      .replace('م', 'مساءً');
-  } catch (e) {
-    console.error('خطأ في تنسيق الوقت:', e);
-    return normalizeTime(timeStr);
-  }
-}
-
 export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
@@ -105,42 +59,101 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
+  // تنسيق التاريخ حسب توقيت النشاط
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '—';
+    try {
+      // استخدام T12:00:00 لتجنب أي مشكلة في حدود اليوم
+      const safeDate = new Date(dateStr + 'T12:00:00');
+      return safeDate.toLocaleDateString('ar-EG', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: timezone,
+      });
+    } catch (e) {
+      console.error('خطأ في تنسيق التاريخ:', e);
+      return dateStr;
+    }
+  };
+
+  // تنسيق الوقت (لا يحتاج timezone لأن الوقت مخزن كـ local business time)
+  const formatTime = (timeStr: string | null) => {
+    if (!timeStr) return '—';
+    try {
+      const timeDate = new Date(`2000-01-01T${normalizeTime(timeStr)}:00`);
+      return timeDate
+        .toLocaleTimeString('ar-EG', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        })
+        .replace('ص', 'صباحاً')
+        .replace('م', 'مساءً');
+    } catch (e) {
+      console.error('خطأ في تنسيق الوقت:', e);
+      return normalizeTime(timeStr);
+    }
+  };
+
+  // ترتيب آمن بدون Date (يمنع أي تأثير للـ timezone المحلية للمتصفح)
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
-      if (!a.appointment_date && b.appointment_date) return 1;
-      if (b.appointment_date && !a.appointment_date) return -1;
-      if (!a.appointment_date && !b.appointment_date) return 0;
-
-      const dtA = new Date(a.appointment_date + 'T' + (a.appointment_time || '00:00:00'));
-      const dtB = new Date(b.appointment_date + 'T' + (b.appointment_time || '00:00:00'));
-      return dtA.getTime() - dtB.getTime();
+      const strA = `${a.appointment_date || ''} ${normalizeTime(a.appointment_time || '')}`;
+      const strB = `${b.appointment_date || ''} ${normalizeTime(b.appointment_time || '')}`;
+      return strA.localeCompare(strB);
     });
   }, [appointments]);
 
+  // حساب التواريخ المتاحة (يبدأ من "اليوم" حسب توقيت النشاط)
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const today = new Date();
+
+    // حساب اليوم الحالي في توقيت النشاط
+    const todayStr = (() => {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const parts = formatter.formatToParts(now);
+      const year = parts.find(p => p.type === 'year')?.value ?? '';
+      const month = parts.find(p => p.type === 'month')?.value ?? '';
+      const day = parts.find(p => p.type === 'day')?.value ?? '';
+      return `\( {year}- \){month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    })();
+
+    let d = new Date(todayStr + 'T00:00:00');
 
     for (let i = 0; i < 30; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
       const isoDate = d.toISOString().split('T')[0];
 
-      if (offDaysSet.has(isoDate)) continue;
+      if (offDaysSet.has(isoDate)) {
+        d.setDate(d.getDate() + 1);
+        continue;
+      }
 
-      const dayOfWeek = d.getDay();
+      // حساب يوم الأسبوع حسب توقيت النشاط (يصلح مشكلة الـ client timezone)
+      const dayOfWeek = (() => {
+        const dateForDay = new Date(isoDate + 'T12:00:00');
+        const wdStr = new Intl.DateTimeFormat('en-US', {
+          timeZone: timezone,
+          weekday: 'numeric',
+        }).format(dateForDay);
+        return parseInt(wdStr) % 7;
+      })();
+
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const formatted = new Intl.DateTimeFormat('ar-EG', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-          timeZone: timezone,
-        }).format(new Date(isoDate));
+        const formatted = formatDate(isoDate);
         dates.push(isoDate + '|' + formatted);
       }
+
+      d.setDate(d.getDate() + 1);
     }
     return dates;
   }, [offDaysSet, workingHoursByDay, timezone]);
@@ -148,8 +161,15 @@ export default function AppointmentsTable({
   const getAvailableTimesForDate = (selectedDate: string | null) => {
     if (!selectedDate) return [];
 
-    const dateObj = new Date(selectedDate);
-    const dayOfWeek = dateObj.getDay();
+    // حساب يوم الأسبوع حسب توقيت النشاط
+    const dayOfWeek = (() => {
+      const dateForDay = new Date(selectedDate + 'T12:00:00');
+      const wdStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        weekday: 'numeric',
+      }).format(dateForDay);
+      return parseInt(wdStr) % 7;
+    })();
 
     const wh = workingHoursByDay[dayOfWeek];
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
@@ -176,7 +196,7 @@ export default function AppointmentsTable({
       if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
 
       const timeDate = new Date(slotStart);
-      const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
+      const isoTime = timeDate.toTimeString().slice(0, 5);
 
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
@@ -186,7 +206,7 @@ export default function AppointmentsTable({
       );
 
       if (!isBooked) {
-        const formatted = formatTime(isoTime, timezone);
+        const formatted = formatTime(isoTime);
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -194,6 +214,7 @@ export default function AppointmentsTable({
     return times;
   };
 
+  // باقي الدوال (toggleEdit, toggleAdd, getStatusText, handleUpdate, handleInsert) بدون تغيير
   const toggleEdit = (id: string, initialValues: Appointment) => {
     if (editingId === id) {
       setEditingId(null);
@@ -328,6 +349,7 @@ export default function AppointmentsTable({
     setIsSubmitting(false);
   };
 
+  // باقي JSX بدون أي تغيير (نفس الكود السابق)
   return (
     <>
       <div className="appointments__actions">
@@ -506,9 +528,7 @@ export default function AppointmentsTable({
                               placeholder="الاسم الكامل"
                               className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.full_name && (
-                              <span className="form-error">{formErrors.full_name}</span>
-                            )}
+                            {formErrors.full_name && <span className="form-error">{formErrors.full_name}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.full_name || '—'}</span>
@@ -530,9 +550,7 @@ export default function AppointmentsTable({
                               placeholder="01xxxxxxxxx أو +201..."
                               className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.phone && (
-                              <span className="form-error">{formErrors.phone}</span>
-                            )}
+                            {formErrors.phone && <span className="form-error">{formErrors.phone}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.phone || '—'}</span>
@@ -556,7 +574,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {formatAppointmentDate(appt.appointment_date, appt.appointment_time, timezone)}
+                            {formatDate(appt.appointment_date)}
                           </span>
                         )}
                       </td>
@@ -578,7 +596,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {formatTime(appt.appointment_time, timezone)}
+                            {formatTime(appt.appointment_time)}
                           </span>
                         )}
                       </td>
@@ -621,7 +639,6 @@ export default function AppointmentsTable({
                             >
                               {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
-
                             <button
                               type="button"
                               onClick={() => toggleEdit(appt.id, appt)}
@@ -654,4 +671,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                            }
+                              }
