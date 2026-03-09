@@ -21,62 +21,41 @@ export default async function TestTimezonePage() {
     redirect('/sign-in');
   }
 
-  // جلب الـ timezone
+  // جلب إعداد الـ timezone
   const { data: settings, error: settingsError } = await supabaseServer
     .from('business_settings')
     .select('timezone')
     .maybeSingle();
 
   if (settingsError) {
-    return <div style={{ padding: '2rem', color: 'red' }}>خطأ في جلب الـ timezone: {settingsError.message}</div>;
+    return (
+      <div style={{ padding: '2rem', color: 'red', fontFamily: 'Tajawal, system-ui' }}>
+        خطأ في جلب إعداد الـ timezone: {settingsError.message}
+      </div>
+    );
   }
 
   const dbTimezone = settings?.timezone || 'Africa/Cairo';
 
-  // جلب المواعيد
+  // جلب المواعيد (يمكنك تعديل الاستعلام حسب احتياجك)
   const { data: appointmentsData, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, phone, appointment_date, appointment_time, reason, status')
     .order('appointment_date', { ascending: true })
     .order('appointment_time', { ascending: true })
-    .limit(50);
+    .limit(100);
 
   if (apptError) {
-    return <div style={{ padding: '2rem', color: 'red' }}>خطأ في جلب المواعيد: {apptError.message}</div>;
+    return (
+      <div style={{ padding: '2rem', color: 'red', fontFamily: 'Tajawal, system-ui' }}>
+        خطأ في جلب المواعيد: {apptError.message}
+      </div>
+    );
   }
 
-  const appointments = appointmentsData || [];
+  const appointments: Appointment[] = appointmentsData || [];
 
-  // ─── دوال تنسيق محسّنة ───
-  function formatAppointmentDateTime(dateStr: string | null, timeStr: string | null): string {
-    if (!dateStr) return '—';
-
-    const timePart = timeStr ? timeStr.slice(0, 8) : '00:00:00';
-    // ننشئ string بدون Z → يُعامل كـ local time
-    const dateTimeStr = `\( {dateStr}T \){timePart}`;
-
-    try {
-      const dt = new Date(dateTimeStr);
-
-      const formatter = new Intl.DateTimeFormat('ar-EG', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: dbTimezone,
-      });
-
-      let formatted = formatter.format(dt);
-      formatted = formatted.replace('ص', 'صباحاً').replace('م', 'مساءً');
-      return formatted;
-    } catch (err) {
-      console.error('خطأ في التنسيق:', err);
-      return `${dateStr} ${timePart.slice(0, 5)}`;
-    }
-  }
+  // ─── دوال عرض محسّنة تعامل الوقت كـ local time في الـ timezone المحدد ───
 
   function formatDateOnly(dateStr: string | null): string {
     if (!dateStr) return '—';
@@ -96,53 +75,91 @@ export default async function TestTimezonePage() {
   function formatTimeOnly(timeStr: string | null): string {
     if (!timeStr) return '—';
     try {
-      const fake = new Date(`1970-01-01T${timeStr.slice(0, 8)}`);
+      // وقت وهمي بدون Z → يُعامل كـ local time
+      const fakeDate = new Date(`1970-01-01T${timeStr}`);
       let formatted = new Intl.DateTimeFormat('ar-EG', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
         timeZone: dbTimezone,
-      }).format(fake);
-      return formatted.replace('ص', 'صباحاً').replace('م', 'مساءً');
+      }).format(fakeDate);
+
+      formatted = formatted.replace('ص', 'صباحاً').replace('م', 'مساءً');
+      return formatted;
     } catch {
-      return timeStr.slice(0, 5);
+      return timeStr.slice(0, 5) || '—';
+    }
+  }
+
+  function formatDateTimeCombined(dateStr: string | null, timeStr: string | null): string {
+    if (!dateStr) return '—';
+
+    const timePart = timeStr || '00:00:00';
+    // ننشئ سلسلة بدون Z حتى يعاملها Intl كـ local time في الـ timezone المحدد
+    const dateTimeStr = `\( {dateStr}T \){timePart}`;
+
+    try {
+      const dt = new Date(dateTimeStr);
+
+      let formatted = new Intl.DateTimeFormat('ar-EG', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: dbTimezone,
+      }).format(dt);
+
+      formatted = formatted.replace('ص', 'صباحاً').replace('م', 'مساءً');
+      return formatted;
+    } catch (err) {
+      console.error('خطأ تنسيق التاريخ والوقت:', err);
+      return `${formatDateOnly(dateStr)} ${formatTimeOnly(timeStr)}`;
     }
   }
 
   return (
-    <div dir="rtl" style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto', fontFamily: 'Tajawal, sans-serif' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>اختبار عرض المواعيد مع Timezone</h1>
+    <div dir="rtl" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Tajawal, system-ui' }}>
+      <h1 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+        اختبار عرض المواعيد مع Timezone
+      </h1>
 
-      <div style={{ background: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem' }}>
-        <strong>Timezone المستخدم حالياً:</strong> {dbTimezone}
+      <div style={{ background: '#eff6ff', padding: '1.25rem', borderRadius: '12px', marginBottom: '2rem' }}>
+        <strong>الـ Timezone المستخدم:</strong> {dbTimezone}
       </div>
 
       {appointments.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#666', fontSize: '1.2rem' }}>
-          لا توجد مواعيد في الجدول حالياً
+        <p style={{ textAlign: 'center', color: '#6b7280', padding: '4rem 1rem', fontSize: '1.2rem' }}>
+          لا توجد مواعيد مسجلة حالياً
         </p>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ overflowX: 'auto', border: '1px solid #d1d5db', borderRadius: '12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.98rem' }}>
             <thead>
-              <tr style={{ background: '#e5e7eb' }}>
-                <th style={{ padding: '12px', textAlign: 'right' }}>الاسم</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>التاريخ</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>الوقت</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>التاريخ والوقت معاً</th>
-                <th style={{ padding: '12px', textAlign: 'right' }}>السبب</th>
+              <tr style={{ background: '#f3f4f6' }}>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>الاسم</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>التاريخ (منفصل)</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>الوقت (منفصل)</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>التاريخ والوقت معاً</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>السبب</th>
+                <th style={{ padding: '1rem', textAlign: 'right' }}>الحالة</th>
               </tr>
             </thead>
             <tbody>
               {appointments.map((appt) => (
-                <tr key={appt.id} style={{ borderBottom: '1px solid #ddd' }}>
-                  <td style={{ padding: '12px' }}>{appt.full_name || '—'}</td>
-                  <td style={{ padding: '12px' }}>{formatDateOnly(appt.appointment_date)}</td>
-                  <td style={{ padding: '12px' }}>{formatTimeOnly(appt.appointment_time)}</td>
-                  <td style={{ padding: '12px', fontWeight: 'bold' }}>
-                    {formatAppointmentDateTime(appt.appointment_date, appt.appointment_time)}
+                <tr key={appt.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                  <td style={{ padding: '1rem' }}>{appt.full_name || '—'}</td>
+                  <td style={{ padding: '1rem' }}>{formatDateOnly(appt.appointment_date)}</td>
+                  <td style={{ padding: '1rem' }}>{formatTimeOnly(appt.appointment_time)}</td>
+                  <td style={{ padding: '1rem', fontWeight: 500 }}>
+                    {formatDateTimeCombined(appt.appointment_date, appt.appointment_time)}
                   </td>
-                  <td style={{ padding: '12px' }}>{appt.reason || '—'}</td>
+                  <td style={{ padding: '1rem' }}>{appt.reason || '—'}</td>
+                  <td style={{ padding: '1rem' }}>
+                    {appt.status || '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -150,8 +167,8 @@ export default async function TestTimezonePage() {
         </div>
       )}
 
-      <div style={{ marginTop: '3rem', textAlign: 'center', color: '#777', fontSize: '0.95rem' }}>
-        إذا كانت الأوقات لا تزال تبدو خاطئة، قد نحتاج إلى تغيير طريقة التخزين أو استخدام مكتبة متخصصة (date-fns-tz)
+      <div style={{ marginTop: '3rem', textAlign: 'center', color: '#6b7280', fontSize: '0.95rem' }}>
+        صفحة اختبار — للتأكد من أن التاريخ والوقت يظهران بالتوقيت المحلي الصحيح حسب الـ timezone المخزن
       </div>
     </div>
   );
