@@ -1,3 +1,5 @@
+// app/dashboard/AppointmentsTable.tsx
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -30,10 +32,70 @@ interface AppointmentsTableProps {
   timezone: string;
 }
 
+// ─── دوال التنسيق ───
 function normalizeTime(time: string | null): string {
   if (!time) return '';
   return time.split(':').slice(0, 2).join(':');
 }
+
+// تنسيق التاريخ مع مراعاة الوقت + الـ timezone (الحل الرئيسي لمشكلة عبور اليوم)
+const formatAppointmentDate = (
+  dateStr: string | null,
+  timeStr: string | null,
+  timezone: string
+) => {
+  if (!dateStr) return '—';
+  const timePart = timeStr || '00:00:00';
+
+  try {
+    // نجمع التاريخ + الوقت كـ UTC ثم نطبق الـ timezone
+    const utcDate = new Date(`\( {dateStr}T \){timePart}Z`);
+    return new Intl.DateTimeFormat('ar-EG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: timezone,
+    }).format(utcDate);
+  } catch (e) {
+    console.error('خطأ في تنسيق التاريخ:', e);
+    return dateStr;
+  }
+};
+
+const formatTime = (timeStr: string | null, timezone: string) => {
+  if (!timeStr) return '—';
+  try {
+    const date = new Date(`1970-01-01T${timeStr}Z`);
+    return new Intl.DateTimeFormat('ar-EG', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: timezone,
+    })
+      .format(date)
+      .replace('ص', 'صباحاً')
+      .replace('م', 'مساءً');
+  } catch (e) {
+    console.error('خطأ في تنسيق الوقت:', e);
+    return normalizeTime(timeStr);
+  }
+};
+
+const formatDateForAvailable = (dateStr: string | null, timezone: string) => {
+  if (!dateStr) return '—';
+  try {
+    return new Intl.DateTimeFormat('ar-EG', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: timezone,
+    }).format(new Date(dateStr));
+  } catch (e) {
+    return dateStr;
+  }
+};
 
 export default function AppointmentsTable({
   initialAppointments,
@@ -57,42 +119,6 @@ export default function AppointmentsTable({
     });
     return map;
   }, [initialWorkingHours]);
-
-  // ─── دوال التنسيق بناءً على الـ timezone ───
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '—';
-    try {
-      return new Intl.DateTimeFormat('ar-EG', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: timezone,
-      }).format(new Date(dateStr));
-    } catch (e) {
-      console.error('خطأ في تنسيق التاريخ:', e);
-      return dateStr;
-    }
-  };
-
-  const formatTime = (timeStr: string | null) => {
-    if (!timeStr) return '—';
-    try {
-      const date = new Date(`1970-01-01T${timeStr}Z`); // نستخدم تاريخ وهمي + Z لتجنب تأثير الـ timezone المحلي
-      return new Intl.DateTimeFormat('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: timezone,
-      })
-        .format(date)
-        .replace('ص', 'صباحاً')
-        .replace('م', 'مساءً');
-    } catch (e) {
-      console.error('خطأ في تنسيق الوقت:', e);
-      return normalizeTime(timeStr);
-    }
-  };
 
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
@@ -121,7 +147,7 @@ export default function AppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const formatted = formatDate(isoDate);
+        const formatted = formatDateForAvailable(isoDate, timezone);
         dates.push(isoDate + '|' + formatted);
       }
     }
@@ -159,7 +185,7 @@ export default function AppointmentsTable({
       if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
 
       const timeDate = new Date(slotStart);
-      const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
+      const isoTime = timeDate.toTimeString().slice(0, 5);
 
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
@@ -169,7 +195,7 @@ export default function AppointmentsTable({
       );
 
       if (!isBooked) {
-        const formatted = formatTime(isoTime);
+        const formatted = formatTime(isoTime, timezone);
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -539,7 +565,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {formatDate(appt.appointment_date)}
+                            {formatAppointmentDate(appt.appointment_date, appt.appointment_time, timezone)}
                           </span>
                         )}
                       </td>
@@ -561,7 +587,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {formatTime(appt.appointment_time)}
+                            {formatTime(appt.appointment_time, timezone)}
                           </span>
                         )}
                       </td>
@@ -637,4 +663,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-}
+                                      }
