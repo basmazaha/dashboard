@@ -5,7 +5,6 @@ import { supabaseServer } from '@/lib/supabaseServer';
 
 /**
  * جلب الـ timezone المخزن في جدول business_settings
- * إرجاع قيمة افتراضية إذا لم يوجد أو حدث خطأ
  */
 export async function testGetBusinessTimezone(): Promise<string> {
   try {
@@ -27,7 +26,7 @@ export async function testGetBusinessTimezone(): Promise<string> {
 }
 
 /**
- * جلب أيام الإجازة كـ Set<string> لتسهيل التحقق السريع
+ * جلب أيام الإجازة كـ Set
  */
 export async function testGetOffDaysSet(): Promise<Set<string>> {
   try {
@@ -42,13 +41,13 @@ export async function testGetOffDaysSet(): Promise<Set<string>> {
 
     return new Set(data?.map(row => row.date) || []);
   } catch (err) {
-    console.error('[test-timezone] استثناء في جلب off_days:', err);
+    console.error('[test-timezone] استثناء في off_days:', err);
     return new Set<string>();
   }
 }
 
 /**
- * جلب ساعات العمل لكل يوم من الأسبوع كـ Record<day_of_week, WorkingHour>
+ * جلب ساعات العمل كـ map
  */
 export async function testGetWorkingHoursMap(): Promise<Record<number, any>> {
   try {
@@ -68,14 +67,13 @@ export async function testGetWorkingHoursMap(): Promise<Record<number, any>> {
 
     return map;
   } catch (err) {
-    console.error('[test-timezone] استثناء في جلب working_hours:', err);
+    console.error('[test-timezone] استثناء في working_hours:', err);
     return {};
   }
 }
 
 /**
- * توليد قائمة التواريخ المتاحة خلال الأيام القادمة
- * يتم استبعاد أيام الإجازة + الأيام غير المفتوحة
+ * توليد التواريخ المتاحة
  */
 export async function testGenerateAvailableDates(
   daysCount: number = 30
@@ -113,21 +111,14 @@ export async function testGenerateAvailableDates(
 
     const label = formatter.format(d);
 
-    dates.push({
-      iso,
-      label,
-      dayOfWeek: dow,
-    });
+    dates.push({ iso, label, dayOfWeek: dow });
   }
 
-  return {
-    dates,
-    usedTimezone: tz,
-  };
+  return { dates, usedTimezone: tz };
 }
 
 /**
- * توليد الأوقات المتاحة ليوم محدد مع استبعاد المواعيد المحجوزة من جدول appointments
+ * توليد الأوقات مع جلب المواعيد الحقيقية + debug كامل
  */
 export async function testGenerateAvailableTimes(
   dateIso: string,
@@ -137,13 +128,26 @@ export async function testGenerateAvailableTimes(
   usedTimezone: string;
   message?: string;
   bookedCount: number;
+  debugInfo: any;
 }> {
+  const debugInfo: any = {
+    queriedDate: dateIso,
+    startTime: null,
+    endTime: null,
+    slotMinutes: null,
+    generatedSlotsCount: 0,
+    rawAppointments: [],
+    normalizedBooked: [],
+    error: null,
+  };
+
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) {
     return {
       times: [],
       usedTimezone: 'N/A',
-      message: 'صيغة التاريخ غير صحيحة (يجب YYYY-MM-DD)',
+      message: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)',
       bookedCount: 0,
+      debugInfo: { ...debugInfo, error: 'bad date format' },
     };
   }
 
@@ -157,6 +161,7 @@ export async function testGenerateAvailableTimes(
       usedTimezone: 'N/A',
       message: 'التاريخ غير صالح',
       bookedCount: 0,
+      debugInfo: { ...debugInfo, error: 'invalid date' },
     };
   }
 
@@ -167,16 +172,57 @@ export async function testGenerateAvailableTimes(
     return {
       times: [],
       usedTimezone: tz,
-      message: 'اليوم غير مفتوح حسب جدول ساعات العمل',
+      message: 'اليوم غير مفتوح',
       bookedCount: 0,
+      debugInfo: { ...debugInfo, dayClosed: true, dayOfWeek: dow },
     };
   }
 
+  debugInfo.startTime = wh.start_time;
+  debugInfo.endTime = wh.end_time;
+  debugInfo.slotMinutes = wh.slot_duration_minutes ?? 15;
+
+  // جلب المواعيد من الداتابيز
+  const { data: appts, error } = await supabaseServer
+    .from('appointments')
+    .select('id, appointment_time, status')
+    .eq('appointment_date', dateIso);
+
+  debugInfo.rawAppointments = appts || [];
+  debugInfo.appointmentsError = error ? error.message : null;
+
+  if (error) {
+    console.error('[test] appointments query failed:', error);
+  }
+
+  const bookedTimes = new Set<string>();
+
+  if (appts && appts.length > 0) {
+    appts.forEach(appt => {
+      if (appt.status !== 'cancelled' && appt.id !== excludeAppointmentId) {
+        let timeStr = appt.appointment_time;
+        if (typeof timeStr === 'string') {
+          timeStr = timeStr.trim();
+          // نحاول نأخذ HH:mm بطرق مختلفة
+          const match = timeStr.match(/^(\d{2}):(\d{2})/);
+          if (match) {
+            const hh = match[1].padStart(2, '0');
+            const mm = match[2].padStart(2, '0');
+            const normalized = `\( {hh}: \){mm}`;
+            bookedTimes.add(normalized);
+          }
+        }
+      }
+    });
+  }
+
+  debugInfo.normalizedBooked = Array.from(bookedTimes);
+
+  // توليد السلوتات
   const start = new Date(`1970-01-01T${wh.start_time}`);
   const end = new Date(`1970-01-01T${wh.end_time}`);
 
-  const slotMinutes = wh.slot_duration_minutes ?? 15;
-  const slotMs = slotMinutes * 60 * 1000;
+  const slotMs = debugInfo.slotMinutes * 60 * 1000;
 
   let breakStartMs = Infinity;
   let breakEndMs = -Infinity;
@@ -185,37 +231,17 @@ export async function testGenerateAvailableTimes(
     breakEndMs = new Date(`1970-01-01T${wh.break_end}`).getTime();
   }
 
-  // جلب المواعيد المسجلة في هذا اليوم
-  const { data: appts, error } = await supabaseServer
-    .from('appointments')
-    .select('id, appointment_time, status')
-    .eq('appointment_date', dateIso);
-
-  if (error) {
-    console.error('[test-timezone] خطأ في قراءة appointments:', error.message);
-    return {
-      times: [],
-      usedTimezone: tz,
-      message: 'خطأ في جلب المواعيد المحجوزة',
-      bookedCount: 0,
-    };
-  }
-
-  const bookedTimes = new Set<string>();
-  appts?.forEach(appt => {
-    if (appt.status !== 'cancelled' && appt.id !== excludeAppointmentId) {
-      const normalizedTime = appt.appointment_time?.slice(0, 5) || '';
-      if (normalizedTime) bookedTimes.add(normalizedTime);
-    }
-  });
-
   const times: Array<{ time: string; label: string; isBooked: boolean }> = [];
 
-  for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
+  let current = start.getTime();
+  while (current < end.getTime()) {
     const slotStart = current;
     const slotEnd = current + slotMs;
 
-    if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
+    if (slotStart < breakEndMs && slotEnd > breakStartMs) {
+      current += slotMs;
+      continue;
+    }
 
     const slotDate = new Date(slotStart);
     const isoTime = slotDate.toTimeString().slice(0, 5);
@@ -232,16 +258,17 @@ export async function testGenerateAvailableTimes(
     let label = formatter.format(slotDate);
     label = label.replace('ص', 'صباحاً').replace('م', 'مساءً');
 
-    times.push({
-      time: isoTime,
-      label,
-      isBooked,
-    });
+    times.push({ time: isoTime, label, isBooked });
+
+    current += slotMs;
+    debugInfo.generatedSlotsCount++;
   }
 
   return {
     times,
     usedTimezone: tz,
+    message: bookedTimes.size > 0 ? undefined : 'لا توجد مواعيد محجوزة في هذا اليوم',
     bookedCount: bookedTimes.size,
+    debugInfo,
   };
 }
