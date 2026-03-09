@@ -637,4 +637,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                              }
+}
