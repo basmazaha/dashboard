@@ -3,7 +3,7 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { fromZonedTime } from 'date-fns-tz';  // الدالة الصحيحة في v3+
 
 type AppointmentInput = {
   full_name: string;
@@ -13,18 +13,6 @@ type AppointmentInput = {
   reason?: string;
   status?: string;
 };
-
-function parseLocalDateTime(dateStr: string, timeStr: string, tz: string): Date {
-  // تقسيم التاريخ والوقت يدويًا عشان نتجنب مشاكل new Date() في السيرفر
-  const [year, month, day] = dateStr.split('-').map(Number);
-  const [hour, minute] = timeStr.split(':').map(Number);
-
-  // إنشاء Date object باستخدام UTC أولاً، ثم نطبق الـ timezone
-  const localDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
-
-  // تحويل الوقت المحلي إلى UTC بدقة
-  return zonedTimeToUtc(localDate, tz);
-}
 
 export async function insertAppointmentAction(input: AppointmentInput) {
   try {
@@ -40,8 +28,15 @@ export async function insertAppointmentAction(input: AppointmentInput) {
 
     const tz = settings.timezone;
 
-    // تحويل يدوي آمن
-    const utcDate = parseLocalDateTime(input.date, input.time, tz);
+    // بناء التاريخ والوقت يدويًا لتجنب أي مشاكل في new Date()
+    const [year, month, day] = input.date.split('-').map(Number);
+    const [hour, minute] = input.time.split(':').map(Number);
+
+    // إنشاء Date محلي باستخدام Date.UTC (آمن في السيرفر)
+    const localDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+
+    // تحويل الوقت المحلي إلى UTC بدقة
+    const utcDate = fromZonedTime(localDate, tz);
 
     const { error } = await supabaseServer.from('appointments').insert({
       full_name: input.full_name,
@@ -71,7 +66,11 @@ export async function updateAppointmentAction(id: string, input: AppointmentInpu
 
     const tz = settings?.timezone || 'Africa/Cairo';
 
-    const utcDate = parseLocalDateTime(input.date, input.time, tz);
+    const [year, month, day] = input.date.split('-').map(Number);
+    const [hour, minute] = input.time.split(':').map(Number);
+
+    const localDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+    const utcDate = fromZonedTime(localDate, tz);
 
     const { error } = await supabaseServer
       .from('appointments')
