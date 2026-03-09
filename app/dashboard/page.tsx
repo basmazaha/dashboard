@@ -1,11 +1,9 @@
-// app/dashboard/page.tsx   ← الملف الوحيد الذي يحتاج تعديل
+// app/dashboard/page.tsx
 
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AppointmentsTable from './AppointmentsTable';
-import { startOfDay, formatISO } from 'date-fns';
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';   // ← التغيير هنا
 
 export const dynamic = 'force-dynamic';
 
@@ -15,79 +13,58 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  // 1. جلب timezone من الإعدادات
-  const { data: settings, error: settingsError } = await supabaseServer
+  const today = new Date().toISOString().split('T')[0];
+
+  // جلب المواعيد المستقبلية
+  const { data: appointments, error: apptError } = await supabaseServer
+    .from('appointments')
+    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
+    .gte('appointment_date', today)
+    .order('appointment_date', { ascending: true })
+    .order('appointment_time', { ascending: true })
+    .limit(100);
+
+  // جلب أيام الإجازة
+  const { data: offDaysData, error: offError } = await supabaseServer
+    .from('off_days')
+    .select('date');
+
+  // جلب ساعات العمل
+  const { data: workingHours, error: hoursError } = await supabaseServer
+    .from('working_hours')
+    .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
+
+  // ─── جلب الـ timezone من business_settings ───
+  const { data: settingsData, error: settingsError } = await supabaseServer
     .from('business_settings')
     .select('timezone')
-    .maybeSingle();
+    .maybeSingle(); // إذا كان فيه صف واحد فقط – أو .limit(1) إذا متعدد
 
-  if (settingsError || !settings) {
-    console.error('خطأ في جلب timezone:', settingsError);
+  const timezone = settingsData?.timezone || 'Africa/Cairo'; // fallback مهم جداً
+
+  if (apptError || offError || hoursError || settingsError) {
+    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError, settingsError });
     return (
-      <div className="p-8 text-center text-red-600 bg-red-50 rounded-lg">
-        تعذر جلب إعدادات المنطقة الزمنية
+      <div className="no-appointments">
+        حدث خطأ أثناء جلب البيانات.
         <br />
-        <small className="text-sm">{settingsError?.message || 'لا توجد بيانات إعدادات'}</small>
+        <small>يرجى التحقق من الـ console</small>
       </div>
     );
   }
 
-  const timezone = settings.timezone || 'Africa/Cairo';
-
-  // 2. حساب بداية اليوم الحالي في الـ timezone المحدد → ثم تحويلها إلى UTC
-  const nowUTC = new Date();                           // الوقت الحالي (يُعامل كـ UTC داخلياً في JS)
-  const nowInTz = toZonedTime(nowUTC, timezone);       // نقل الوقت إلى المنطقة المطلوبة
-  const startOfTodayInTz = startOfDay(nowInTz);        // 00:00:00 في المنطقة الزمنية
-  const startOfTodayUTC = fromZonedTime(startOfTodayInTz, timezone);  // إرجاعه إلى UTC
-
-  const startOfTodayISO = formatISO(startOfTodayUTC, { representation: 'complete' });
-
-  console.log('[DEBUG] timezone:', timezone);
-  console.log('[DEBUG] startOfTodayISO:', startOfTodayISO);
-
-  // 3. جلب البيانات
-  const [
-    { data: appointments, error: apptError },
-    { data: offDaysData, error: offError },
-    { data: workingHours, error: hoursError },
-  ] = await Promise.all([
-    supabaseServer
-      .from('appointments')
-      .select('id, full_name, date_time, phone, reason, status')
-      .gte('date_time', startOfTodayISO)
-      .order('date_time', { ascending: true })
-      .limit(100),
-
-    supabaseServer.from('off_days').select('date'),
-
-    supabaseServer
-      .from('working_hours')
-      .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end'),
-  ]);
-
-  if (apptError || offError || hoursError) {
-    console.error('أخطاء في جلب البيانات:', { apptError, offError, hoursError });
-    return (
-      <div className="p-8 text-center text-red-600 bg-red-50 rounded-lg">
-        حدث خطأ أثناء جلب بيانات المواعيد أو ساعات العمل أو أيام الإجازة
-        <br />
-        <small>يرجى مراجعة Vercel Logs للتفاصيل</small>
-      </div>
-    );
-  }
-
-  const offDays = offDaysData?.map((row) => row.date) ?? [];
+  const offDays = offDaysData?.map(row => row.date) || [];
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">المواعيد اليومية</h1>
+    <div>
+      <div className="dashboard-page-header">
+        <h2 className="dashboard-page-title">المواعيد</h2>
       </div>
 
       <AppointmentsTable
-        initialAppointments={appointments ?? []}
+        initialAppointments={appointments || []}
         initialOffDays={offDays}
-        initialWorkingHours={workingHours ?? []}
+        initialWorkingHours={workingHours || []}
         timezone={timezone}
       />
     </div>
