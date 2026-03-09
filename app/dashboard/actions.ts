@@ -35,7 +35,7 @@ async function getBusinessTimezone() {
 
   if (error) {
     console.error('Error fetching timezone:', error);
-    return 'Africa/Cairo'; // fallback
+    return 'Africa/Cairo';
   }
 
   return data?.timezone || 'Africa/Cairo';
@@ -70,9 +70,9 @@ export async function updateAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    // إنشاء التاريخ المحلي (بدون Z = local time)
-    const localDateTime = new Date(date + 'T' + fullTime);
-    // تحويل إلى UTC ISO string
+    // التاريخ/الوقت المحلي حسب timezone من الجدول
+    const localDateTime = new Date(`\( {date}T \){fullTime}`);
+    // تحويل إلى UTC ISO
     date_time = localDateTime.toISOString();
   }
 
@@ -148,13 +148,10 @@ export async function insertAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    // إنشاء التاريخ المحلي
-    const localDateTime = new Date(date + 'T' + fullTime);
-    // تحويل إلى UTC ISO
+    const localDateTime = new Date(`\( {date}T \){fullTime}`);
     date_time = localDateTime.toISOString();
   }
 
-  // التحقق من عدم التداخل
   if (date_time) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
@@ -212,9 +209,5 @@ export async function fetchAppointments() {
     return { error: error.message, appointments: [] as Appointment[] };
   }
 
-  const normalized = (data ?? []).map(appt => ({
-    ...appt,
-  }));
-
-  return { appointments: normalized };
+  return { appointments: data ?? [] };
 }
