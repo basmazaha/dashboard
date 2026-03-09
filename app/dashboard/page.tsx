@@ -23,36 +23,29 @@ export default async function DashboardPage() {
     .order('appointment_time', { ascending: true })
     .limit(100);
 
-  // جلب أيام الإجازة
-  const { data: offDaysData, error: offError } = await supabaseServer
+  // أيام الإجازة
+  const { data: offDaysData } = await supabaseServer
     .from('off_days')
     .select('date');
 
-  // جلب ساعات العمل
-  const { data: workingHours, error: hoursError } = await supabaseServer
+  // ساعات العمل
+  const { data: workingHours } = await supabaseServer
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
-  // جلب الـ timezone
-  const { data: settingsData, error: settingsError } = await supabaseServer
+  // ← هنا الأهم: جلب timezone
+  const { data: settings } = await supabaseServer
     .from('business_settings')
     .select('timezone')
     .maybeSingle();
 
-  const timezone = settingsData?.timezone || 'Africa/Cairo';
+  const timezone = settings?.timezone || 'Africa/Cairo'; // fallback آمن
 
-  if (apptError || offError || hoursError || settingsError) {
-    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError, settingsError });
-    return (
-      <div className="no-appointments">
-        حدث خطأ أثناء جلب البيانات.
-        <br />
-        <small>يرجى التحقق من الـ console</small>
-      </div>
-    );
+  if (apptError) {
+    console.error('خطأ جلب المواعيد:', apptError);
   }
 
-  const offDays = offDaysData?.map(row => row.date) || [];
+  const offDays = offDaysData?.map((row) => row.date) || [];
 
   return (
     <div>
