@@ -11,6 +11,7 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
+  // جلب timezone من الإعدادات
   const { data: settingsData, error: settingsError } = await supabaseServer
     .from('business_settings')
     .select('timezone')
@@ -18,19 +19,25 @@ export default async function DashboardPage() {
 
   const timezone = settingsData?.timezone || 'Africa/Cairo';
 
-  const todayLocal = new Date().toLocaleString('en-US', {
+  // حساب اليوم الحالي باستخدام الـ timezone المحدد
+  const now = new Date();
+  const todayInTz = now.toLocaleDateString('en-CA', {
     timeZone: timezone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).split('/').reverse().join('-') + 'T00:00:00';
+  }); // → YYYY-MM-DD
 
-  const todayUTC = new Date(todayLocal).toISOString();
+  // تحويل اليوم الحالي إلى بداية اليوم UTC للاستعلام في Supabase
+  const startOfTodayLocal = new Date(`${todayInTz}T00:00:00`);
+  const startOfTodayUTC = new Date(
+    startOfTodayLocal.getTime() - startOfTodayLocal.getTimezoneOffset() * 60000
+  ).toISOString();
 
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
-    .gte('date_time', todayUTC)
+    .gte('date_time', startOfTodayUTC)
     .order('date_time', { ascending: true })
     .limit(100);
 
