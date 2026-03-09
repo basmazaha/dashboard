@@ -1,5 +1,3 @@
-// app/dashboard/AppointmentsTable.tsx
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -32,20 +30,23 @@ interface AppointmentsTableProps {
   timezone: string;
 }
 
-// ─── دوال التنسيق ───
+// ─── دوال مساعدة ───
 function normalizeTime(time: string | null): string {
   if (!time) return '';
   return time.split(':').slice(0, 2).join(':');
 }
 
-// تنسيق التاريخ مع مراعاة الوقت + الـ timezone (الحل الرئيسي لمشكلة عبور اليوم)
+// ─── الدالة الجديدة (الحل النهائي لمشكلة عبور اليوم) ───
 const formatAppointmentDate = (
   dateStr: string | null,
   timeStr: string | null,
   timezone: string
 ) => {
   if (!dateStr) return '—';
-  const timePart = timeStr || '00:00:00';
+
+  // نضمن تنسيق الوقت HH:mm:ss
+  let timePart = timeStr || '00:00:00';
+  if (timePart.length === 5) timePart += ':00';
 
   try {
     // نجمع التاريخ + الوقت كـ UTC ثم نطبق الـ timezone
@@ -58,7 +59,7 @@ const formatAppointmentDate = (
       timeZone: timezone,
     }).format(utcDate);
   } catch (e) {
-    console.error('خطأ في تنسيق التاريخ:', e);
+    console.error('❌ خطأ في تنسيق التاريخ:', e, { dateStr, timeStr });
     return dateStr;
   }
 };
@@ -663,4 +664,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                                      }
+}
