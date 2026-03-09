@@ -3,53 +3,73 @@
 
 import { useMemo } from 'react';
 
-interface Props {
+interface TestAvailableTimesProps {
   timezone: string;
   date: string;
 }
 
-export default function TestAvailableTimes({ timezone, date }: Props) {
+export default function TestAvailableTimes({ timezone, date }: TestAvailableTimesProps) {
   const slots = useMemo(() => {
-    const start = new Date(`1970-01-01T09:00:00`);
-    const end = new Date(`1970-01-01T21:00:00`);
-    const slotMs = 30 * 60 * 1000;
-    const breakStart = new Date(`1970-01-01T14:00:00`).getTime();
-    const breakEnd = new Date(`1970-01-01T15:00:00`).getTime();
+    const startHour = 9;
+    const endHour = 21;
+    const slotMinutes = 30;
 
     const result: string[] = [];
 
-    for (let t = start.getTime(); t < end.getTime(); t += slotMs) {
-      if (t >= breakStart && t < breakEnd) continue;
+    for (let h = startHour; h < endHour; h++) {
+      for (let m = 0; m < 60; m += slotMinutes) {
+        const hourStr = h.toString().padStart(2, '0');
+        const minStr = m.toString().padStart(2, '0');
+        const timeStr = `\( {hourStr}: \){minStr}`;
 
-      const slotDate = new Date(t);
-      const timeStr = slotDate.toTimeString().slice(0, 5);
+        const fakeDate = new Date(`1970-01-01T${timeStr}:00`);
 
-      const formatted = new Intl.DateTimeFormat('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: timezone,
-      })
-        .format(slotDate)
-        .replace('ص', 'صباحاً')
-        .replace('م', 'مساءً');
+        const formatted = new Intl.DateTimeFormat('ar-EG', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+          timeZone: timezone,
+        })
+          .format(fakeDate)
+          .replace('ص', 'صباحاً')
+          .replace('م', 'مساءً');
 
-      result.push(`${timeStr} → ${formatted}`);
+        result.push(`${timeStr} → ${formatted}`);
+      }
     }
 
     return result;
   }, [timezone]);
 
   return (
-    <div>
-      <h3>الأوقات المتاحة ليوم {date} (timezone: {timezone})</h3>
-      <ul style={{ columns: '3', listStyle: 'none', padding: 0, fontSize: '0.95rem' }}>
+    <div style={{ marginTop: '2rem' }}>
+      <h3 style={{ marginBottom: '1rem' }}>
+        عرض توضيحي client-side للأوقات (timezone: {timezone})
+      </h3>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          gap: '10px',
+        }}
+      >
         {slots.map((slot, i) => (
-          <li key={i} style={{ marginBottom: '0.4rem' }}>
+          <div
+            key={i}
+            style={{
+              padding: '10px',
+              backgroundColor: '#f0f9ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '6px',
+              fontSize: '0.95rem',
+              textAlign: 'center',
+            }}
+          >
             {slot}
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
