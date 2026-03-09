@@ -254,7 +254,6 @@ export default function AppointmentsTable({
     const appointmentId = formData.get('appointment_id') as string;
     const originalAppt = appointments.find(a => a.id === appointmentId);
 
-    // تحديث مؤقت بدون حساب التاريخ (السيرفر سيتولى ذلك)
     setAppointments(prev =>
       prev.map(appt =>
         appt.id === appointmentId
@@ -262,7 +261,7 @@ export default function AppointmentsTable({
               ...appt,
               full_name: formData.get('full_name') as string | null,
               phone: formData.get('phone') as string | null,
-              date_time: null, // سيتم تحديثه بعد الرفريش
+              date_time: null,
               status: formData.get('status') as string | null,
             }
           : appt
@@ -304,7 +303,7 @@ export default function AppointmentsTable({
       id: tempId,
       full_name: formData.get('full_name') as string | null,
       phone: formData.get('phone') as string | null,
-      date_time: null, // السيرفر سيحدده
+      date_time: null,
       reason: formData.get('reason') as string | null,
       status: formData.get('status') as string | null ?? 'confirmed',
     };
