@@ -46,7 +46,7 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
       const utcDate = fromZonedTime(zonedDate, businessTimezone);
       date_time = utcDate.toISOString();
     } catch (err) {
-      console.error('خطأ في تحويل التاريخ/الوقت إلى UTC:', err);
+      console.error(err);
       return { error: 'صيغة التاريخ أو الوقت غير صحيحة' };
     }
   }
@@ -54,8 +54,8 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
   // التحقق من عدم التداخل في نفس اليوم + نفس الدقيقة
   if (status !== 'cancelled' && date_time) {
     const targetDateLocal = toZonedTime(date_time, businessTimezone);
-    const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd');
-    const targetTimeOnly = format(targetDateLocal, 'HH:mm');
+    const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd', { timeZone: businessTimezone });
+    const targetTimeOnly = format(targetDateLocal, 'HH:mm', { timeZone: businessTimezone });
 
     const { data: existing, error } = await supabaseServer
       .from('appointments')
@@ -73,7 +73,7 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
       if (!a.date_time) return false;
 
       const existingZoned = toZonedTime(a.date_time, businessTimezone);
-      const existingTime = format(existingZoned, 'HH:mm');
+      const existingTime = format(existingZoned, 'HH:mm', { timeZone: businessTimezone });
 
       return existingTime === targetTimeOnly;
     });
@@ -144,15 +144,15 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
     const utcDate = fromZonedTime(zonedDate, businessTimezone);
     date_time = utcDate.toISOString();
   } catch (err) {
-    console.error('خطأ في تحويل التاريخ/الوقت إلى UTC:', err);
+    console.error(err);
     return { error: 'صيغة التاريخ أو الوقت غير صحيحة' };
   }
 
   // التحقق من عدم التداخل
   if (date_time) {
     const targetDateLocal = toZonedTime(date_time, businessTimezone);
-    const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd');
-    const targetTimeOnly = format(targetDateLocal, 'HH:mm');
+    const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd', { timeZone: businessTimezone });
+    const targetTimeOnly = format(targetDateLocal, 'HH:mm', { timeZone: businessTimezone });
 
     const { data: existing, error } = await supabaseServer
       .from('appointments')
@@ -167,7 +167,7 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
       if (!a.date_time) return false;
 
       const exZoned = toZonedTime(a.date_time, businessTimezone);
-      const exTime = format(exZoned, 'HH:mm');
+      const exTime = format(exZoned, 'HH:mm', { timeZone: businessTimezone });
 
       return exTime === targetTimeOnly;
     });
