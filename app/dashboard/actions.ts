@@ -70,9 +70,9 @@ export async function updateAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    // التاريخ/الوقت المحلي حسب timezone من الجدول
-    const localDateTime = new Date(`\( {date}T \){fullTime}`);
-    // تحويل إلى UTC ISO
+    // إنشاء التاريخ والوقت كـ local time
+    const localDateTime = new Date(date + 'T' + fullTime);
+    // تحويل إلى UTC ISO string
     date_time = localDateTime.toISOString();
   }
 
@@ -148,7 +148,7 @@ export async function insertAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    const localDateTime = new Date(`\( {date}T \){fullTime}`);
+    const localDateTime = new Date(date + 'T' + fullTime);
     date_time = localDateTime.toISOString();
   }
 
