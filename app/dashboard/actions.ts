@@ -1,3 +1,5 @@
+// app/dashboard/actions.ts
+
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -5,7 +7,8 @@ import { supabaseServer } from '@/lib/supabaseServer';
 type Appointment = {
   id: string;
   full_name: string | null;
-  date_time: string | null; // ISO string in UTC
+  appointment_date: string | null;
+  appointment_time: string | null;
   phone: string | null;
   reason: string | null;
   status: string | null;
@@ -17,45 +20,23 @@ function normalizeTime(time: string | null): string {
 }
 
 function toFullTimeFormat(time: string | null): string {
-  if (!time?.trim()) return '00:00:00';
-  const cleaned = time.trim().replace(/\s+/g, '');
-  const parts = cleaned.split(':');
-
+  if (!time) return '00:00:00';
+  const parts = time.split(':');
   if (parts.length === 2) {
-    return `\( {parts[0].padStart(2, '0')}: \){parts[1].padStart(2, '0')}:00`;
+    // الصيغة المصححة – بدون أخطاء الـ escape
+    return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0') + ':00';
   }
-  if (parts.length === 3) {
-    return `\( {parts[0].padStart(2, '0')}: \){parts[1].padStart(2, '0')}:${parts[2].padStart(2, '0')}`;
-  }
+  if (parts.length === 3) return time;
   return '00:00:00';
 }
 
-async function getBusinessTimezone() {
-  const { data, error } = await supabaseServer
-    .from('business_settings')
-    .select('timezone')
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error fetching timezone:', error);
-    return 'Africa/Cairo';
-  }
-
-  return data?.timezone || 'Africa/Cairo';
-}
-
 export async function updateAppointment(formData: FormData) {
-  console.log('───── updateAppointment called ─────');
-  console.log('FormData:', Object.fromEntries(formData));
-
   const id = formData.get('appointment_id') as string;
   const full_name = (formData.get('full_name') as string)?.trim() || '';
   const phone = (formData.get('phone') as string)?.trim() || '';
-  const date = (formData.get('date') as string)?.trim() || null;
-  const time = (formData.get('time') as string)?.trim() || null;
+  const date = formData.get('date') as string | null;
+  const time = formData.get('time') as string | null;
   const status = formData.get('status') as string | null;
-
-  console.log({ id, full_name, phone, date, time, status });
 
   if (!id) return { error: 'لا يوجد معرف للموعد' };
 
@@ -73,36 +54,22 @@ export async function updateAppointment(formData: FormData) {
 
   if (Object.keys(errors).length > 0) return { errors };
 
-  let date_time: string | null = null;
-  if (date && time) {
-    const fullTime = toFullTimeFormat(time);
-    const localStr = `\( {date}T \){fullTime}`;
-
-    console.log('محاولة تحويل →', { date, time, fullTime, localStr });
-
-    const localDate = new Date(localStr);
-    if (isNaN(localDate.getTime())) {
-      console.error('فشل تحويل التاريخ:', localStr);
-      return { error: 'صيغة التاريخ أو الوقت غير صالحة' };
-    }
-
-    date_time = localDate.toISOString();
-    console.log('تم التحويل بنجاح →', date_time);
-  }
+  const dbTime = time ? toFullTimeFormat(time) : null;
 
   // التحقق من عدم التداخل
-  if (status !== 'cancelled' && date_time) {
+  if (status !== 'cancelled' && date && dbTime) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
-      .select('id, status, date_time')
-      .eq('date_time', date_time);
+      .select('id, status, appointment_time')
+      .eq('appointment_date', date);
 
-    if (error) {
-      console.error('خطأ في التحقق من التداخل:', error);
-      return { error: 'خطأ في التحقق من توفر الموعد' };
-    }
+    if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
-    if (existing?.some(a => a.status !== 'cancelled' && a.id !== id)) {
+    if (existing?.some(a => 
+      a.status !== 'cancelled' && 
+      a.id !== id && 
+      normalizeTime(a.appointment_time) === normalizeTime(time)
+    )) {
       return { error: 'هذا الوقت محجوز بالفعل' };
     }
   }
@@ -111,10 +78,12 @@ export async function updateAppointment(formData: FormData) {
 
   if (status === 'cancelled') {
     updates.status = 'cancelled';
-    updates.date_time = null;
+    updates.appointment_date = null;
+    updates.appointment_time = null;
     updates.reminder_sent_6h = false;
   } else {
-    if (date_time) updates.date_time = date_time;
+    if (date) updates.appointment_date = date;
+    if (dbTime) updates.appointment_time = dbTime;
     if (status) {
       updates.status = status;
       if (status === 'rescheduled') updates.reminder_sent_6h = false;
@@ -130,26 +99,18 @@ export async function updateAppointment(formData: FormData) {
     .update(updates)
     .eq('id', id);
 
-  if (error) {
-    console.error('خطأ تحديث الموعد:', error);
-    return { error: error.message || 'فشل التحديث' };
-  }
+  if (error) return { error: error.message || 'فشل التحديث' };
 
   return { success: true };
 }
 
 export async function insertAppointment(formData: FormData) {
-  console.log('───── insertAppointment called ─────');
-  console.log('FormData:', Object.fromEntries(formData));
-
   const full_name = (formData.get('full_name') as string)?.trim() || '';
   const phone = (formData.get('phone') as string)?.trim() || '';
-  const date = (formData.get('date') as string)?.trim() || null;
-  const time = (formData.get('time') as string)?.trim() || null;
-  const reason = (formData.get('reason') as string)?.trim() || null;
-  const status = (formData.get('status') as string)?.trim() || 'confirmed';
-
-  console.log({ full_name, phone, date, time, reason, status });
+  const date = formData.get('date') as string | null;
+  const time = formData.get('time') as string | null;
+  const reason = formData.get('reason') as string | null;
+  const status = (formData.get('status') as string) || 'confirmed';
 
   const errors: Record<string, string> = {};
 
@@ -166,40 +127,23 @@ export async function insertAppointment(formData: FormData) {
   if (!date) errors.date = 'التاريخ مطلوب';
   if (!time) errors.time = 'الوقت مطلوب';
 
-  if (Object.keys(errors).length > 0) {
-    console.log('أخطاء التحقق:', errors);
-    return { errors };
-  }
+  if (Object.keys(errors).length > 0) return { errors };
 
-  let date_time: string | null = null;
-  if (date && time) {
-    const fullTime = toFullTimeFormat(time);
-    const localStr = `\( {date}T \){fullTime}`;
+  const dbTime = time ? toFullTimeFormat(time) : null;
 
-    console.log('محاولة تحويل →', { date, time, fullTime, localStr });
-
-    const localDate = new Date(localStr);
-    if (isNaN(localDate.getTime())) {
-      console.error('فشل تحويل التاريخ:', localStr);
-      return { error: 'صيغة التاريخ أو الوقت غير صالحة' };
-    }
-
-    date_time = localDate.toISOString();
-    console.log('تم التحويل بنجاح →', date_time);
-  }
-
-  if (date_time) {
+  // التحقق من عدم التداخل
+  if (date && dbTime) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
-      .select('id, status, date_time')
-      .eq('date_time', date_time);
+      .select('id, status, appointment_time')
+      .eq('appointment_date', date);
 
-    if (error) {
-      console.error('خطأ في التحقق من التداخل:', error);
-      return { error: 'خطأ في التحقق من توفر الموعد' };
-    }
+    if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
-    if (existing?.length > 0) {
+    if (existing?.some(a => 
+      a.status !== 'cancelled' && 
+      normalizeTime(a.appointment_time) === normalizeTime(time)
+    )) {
       return { error: 'هذا الوقت محجوز بالفعل' };
     }
   }
@@ -207,47 +151,29 @@ export async function insertAppointment(formData: FormData) {
   const insertData = {
     full_name,
     phone,
-    date_time,
+    appointment_date: date,
+    appointment_time: dbTime,
     reason: reason || null,
     status,
     reminder_sent_6h: false,
   };
 
-  console.log('البيانات التي سيتم إدراجها:', insertData);
-
   const { data, error } = await supabaseServer
     .from('appointments')
     .insert([insertData])
-    .select('id, full_name, date_time, phone, reason, status')
+    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
     .single();
 
-  if (error) {
-    console.error('خطأ إدراج الموعد:', error);
-    return { error: error.message || 'فشل إضافة الموعد' };
-  }
+  if (error) return { error: error.message || 'فشل إضافة الموعد' };
 
   return { success: true, newAppointment: data };
 }
 
 export async function fetchAppointments() {
-  const timezone = await getBusinessTimezone();
-
-  const todayLocal = new Date().toLocaleString('en-US', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).split('/').reverse().join('-') + 'T00:00:00';
-
-  const todayUTC = new Date(todayLocal).toISOString();
-
-  console.log('fetchAppointments → من:', todayUTC);
-
   const { data, error } = await supabaseServer
     .from('appointments')
-    .select('id, full_name, date_time, phone, reason, status')
-    .gte('date_time', todayUTC)
-    .order('date_time', { ascending: true })
+    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
+    .order('appointment_date', { ascending: true })
     .limit(50);
 
   if (error) {
@@ -255,5 +181,11 @@ export async function fetchAppointments() {
     return { error: error.message, appointments: [] as Appointment[] };
   }
 
-  return { appointments: data ?? [] };
+  const normalized = (data ?? []).map(appt => ({
+    ...appt,
+    appointment_time: normalizeTime(appt.appointment_time),
+  }));
+
+  return { appointments: normalized };
 }
+
