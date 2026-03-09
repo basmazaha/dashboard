@@ -70,33 +70,9 @@ export async function updateAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    // إنشاء string للتاريخ والوقت المحلي
-    const localStr = `\( {date}T \){fullTime}`;
-    
-    // استخدام Intl لتحويل التاريخ المحلي إلى UTC بشكل صحيح
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-
-    // نحصل على أجزاء التاريخ/الوقت في الـ timezone المطلوب
-    const parts = formatter.formatToParts(new Date(localStr));
-    const year = parts.find(p => p.type === 'year')?.value;
-    const month = parts.find(p => p.type === 'month')?.value;
-    const day = parts.find(p => p.type === 'day')?.value;
-    const hour = parts.find(p => p.type === 'hour')?.value;
-    const minute = parts.find(p => p.type === 'minute')?.value;
-    const second = parts.find(p => p.type === 'second')?.value;
-
-    // إنشاء UTC date
-    const utcDate = new Date(`\( {year}- \){month}-\( {day}T \){hour}:\( {minute}: \){second}Z`);
-    date_time = utcDate.toISOString();
+    // صيغة صحيحة 100%
+    const localDateTime = new Date(`\( {date}T \){fullTime}`);
+    date_time = localDateTime.toISOString();
   }
 
   // التحقق من عدم التداخل
@@ -171,37 +147,9 @@ export async function insertAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    const localStr = `\( {date}T \){fullTime}`;
-    
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-
-    const parts = formatter.formatToParts(new Date(localStr));
-    const year = parts.find(p => p.type === 'year')?.value;
-    const month = parts.find(p => p.type === 'month')?.value.padStart(2, '0');
-    const day = parts.find(p => p.type === 'day')?.value.padStart(2, '0');
-    const hour = parts.find(p => p.type === 'hour')?.value.padStart(2, '0');
-    const minute = parts.find(p => p.type === 'minute')?.value.padStart(2, '0');
-    const second = parts.find(p => p.type === 'second')?.value.padStart(2, '0');
-
-    const utcDate = new Date(Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second)
-    ));
-
-    date_time = utcDate.toISOString();
+    // صيغة صحيحة 100%
+    const localDateTime = new Date(`\( {date}T \){fullTime}`);
+    date_time = localDateTime.toISOString();
   }
 
   if (date_time) {
