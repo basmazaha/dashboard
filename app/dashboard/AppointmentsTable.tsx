@@ -1,4 +1,3 @@
-// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -36,18 +35,6 @@ function normalizeTime(time: string | null): string {
   return time.split(':').slice(0, 2).join(':');
 }
 
-const DAY_OF_WEEK_MAP = {
-  sun: 0,
-  mon: 1,
-  tue: 2,
-  wed: 3,
-  thu: 4,
-  fri: 5,
-  sat: 6,
-} as const;
-
-type DayShort = keyof typeof DAY_OF_WEEK_MAP;
-
 export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
@@ -71,17 +58,17 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
+  // ─── دوال التنسيق بناءً على الـ timezone ───
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     try {
-      const safeDate = new Date(dateStr + 'T12:00:00');
-      return safeDate.toLocaleDateString('ar-EG', {
+      return new Intl.DateTimeFormat('ar-EG', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
         day: 'numeric',
         timeZone: timezone,
-      });
+      }).format(new Date(dateStr));
     } catch (e) {
       console.error('خطأ في تنسيق التاريخ:', e);
       return dateStr;
@@ -91,13 +78,14 @@ export default function AppointmentsTable({
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return '—';
     try {
-      const timeDate = new Date(`2000-01-01T${normalizeTime(timeStr)}:00`);
-      return timeDate
-        .toLocaleTimeString('ar-EG', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        })
+      const date = new Date(`1970-01-01T${timeStr}Z`); // نستخدم تاريخ وهمي + Z لتجنب تأثير الـ timezone المحلي
+      return new Intl.DateTimeFormat('ar-EG', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone,
+      })
+        .format(date)
         .replace('ص', 'صباحاً')
         .replace('م', 'مساءً');
     } catch (e) {
@@ -108,57 +96,34 @@ export default function AppointmentsTable({
 
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
-      const strA = `${a.appointment_date || ''} ${normalizeTime(a.appointment_time || '')}`;
-      const strB = `${b.appointment_date || ''} ${normalizeTime(b.appointment_time || '')}`;
-      return strA.localeCompare(strB);
+      if (!a.appointment_date && b.appointment_date) return 1;
+      if (b.appointment_date && !a.appointment_date) return -1;
+      if (!a.appointment_date && !b.appointment_date) return 0;
+
+      const dtA = new Date(a.appointment_date + 'T' + (a.appointment_time || '00:00:00'));
+      const dtB = new Date(b.appointment_date + 'T' + (b.appointment_time || '00:00:00'));
+      return dtA.getTime() - dtB.getTime();
     });
   }, [appointments]);
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-
-    const todayStr = (() => {
-      const now = new Date();
-      const formatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: timezone,
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      });
-      const parts = formatter.formatToParts(now);
-      const year = parts.find(p => p.type === 'year')?.value ?? '';
-      const month = parts.find(p => p.type === 'month')?.value ?? '';
-      const day = parts.find(p => p.type === 'day')?.value ?? '';
-      return `\( {year}- \){month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-    })();
-
-    let d = new Date(todayStr + 'T00:00:00');
+    const today = new Date();
 
     for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
       const isoDate = d.toISOString().split('T')[0];
 
-      if (offDaysSet.has(isoDate)) {
-        d.setDate(d.getDate() + 1);
-        continue;
-      }
+      if (offDaysSet.has(isoDate)) continue;
 
-      const dayOfWeekStr = new Date(isoDate + 'T12:00:00')
-        .toLocaleDateString('en-US', {
-          timeZone: timezone,
-          weekday: 'short',
-        })
-        .toLowerCase() as DayShort;
-
-      const dayOfWeek = DAY_OF_WEEK_MAP[dayOfWeekStr] ?? 0;
-
+      const dayOfWeek = d.getDay();
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
         const formatted = formatDate(isoDate);
         dates.push(isoDate + '|' + formatted);
       }
-
-      d.setDate(d.getDate() + 1);
     }
     return dates;
   }, [offDaysSet, workingHoursByDay, timezone]);
@@ -166,14 +131,8 @@ export default function AppointmentsTable({
   const getAvailableTimesForDate = (selectedDate: string | null) => {
     if (!selectedDate) return [];
 
-    const dayOfWeekStr = new Date(selectedDate + 'T12:00:00')
-      .toLocaleDateString('en-US', {
-        timeZone: timezone,
-        weekday: 'short',
-      })
-      .toLowerCase() as DayShort;
-
-    const dayOfWeek = DAY_OF_WEEK_MAP[dayOfWeekStr] ?? 0;
+    const dateObj = new Date(selectedDate);
+    const dayOfWeek = dateObj.getDay();
 
     const wh = workingHoursByDay[dayOfWeek];
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
@@ -200,7 +159,7 @@ export default function AppointmentsTable({
       if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
 
       const timeDate = new Date(slotStart);
-      const isoTime = timeDate.toTimeString().slice(0, 5);
+      const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
 
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
@@ -678,4 +637,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-}
+                          }
