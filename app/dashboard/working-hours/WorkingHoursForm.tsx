@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { upsertWorkingHours } from './actions';
 import type { WorkingHour } from './types';
 import './working-hours.css';
@@ -17,6 +19,7 @@ const DAY_NAMES: Record<number, string> = {
 
 type Props = {
   initialHours: WorkingHour[];
+  timezone: string;
 };
 
 function normalizeTime(time: string | null): string {
@@ -24,7 +27,7 @@ function normalizeTime(time: string | null): string {
   return time.split(':').slice(0, 2).join(':');
 }
 
-function formatArabicTime(time: string | null): string {
+function formatArabicTime(time: string | null, timezone: string): string {
   if (!time) return '—';
 
   // نحول الوقت إلى صيغة كاملة إذا كان HH:MM فقط
@@ -34,23 +37,22 @@ function formatArabicTime(time: string | null): string {
   }
 
   try {
+    // نستخدم تاريخ وهمي + الـ timezone المطلوب
     const date = new Date(`2000-01-01T${fullTime}`);
     if (isNaN(date.getTime())) return time;
 
-    return date
-      .toLocaleTimeString('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      })
-      .replace('ص', 'صباحاً')
-      .replace('م', 'مساءً');
-  } catch {
+    const zoned = toZonedTime(date, timezone);
+    let str = format(zoned, 'hh:mm a');
+
+    str = str.replace('AM', 'صباحاً').replace('PM', 'مساءً');
+    return str;
+  } catch (err) {
+    console.error('خطأ في تنسيق الوقت:', err);
     return time || '—';
   }
 }
 
-export default function WorkingHoursForm({ initialHours }: Props) {
+export default function WorkingHoursForm({ initialHours, timezone }: Props) {
   const [hours, setHours] = useState<WorkingHour[]>(initialHours);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -150,7 +152,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       onChange={e => handleChange(day.day_of_week, 'start_time', e.target.value)}
                     />
                   ) : (
-                    formatArabicTime(day.start_time)
+                    formatArabicTime(day.start_time, timezone)
                   )}
                 </td>
 
@@ -163,7 +165,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       onChange={e => handleChange(day.day_of_week, 'end_time', e.target.value)}
                     />
                   ) : (
-                    formatArabicTime(day.end_time)
+                    formatArabicTime(day.end_time, timezone)
                   )}
                 </td>
 
@@ -199,7 +201,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       onChange={e => handleChange(day.day_of_week, 'break_start', e.target.value)}
                     />
                   ) : (
-                    formatArabicTime(day.break_start)
+                    formatArabicTime(day.break_start, timezone)
                   )}
                 </td>
 
@@ -212,7 +214,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       onChange={e => handleChange(day.day_of_week, 'break_end', e.target.value)}
                     />
                   ) : (
-                    formatArabicTime(day.break_end)
+                    formatArabicTime(day.break_end, timezone)
                   )}
                 </td>
               </tr>
