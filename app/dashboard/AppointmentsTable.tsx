@@ -52,13 +52,11 @@ export default function AppointmentsTable({
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => {
-      map[wh.day_of_week] = wh;
-    });
+    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
     return map;
   }, [initialWorkingHours]);
 
-  // ─── دوال التنسيق بناءً على الـ timezone ───
+  // ─── دوال التنسيق المحسنة مع timezone ───
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     try {
@@ -68,9 +66,9 @@ export default function AppointmentsTable({
         month: 'long',
         day: 'numeric',
         timeZone: timezone,
-      }).format(new Date(dateStr));
-    } catch (e) {
-      console.error('خطأ في تنسيق التاريخ:', e);
+      }).format(new Date(dateStr + 'T00:00:00'));
+    } catch (err) {
+      console.error('خطأ تنسيق التاريخ:', err);
       return dateStr;
     }
   };
@@ -78,18 +76,19 @@ export default function AppointmentsTable({
   const formatTime = (timeStr: string | null) => {
     if (!timeStr) return '—';
     try {
-      const date = new Date(`1970-01-01T${timeStr}Z`); // نستخدم تاريخ وهمي + Z لتجنب تأثير الـ timezone المحلي
+      // نستخدم تاريخ وهمي + الوقت فقط
+      const fakeDate = `1970-01-01T${timeStr}`;
       return new Intl.DateTimeFormat('ar-EG', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
         timeZone: timezone,
       })
-        .format(date)
+        .format(new Date(fakeDate))
         .replace('ص', 'صباحاً')
         .replace('م', 'مساءً');
-    } catch (e) {
-      console.error('خطأ في تنسيق الوقت:', e);
+    } catch (err) {
+      console.error('خطأ تنسيق الوقت:', err);
       return normalizeTime(timeStr);
     }
   };
@@ -100,8 +99,8 @@ export default function AppointmentsTable({
       if (b.appointment_date && !a.appointment_date) return -1;
       if (!a.appointment_date && !b.appointment_date) return 0;
 
-      const dtA = new Date(a.appointment_date + 'T' + (a.appointment_time || '00:00:00'));
-      const dtB = new Date(b.appointment_date + 'T' + (b.appointment_time || '00:00:00'));
+      const dtA = new Date(`\( {a.appointment_date}T \){a.appointment_time || '00:00:00'}`);
+      const dtB = new Date(`\( {b.appointment_date}T \){b.appointment_time || '00:00:00'}`);
       return dtA.getTime() - dtB.getTime();
     });
   }, [appointments]);
@@ -110,6 +109,8 @@ export default function AppointmentsTable({
     const dates: string[] = [];
     const today = new Date();
 
+    // ننشئ التواريخ بناءً على الـ server timezone (Africa/Cairo عادةً)
+    // لكن نعرضها بتنسيق الـ business timezone
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
@@ -138,7 +139,7 @@ export default function AppointmentsTable({
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
     const start = new Date(`1970-01-01T${wh.start_time}`);
-    const end = new Date(`1970-01-01T${wh.end_time}`);
+    const end   = new Date(`1970-01-01T${wh.end_time}`);
 
     const slotDuration = wh.slot_duration_minutes ?? 15;
     const slotMs = slotDuration * 60 * 1000;
@@ -147,7 +148,7 @@ export default function AppointmentsTable({
     let breakEndMs = -Infinity;
     if (wh.break_start && wh.break_end) {
       breakStartMs = new Date(`1970-01-01T${wh.break_start}`).getTime();
-      breakEndMs = new Date(`1970-01-01T${wh.break_end}`).getTime();
+      breakEndMs   = new Date(`1970-01-01T${wh.break_end}`).getTime();
     }
 
     const times: string[] = [];
@@ -489,9 +490,7 @@ export default function AppointmentsTable({
                               placeholder="الاسم الكامل"
                               className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.full_name && (
-                              <span className="form-error">{formErrors.full_name}</span>
-                            )}
+                            {formErrors.full_name && <span className="form-error">{formErrors.full_name}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.full_name || '—'}</span>
@@ -513,9 +512,7 @@ export default function AppointmentsTable({
                               placeholder="01xxxxxxxxx أو +201..."
                               className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.phone && (
-                              <span className="form-error">{formErrors.phone}</span>
-                            )}
+                            {formErrors.phone && <span className="form-error">{formErrors.phone}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.phone || '—'}</span>
@@ -538,9 +535,7 @@ export default function AppointmentsTable({
                             })}
                           </select>
                         ) : (
-                          <span className="cell-content">
-                            {formatDate(appt.appointment_date)}
-                          </span>
+                          <span className="cell-content">{formatDate(appt.appointment_date)}</span>
                         )}
                       </td>
 
@@ -560,9 +555,7 @@ export default function AppointmentsTable({
                             })}
                           </select>
                         ) : (
-                          <span className="cell-content">
-                            {formatTime(appt.appointment_time)}
-                          </span>
+                          <span className="cell-content">{formatTime(appt.appointment_time)}</span>
                         )}
                       </td>
 
@@ -637,4 +630,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                          }
+}
