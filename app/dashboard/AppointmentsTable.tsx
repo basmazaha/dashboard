@@ -71,28 +71,21 @@ export default function AppointmentsTable({
   const formatTime = (input: string | null) => {
     if (!input) return '—';
 
-    let h = 0;
-    let m = 0;
+    const date = new Date(input); // input هو UTC ISO
+    if (isNaN(date.getTime())) return '—';
 
-    if (input.includes('T')) {
-      const time = input.split('T')[1];
-      if (time) {
-        h = parseInt(time.substring(0, 2), 10);
-        m = parseInt(time.substring(3, 5), 10);
-      }
-    } else if (input.includes(':')) {
-      const parts = input.split(':');
-      h = parseInt(parts[0], 10);
-      m = parseInt(parts[1], 10);
-    }
+    // عرض الوقت في التوقيت المحلي (Africa/Cairo)
+    const formatter = new Intl.DateTimeFormat('ar-EG', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: timezone,
+    });
 
-    if (isNaN(h) || isNaN(m)) return '—';
+    let formatted = formatter.format(date);
+    formatted = formatted.replace('ص', 'صباحاً').replace('م', 'مساءً');
 
-    const hour12 = h % 12 || 12;
-    const period = h < 12 ? 'صباحاً' : 'مساءً';
-    const minStr = m < 10 ? '0' + m : m;
-
-    return hour12 + ':' + minStr + ' ' + period;
+    return formatted;
   };
 
   const extractDateForForm = (iso: string | null) => {
@@ -188,7 +181,7 @@ export default function AppointmentsTable({
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
 
-      const localIso = `\( {selectedDate}T \){isoTime}:00`;
+      const localIso = selectedDate + 'T' + isoTime + ':00';
       const localDate = new Date(localIso);
       const utcIso = localDate.toISOString();
 
@@ -199,7 +192,7 @@ export default function AppointmentsTable({
       );
 
       if (!isBooked) {
-        const formatted = formatTime(isoTime);
+        const formatted = formatTime(utcIso); // ← عرض في التوقيت المحلي
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -265,7 +258,7 @@ export default function AppointmentsTable({
 
     const newDate = formData.get('date') as string | null;
     const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null;
+    const newDateTime = newDate && newTime ? newDate + 'T' + newTime + ':00Z' : null;
 
     setAppointments(prev =>
       prev.map(appt =>
@@ -314,7 +307,7 @@ export default function AppointmentsTable({
 
     const newDate = formData.get('date') as string | null;
     const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null;
+    const newDateTime = newDate && newTime ? newDate + 'T' + newTime + ':00Z' : null;
 
     const optimisticAppt: Appointment = {
       id: tempId,
