@@ -1,3 +1,4 @@
+// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -135,14 +136,7 @@ export default function AppointmentsTable({
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const todayIso = new Date().toLocaleString('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).split('/').reverse().join('-');
-
-    const today = new Date(todayIso);
+    const today = new Date();
 
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
@@ -195,19 +189,20 @@ export default function AppointmentsTable({
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
 
-      // تحويل الوقت المحلي المختار إلى ISO UTC للمقارنة
+      // Check if booked
       const slotIso = `\( {selectedDate}T \){isoTime}:00`;
       const slotDate = new Date(slotIso);
-      const utcIso = slotDate.toISOString();
+      slotDate.setMinutes(slotDate.getMinutes() - new Date().getTimezoneOffset());
+      const slotUtcIso = slotDate.toISOString();
 
       const isBooked = appointments.some(a =>
-        a.date_time === utcIso &&
+        a.date_time === slotUtcIso &&
         a.status !== 'cancelled' &&
         a.id !== editingId
       );
 
       if (!isBooked) {
-        const formatted = formatTime(slotIso);
+        const formatted = formatTime(slotIso + 'Z');
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -273,7 +268,7 @@ export default function AppointmentsTable({
 
     const newDate = formData.get('date') as string | null;
     const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00` : null;
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null; // Temporary for optimistic
 
     setAppointments(prev =>
       prev.map(appt =>
@@ -322,7 +317,7 @@ export default function AppointmentsTable({
 
     const newDate = formData.get('date') as string | null;
     const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00` : null;
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null; // Temporary
 
     const optimisticAppt: Appointment = {
       id: tempId,
@@ -682,4 +677,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-}
+        }
