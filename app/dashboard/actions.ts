@@ -1,5 +1,3 @@
-// app/dashboard/actions.ts
-
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -23,6 +21,7 @@ function toFullTimeFormat(time: string | null): string {
   if (!time) return '00:00:00';
   const parts = time.split(':');
   if (parts.length === 2) {
+    // الصيغة المصححة – بدون أخطاء الـ escape
     return parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0') + ':00';
   }
   if (parts.length === 3) return time;
@@ -55,7 +54,7 @@ export async function updateAppointment(formData: FormData) {
 
   const dbTime = time ? toFullTimeFormat(time) : null;
 
-  // التحقق من عدم التداخل (بناءً على appointment_date و appointment_time)
+  // التحقق من عدم التداخل
   if (status !== 'cancelled' && date && dbTime) {
     const { data: existing, error } = await supabaseServer
       .from('appointments')
@@ -79,10 +78,14 @@ export async function updateAppointment(formData: FormData) {
     updates.status = 'cancelled';
     updates.appointment_date = null;
     updates.appointment_time = null;
+    updates.reminder_sent_6h = false;
   } else {
     if (date) updates.appointment_date = date;
     if (dbTime) updates.appointment_time = dbTime;
-    if (status) updates.status = status;
+    if (status) {
+      updates.status = status;
+      if (status === 'rescheduled') updates.reminder_sent_6h = false;
+    }
   }
 
   if (Object.keys(updates).length === 0) {
@@ -150,6 +153,7 @@ export async function insertAppointment(formData: FormData) {
     appointment_time: dbTime,
     reason: reason || null,
     status,
+    reminder_sent_6h: false,
   };
 
   const { data, error } = await supabaseServer
