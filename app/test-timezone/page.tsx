@@ -1,7 +1,8 @@
 // app/test-timezone/page.tsx
-import { supabaseServer } from '@/lib/supabaseServer';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import { insertAppointmentAction, updateAppointmentAction } from './actions';
+import { supabaseServer } from '@/lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,150 +10,183 @@ type Appointment = {
   id: string;
   full_name: string | null;
   phone: string | null;
-  date_time: string | null;     // timestamptz → UTC ISO string
+  date_time: string | null;
   reason: string | null;
   status: string | null;
 };
 
 export default async function TestTimezonePage() {
   const { userId } = await auth();
-  if (!userId) {
-    redirect('/sign-in');
-  }
+  if (!userId) redirect('/sign-in');
 
-  // جلب الـ timezone من business_settings
-  const { data: settings, error: tzError } = await supabaseServer
+  // جلب الـ timezone
+  const { data: settings } = await supabaseServer
     .from('business_settings')
     .select('timezone')
     .maybeSingle();
 
-  if (tzError) {
-    return (
-      <div style={{ padding: '2rem', color: 'red' }}>
-        خطأ في جلب الـ timezone: {tzError.message}
-      </div>
-    );
-  }
-
-  const displayTz = settings?.timezone || 'Africa/Cairo';
+  const timezone = settings?.timezone || 'Africa/Cairo';
 
   // جلب المواعيد
-  const { data: rows, error } = await supabaseServer
+  const { data: appointments = [] } = await supabaseServer
     .from('appointments')
     .select('id, full_name, phone, date_time, reason, status')
     .order('date_time', { ascending: true })
     .limit(50);
 
-  if (error) {
-    return (
-      <div style={{ padding: '2rem', color: 'red' }}>
-        خطأ في جلب المواعيد: {error.message}
-      </div>
-    );
-  }
+  return (
+    <TestTimezoneClient
+      initialAppointments={appointments}
+      timezone={timezone}
+    />
+  );
+}
 
-  const appointments = rows || [];
+// ─── Client Component ───
+'use client';
 
-  // ─── دالة مساعدة للتنسيق ───
-  const formatUtcToLocal = (
-    utcIso: string | null,
-    options: Intl.DateTimeFormatOptions
-  ): string => {
+import { useState } from 'react';
+import { insertAppointmentAction, updateAppointmentAction } from './actions';
+
+export function TestTimezoneClient({
+  initialAppointments,
+  timezone,
+}: {
+  initialAppointments: any[];
+  timezone: string;
+}) {
+  const [appointments, setAppointments] = useState(initialAppointments);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
+
+  const [form, setForm] = useState({
+    full_name: '',
+    phone: '',
+    date: '',
+    time: '',
+    reason: '',
+    status: 'confirmed',
+  });
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ full_name: '', phone: '', date: '', time: '', reason: '', status: 'confirmed' });
+    setShowForm(true);
+  };
+
+  const openEdit = (appt: any) => {
+    const d = new Date(appt.date_time);
+    setForm({
+      full_name: appt.full_name || '',
+      phone: appt.phone || '',
+      date: d.toISOString().split('T')[0],
+      time: d.toTimeString().slice(0, 5),
+      reason: appt.reason || '',
+      status: appt.status || 'confirmed',
+    });
+    setEditing(appt);
+    setShowForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    let result;
+    if (editing) {
+      result = await updateAppointmentAction(editing.id, form);
+    } else {
+      result = await insertAppointmentAction(form);
+    }
+
+    if (result.success) {
+      // إعادة تحميل الصفحة بعد النجاح
+      window.location.reload();
+    } else {
+      alert(result.error || 'حدث خطأ');
+    }
+  };
+
+  const formatLocal = (utcIso: string | null, opts: Intl.DateTimeFormatOptions = {}) => {
     if (!utcIso) return '—';
     try {
-      const date = new Date(utcIso);
-      let str = new Intl.DateTimeFormat('ar-EG', {
-        ...options,
-        timeZone: displayTz,
-      }).format(date);
-      str = str.replace('ص', 'صباحاً').replace('م', 'مساءً');
-      return str;
+      const d = new Date(utcIso);
+      let s = new Intl.DateTimeFormat('ar-EG', { ...opts, timeZone: timezone }).format(d);
+      return s.replace('ص', 'صباحاً').replace('م', 'مساءً');
     } catch {
       return utcIso;
     }
   };
 
   return (
-    <div dir="rtl" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', fontFamily: 'Tajawal, system-ui' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-        اختبار عرض المواعيد من timestamptz (UTC)
-      </h1>
+    <div dir="rtl" style={{ padding: '2rem', fontFamily: 'Tajawal, sans-serif' }}>
+      <h1>اختبار المواعيد مع Timezone: {timezone}</h1>
 
-      <div style={{ background: '#eff6ff', padding: '1.25rem', borderRadius: '12px', marginBottom: '2rem', textAlign: 'center' }}>
-        <strong>Timezone العرض الحالي (من business_settings):</strong> {displayTz}
-      </div>
+      <button onClick={openAdd} style={{ marginBottom: '20px', padding: '10px 20px', background: '#10b981', color: 'white', border: 'none' }}>
+        + إضافة موعد جديد
+      </button>
 
-      {appointments.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '1.2rem' }}>
-          لا توجد مواعيد مسجلة حاليًا
-        </p>
-      ) : (
-        <div style={{ overflowX: 'auto', border: '1px solid #d1d5db', borderRadius: '12px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.97rem' }}>
-            <thead>
-              <tr style={{ background: '#f3f4f6' }}>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>الاسم</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>التاريخ فقط</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>الوقت فقط</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>التاريخ والوقت معًا</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>القيمة الخام (UTC)</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>السبب</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((appt) => (
-                <tr key={appt.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                  <td style={{ padding: '1rem' }}>{appt.full_name || '—'}</td>
+      {showForm && (
+        <form onSubmit={handleSubmit} style={{ marginBottom: '40px', padding: '20px', background: '#f0f9ff', borderRadius: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div>
+              <label>الاسم</label>
+              <input name="full_name" value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} required />
+            </div>
+            <div>
+              <label>التليفون</label>
+              <input name="phone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required />
+            </div>
+            <div>
+              <label>التاريخ</label>
+              <input type="date" name="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} required />
+            </div>
+            <div>
+              <label>الوقت</label>
+              <input type="time" name="time" value={form.time} onChange={e => setForm({...form, time: e.target.value})} required />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label>السبب</label>
+              <input name="reason" value={form.reason} onChange={e => setForm({...form, reason: e.target.value})} />
+            </div>
+          </div>
 
-                  {/* التاريخ فقط */}
-                  <td style={{ padding: '1rem' }}>
-                    {formatUtcToLocal(appt.date_time, {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </td>
-
-                  {/* الوقت فقط */}
-                  <td style={{ padding: '1rem' }}>
-                    {formatUtcToLocal(appt.date_time, {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true,
-                    })}
-                  </td>
-
-                  {/* التاريخ + الوقت معًا */}
-                  <td style={{ padding: '1rem', fontWeight: 500 }}>
-                    {formatUtcToLocal(appt.date_time, {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true,
-                    })}
-                  </td>
-
-                  {/* القيمة الخام من Supabase */}
-                  <td style={{ padding: '1rem', color: '#6b7280', fontSize: '0.9rem' }}>
-                    {appt.date_time || '—'}
-                  </td>
-
-                  <td style={{ padding: '1rem' }}>{appt.reason || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          <div style={{ marginTop: '20px' }}>
+            <button type="submit" style={{ padding: '10px 20px', background: '#2563eb', color: 'white' }}>
+              {editing ? 'حفظ التعديل' : 'إضافة'}
+            </button>
+            <button type="button" onClick={() => setShowForm(false)} style={{ marginRight: '10px', padding: '10px 20px', background: '#ef4444', color: 'white' }}>
+              إلغاء
+            </button>
+          </div>
+        </form>
       )}
 
-      <div style={{ marginTop: '3rem', textAlign: 'center', color: '#6b7280', fontSize: '0.95rem' }}>
-        <p>القيم مخزنة كـ UTC في عمود date_time (timestamptz)</p>
-        <p>العرض يتم حسب الـ timezone المخزن في business_settings.timezone</p>
-      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: '#f3f4f6' }}>
+            <th>الاسم</th>
+            <th>التاريخ</th>
+            <th>الوقت</th>
+            <th>UTC خام</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {appointments.map(a => (
+            <tr key={a.id}>
+              <td>{a.full_name}</td>
+              <td>{formatLocal(a.date_time, { dateStyle: 'full' })}</td>
+              <td>{formatLocal(a.date_time, { timeStyle: 'short' })}</td>
+              <td style={{ fontSize: '0.85rem', color: '#666' }}>{a.date_time}</td>
+              <td>
+                <button onClick={() => openEdit(a)} style={{ background: '#3b82f6', color: 'white', padding: '6px 12px' }}>
+                  تعديل
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
