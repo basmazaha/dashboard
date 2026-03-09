@@ -1,4 +1,3 @@
-// app/dashboard/actions.ts
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -70,9 +69,18 @@ export async function updateAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    // صيغة صحيحة 100%
-    const localDateTime = new Date(`\( {date}T \){fullTime}`);
+    const localDateTimeStr = `\( {date}T \){fullTime}`;
+
+    const localDateTime = new Date(localDateTimeStr);
+
+    if (isNaN(localDateTime.getTime())) {
+      return { error: 'صيغة التاريخ أو الوقت غير صالحة' };
+    }
+
+    // تحويل التاريخ المحلي إلى UTC ISO
     date_time = localDateTime.toISOString();
+
+    console.log('[updateAppointment] computed →', { local: localDateTimeStr, utc: date_time });
   }
 
   // التحقق من عدم التداخل
@@ -147,9 +155,17 @@ export async function insertAppointment(formData: FormData) {
   let date_time: string | null = null;
   if (date && time) {
     const fullTime = toFullTimeFormat(time);
-    // صيغة صحيحة 100%
-    const localDateTime = new Date(`\( {date}T \){fullTime}`);
+    const localDateTimeStr = `\( {date}T \){fullTime}`;
+
+    const localDateTime = new Date(localDateTimeStr);
+
+    if (isNaN(localDateTime.getTime())) {
+      return { error: 'صيغة التاريخ أو الوقت غير صالحة' };
+    }
+
     date_time = localDateTime.toISOString();
+
+    console.log('[insertAppointment] computed →', { local: localDateTimeStr, utc: date_time });
   }
 
   if (date_time) {
