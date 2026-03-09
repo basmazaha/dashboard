@@ -3,16 +3,28 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
-import { fromZonedTime } from 'date-fns-tz';  // ← الاسم الجديد في v3+
+import { zonedTimeToUtc } from 'date-fns-tz';
 
 type AppointmentInput = {
   full_name: string;
   phone: string;
-  date: string;   // 'YYYY-MM-DD'
-  time: string;   // 'HH:mm'
+  date: string;   // '2026-03-09'
+  time: string;   // '12:00'
   reason?: string;
   status?: string;
 };
+
+function parseLocalDateTime(dateStr: string, timeStr: string, tz: string): Date {
+  // تقسيم التاريخ والوقت يدويًا عشان نتجنب مشاكل new Date() في السيرفر
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hour, minute] = timeStr.split(':').map(Number);
+
+  // إنشاء Date object باستخدام UTC أولاً، ثم نطبق الـ timezone
+  const localDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+
+  // تحويل الوقت المحلي إلى UTC بدقة
+  return zonedTimeToUtc(localDate, tz);
+}
 
 export async function insertAppointmentAction(input: AppointmentInput) {
   try {
@@ -28,12 +40,8 @@ export async function insertAppointmentAction(input: AppointmentInput) {
 
     const tz = settings.timezone;
 
-    // إنشاء تاريخ محلي كامل
-    const localDateTimeStr = `\( {input.date}T \){input.time}:00`;
-
-    // تحويل الوقت المحلي إلى UTC بدقة (الاسم الجديد)
-    const localDate = new Date(localDateTimeStr);
-    const utcDate = fromZonedTime(localDate, tz);
+    // تحويل يدوي آمن
+    const utcDate = parseLocalDateTime(input.date, input.time, tz);
 
     const { error } = await supabaseServer.from('appointments').insert({
       full_name: input.full_name,
@@ -63,9 +71,7 @@ export async function updateAppointmentAction(id: string, input: AppointmentInpu
 
     const tz = settings?.timezone || 'Africa/Cairo';
 
-    const localDateTimeStr = `\( {input.date}T \){input.time}:00`;
-    const localDate = new Date(localDateTimeStr);
-    const utcDate = fromZonedTime(localDate, tz);
+    const utcDate = parseLocalDateTime(input.date, input.time, tz);
 
     const { error } = await supabaseServer
       .from('appointments')
