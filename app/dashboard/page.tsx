@@ -1,5 +1,3 @@
-// app/dashboard/page.tsx
-
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -13,13 +11,12 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  // ─── جلب الـ timezone من business_settings ───
   const { data: settingsData, error: settingsError } = await supabaseServer
     .from('business_settings')
     .select('timezone')
     .maybeSingle();
 
-  const timezone = settingsData?.timezone || 'Africa/Cairo'; // fallback
+  const timezone = settingsData?.timezone || 'Africa/Cairo';
 
   const todayLocal = new Date().toLocaleString('en-US', {
     timeZone: timezone,
@@ -30,7 +27,6 @@ export default async function DashboardPage() {
 
   const todayUTC = new Date(todayLocal).toISOString();
 
-  // جلب المواعيد المستقبلية
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
@@ -38,12 +34,10 @@ export default async function DashboardPage() {
     .order('date_time', { ascending: true })
     .limit(100);
 
-  // جلب أيام الإجازة
   const { data: offDaysData, error: offError } = await supabaseServer
     .from('off_days')
     .select('date');
 
-  // جلب ساعات العمل
   const { data: workingHours, error: hoursError } = await supabaseServer
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
