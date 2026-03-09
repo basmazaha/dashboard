@@ -57,8 +57,7 @@ export default function AppointmentsTable({
     if (!iso) return '—';
     try {
       const zoned = toZonedTime(iso, timezone);
-      // استخدام تنسيق عربي بسيط – يمكن تخصيصه أكثر
-      return format(zoned, 'EEEE، d MMMM yyyy', { timeZone: timezone });
+      return format(zoned, 'EEEE، d MMMM yyyy');
     } catch (e) {
       console.error('خطأ تنسيق التاريخ:', e);
       return iso.split('T')[0] || '—';
@@ -69,7 +68,7 @@ export default function AppointmentsTable({
     if (!iso) return '—';
     try {
       const zoned = toZonedTime(iso, timezone);
-      let str = format(zoned, 'hh:mm a', { timeZone: timezone });
+      let str = format(zoned, 'hh:mm a');
       str = str.replace('AM', 'صباحاً').replace('PM', 'مساءً');
       return str;
     } catch (e) {
@@ -82,7 +81,7 @@ export default function AppointmentsTable({
     if (!iso) return '';
     try {
       const zoned = toZonedTime(iso, timezone);
-      return format(zoned, 'yyyy-MM-dd', { timeZone: timezone });
+      return format(zoned, 'yyyy-MM-dd');
     } catch {
       return '';
     }
@@ -92,7 +91,7 @@ export default function AppointmentsTable({
     if (!iso) return '';
     try {
       const zoned = toZonedTime(iso, timezone);
-      return format(zoned, 'HH:mm', { timeZone: timezone });
+      return format(zoned, 'HH:mm');
     } catch {
       return '';
     }
@@ -121,7 +120,9 @@ export default function AppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const label = format(d, 'EEEE، d MMMM yyyy', { timeZone: timezone });
+        // نستخدم toZonedTime هنا أيضاً للحصول على تاريخ محلي صحيح
+        const zoned = toZonedTime(d, timezone);
+        const label = format(zoned, 'EEEE، d MMMM yyyy');
         dates.push(isoDate + '|' + label);
       }
     }
@@ -160,7 +161,8 @@ export default function AppointmentsTable({
         continue;
       }
 
-      const timeStr = format(new Date(current), 'HH:mm');
+      const slotDate = new Date(current);
+      const timeStr = format(slotDate, 'HH:mm');
 
       const isBooked = appointments.some(a => {
         if (!a.date_time || a.status === 'cancelled') return false;
@@ -173,7 +175,7 @@ export default function AppointmentsTable({
       });
 
       if (!isBooked) {
-        let display = format(new Date(current), 'hh:mm a')
+        let display = format(slotDate, 'hh:mm a')
           .replace('AM', 'صباحاً')
           .replace('PM', 'مساءً');
         times.push(timeStr + '|' + display);
@@ -635,4 +637,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-}
+                              }
