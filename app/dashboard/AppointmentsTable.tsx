@@ -53,7 +53,7 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
-  // تنسيق التاريخ حسب الـ timezone
+  // تنسيق التاريخ (يبقى كما هو)
   const formatDate = (iso: string | null) => {
     if (!iso) return '—';
     try {
@@ -69,25 +69,36 @@ export default function AppointmentsTable({
     }
   };
 
-  // تنسيق الوقت – الدالة المصححة النهائية
-  const formatTime = (isoOrTime: string | null) => {
-    if (!isoOrTime) return '—';
+  // طريقة تنسيق الوقت الجديدة – أبسط وأكثر استقراراً
+  // تقبل ISO string أو "HH:mm" مباشرة وتعتمد على حساب يدوي فقط
+  const formatTime = (input: string | null) => {
+    if (!input) return '—';
 
-    let hours: number;
-    let minutes: number;
+    let hourStr: string;
+    let minuteStr: string;
 
-    try {
-      const date = new Date(isoOrTime);
-      if (isNaN(date.getTime())) throw new Error('Invalid date');
-
-      hours = date.getHours();
-      minutes = date.getMinutes();
-    } catch {
-      const match = isoOrTime.match(/^(\d{1,2}):(\d{2})$/);
-      if (!match) return '—';
-      hours = parseInt(match[1], 10);
-      minutes = parseInt(match[2], 10);
+    // إذا كان الإدخال ISO (مثل 2025-10-15T09:30:00Z)
+    if (input.includes('T')) {
+      const timePart = input.split('T')[1]?.split(':');
+      if (!timePart || timePart.length < 2) return '—';
+      hourStr = timePart[0];
+      minuteStr = timePart[1];
     }
+    // إذا كان HH:mm مباشرة
+    else if (input.includes(':')) {
+      const parts = input.split(':');
+      if (parts.length < 2) return '—';
+      hourStr = parts[0];
+      minuteStr = parts[1];
+    }
+    else {
+      return '—';
+    }
+
+    const hours = parseInt(hourStr, 10);
+    const minutes = parseInt(minuteStr.slice(0, 2), 10); // تأخذ أول دقيقتين فقط
+
+    if (isNaN(hours) || isNaN(minutes)) return '—';
 
     const hour12 = hours % 12 || 12;
     const period = hours < 12 ? 'صباحاً' : 'مساءً';
@@ -109,7 +120,9 @@ export default function AppointmentsTable({
     if (!iso) return '';
     try {
       const date = new Date(iso);
-      return date.toTimeString().slice(0, 5); // HH:mm
+      const h = date.getHours().toString().padStart(2, '0');
+      const m = date.getMinutes().toString().padStart(2, '0');
+      return `\( {h}: \){m}`;
     } catch {
       return '';
     }
@@ -198,7 +211,7 @@ export default function AppointmentsTable({
       );
 
       if (!isBooked) {
-        const formatted = formatTime(localIso);
+        const formatted = formatTime(isoTime); // ← نرسل HH:mm فقط
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -262,6 +275,10 @@ export default function AppointmentsTable({
     const appointmentId = formData.get('appointment_id') as string;
     const originalAppt = appointments.find(a => a.id === appointmentId);
 
+    const newDate = formData.get('date') as string | null;
+    const newTime = formData.get('time') as string | null;
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null;
+
     setAppointments(prev =>
       prev.map(appt =>
         appt.id === appointmentId
@@ -269,9 +286,7 @@ export default function AppointmentsTable({
               ...appt,
               full_name: formData.get('full_name') as string | null,
               phone: formData.get('phone') as string | null,
-              date_time: formData.get('date') && formData.get('time')
-                ? `\( {formData.get('date')}T \){formData.get('time')}:00Z`
-                : null,
+              date_time: newDateTime,
               status: formData.get('status') as string | null,
             }
           : appt
