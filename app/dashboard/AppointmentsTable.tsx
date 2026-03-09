@@ -8,8 +8,7 @@ import { updateAppointment, insertAppointment, fetchAppointments } from './actio
 type Appointment = {
   id: string;
   full_name: string | null;
-  appointment_date: string | null;
-  appointment_time: string | null;
+  date_time: string | null; // ISO in UTC
   phone: string | null;
   reason: string | null;
   status: string | null;
@@ -61,8 +60,28 @@ export default function AppointmentsTable({
   }, [initialWorkingHours]);
 
   // ─── دوال التنسيق بناءً على الـ timezone ───
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '—';
+  const extractDate = (iso: string | null) => {
+    if (!iso) return null;
+    try {
+      return new Date(iso).toLocaleDateString('en-CA', { timeZone: timezone });
+    } catch (e) {
+      console.error('خطأ في استخراج التاريخ:', e);
+      return null;
+    }
+  };
+
+  const extractTime = (iso: string | null) => {
+    if (!iso) return null;
+    try {
+      return new Date(iso).toLocaleTimeString('en-GB', { timeZone: timezone }).slice(0, 5);
+    } catch (e) {
+      console.error('خطأ في استخراج الوقت:', e);
+      return null;
+    }
+  };
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return '—';
     try {
       return new Intl.DateTimeFormat('ar-EG', {
         weekday: 'long',
@@ -70,17 +89,18 @@ export default function AppointmentsTable({
         month: 'long',
         day: 'numeric',
         timeZone: timezone,
-      }).format(new Date(dateStr));
+      }).format(new Date(iso));
     } catch (e) {
       console.error('خطأ في تنسيق التاريخ:', e);
-      return dateStr;
+      return '—';
     }
   };
 
-  const formatTime = (timeStr: string | null) => {
-    if (!timeStr) return '—';
+  const formatTime = (iso: string | null) => {
+    if (!iso) return '—';
     try {
-      const date = new Date(`1970-01-01T${timeStr}Z`); // نستخدم تاريخ وهمي + Z لتجنب تأثير الـ timezone المحلي
+      const timeStr = extractTime(iso) || '00:00';
+      const date = new Date(`1970-01-01T${timeStr}:00Z`);
       return new Intl.DateTimeFormat('ar-EG', {
         hour: '2-digit',
         minute: '2-digit',
@@ -92,25 +112,32 @@ export default function AppointmentsTable({
         .replace('م', 'مساءً');
     } catch (e) {
       console.error('خطأ في تنسيق الوقت:', e);
-      return normalizeTime(timeStr);
+      return '—';
     }
   };
 
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
-      if (!a.appointment_date && b.appointment_date) return 1;
-      if (b.appointment_date && !a.appointment_date) return -1;
-      if (!a.appointment_date && !b.appointment_date) return 0;
+      if (!a.date_time && b.date_time) return 1;
+      if (b.date_time && !a.date_time) return -1;
+      if (!a.date_time && !b.date_time) return 0;
 
-      const dtA = new Date(a.appointment_date + 'T' + (a.appointment_time || '00:00:00'));
-      const dtB = new Date(b.appointment_date + 'T' + (b.appointment_time || '00:00:00'));
+      const dtA = new Date(a.date_time);
+      const dtB = new Date(b.date_time);
       return dtA.getTime() - dtB.getTime();
     });
   }, [appointments]);
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const today = new Date();
+    const todayIso = new Date().toLocaleString('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).split('/').reverse().join('-');
+
+    const today = new Date(todayIso);
 
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
@@ -123,7 +150,7 @@ export default function AppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const formatted = formatDate(isoDate);
+        const formatted = formatDate(isoDate + 'T00:00:00Z');
         dates.push(isoDate + '|' + formatted);
       }
     }
@@ -163,15 +190,20 @@ export default function AppointmentsTable({
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
 
+      // Check if booked
+      const slotIso = `\( {selectedDate}T \){isoTime}:00`;
+      const slotDate = new Date(slotIso);
+      slotDate.setMinutes(slotDate.getMinutes() - new Date().getTimezoneOffset());
+      const slotUtcIso = slotDate.toISOString();
+
       const isBooked = appointments.some(a =>
-        a.appointment_date === selectedDate &&
-        normalizeTime(a.appointment_time) === isoTime &&
+        a.date_time === slotUtcIso &&
         a.status !== 'cancelled' &&
         a.id !== editingId
       );
 
       if (!isBooked) {
-        const formatted = formatTime(isoTime);
+        const formatted = formatTime(slotIso + 'Z');
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -189,8 +221,8 @@ export default function AppointmentsTable({
       setFormValues({
         full_name: initialValues.full_name || '',
         phone: initialValues.phone || '',
-        date: initialValues.appointment_date || '',
-        time: normalizeTime(initialValues.appointment_time),
+        date: extractDate(initialValues.date_time) || '',
+        time: extractTime(initialValues.date_time) || '',
         status: initialValues.status || 'confirmed',
       });
       setFormErrors({});
@@ -235,6 +267,10 @@ export default function AppointmentsTable({
     const appointmentId = formData.get('appointment_id') as string;
     const originalAppt = appointments.find(a => a.id === appointmentId);
 
+    const newDate = formData.get('date') as string | null;
+    const newTime = formData.get('time') as string | null;
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null; // Temporary for optimistic
+
     setAppointments(prev =>
       prev.map(appt =>
         appt.id === appointmentId
@@ -242,8 +278,7 @@ export default function AppointmentsTable({
               ...appt,
               full_name: formData.get('full_name') as string | null,
               phone: formData.get('phone') as string | null,
-              appointment_date: formData.get('date') as string | null,
-              appointment_time: formData.get('time') as string | null,
+              date_time: newDateTime,
               status: formData.get('status') as string | null,
             }
           : appt
@@ -280,12 +315,16 @@ export default function AppointmentsTable({
     setFormErrors({});
 
     const tempId = 'temp-' + Date.now().toString();
+
+    const newDate = formData.get('date') as string | null;
+    const newTime = formData.get('time') as string | null;
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null; // Temporary
+
     const optimisticAppt: Appointment = {
       id: tempId,
       full_name: formData.get('full_name') as string | null,
       phone: formData.get('phone') as string | null,
-      appointment_date: formData.get('date') as string | null,
-      appointment_time: formData.get('time') as string | null,
+      date_time: newDateTime,
       reason: formData.get('reason') as string | null,
       status: formData.get('status') as string | null ?? 'confirmed',
     };
@@ -471,7 +510,7 @@ export default function AppointmentsTable({
                 {sortedAppointments.map(appt => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
-                  const currentDate = isEditing ? formValues.date : appt.appointment_date;
+                  const currentDate = isEditing ? formValues.date : extractDate(appt.date_time);
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
                   return (
@@ -541,7 +580,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {formatDate(appt.appointment_date)}
+                            {formatDate(appt.date_time)}
                           </span>
                         )}
                       </td>
@@ -563,7 +602,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {formatTime(appt.appointment_time)}
+                            {formatTime(appt.date_time)}
                           </span>
                         )}
                       </td>
@@ -639,4 +678,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                  }
+}
