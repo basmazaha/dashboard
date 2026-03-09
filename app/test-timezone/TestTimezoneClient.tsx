@@ -23,6 +23,7 @@ export default function TestTimezoneClient({
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     full_name: '',
@@ -32,8 +33,6 @@ export default function TestTimezoneClient({
     reason: '',
     status: 'confirmed',
   });
-
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const openAdd = () => {
     setEditing(null);
@@ -68,8 +67,7 @@ export default function TestTimezoneClient({
       : await insertAppointmentAction(form);
 
     if (result.success) {
-      // إعادة تحميل الصفحة لجلب البيانات الجديدة من السيرفر
-      window.location.reload();
+      window.location.reload(); // إعادة تحميل لجلب البيانات الجديدة
     } else {
       setErrorMsg(result.error || 'حدث خطأ غير متوقع');
     }
@@ -211,7 +209,6 @@ export default function TestTimezoneClient({
         </form>
       )}
 
-      {/* جدول العرض */}
       <div style={{ overflowX: 'auto', border: '1px solid #d1d5db', borderRadius: '12px' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -219,7 +216,7 @@ export default function TestTimezoneClient({
               <th style={{ padding: '12px', textAlign: 'right' }}>الاسم</th>
               <th style={{ padding: '12px', textAlign: 'right' }}>التاريخ</th>
               <th style={{ padding: '12px', textAlign: 'right' }}>الوقت</th>
-              <th style={{ padding: '12px', textAlign: 'right' }}>التاريخ والوقت معًا</th>
+              <th style={{ padding: '12px', textAlign: 'right' }}>التاريخ والوقت معاً</th>
               <th style={{ padding: '12px', textAlign: 'right' }}>UTC خام</th>
               <th style={{ padding: '12px', textAlign: 'right' }}>إجراءات</th>
             </tr>
