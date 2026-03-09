@@ -1,4 +1,3 @@
-// app/dashboard/AppointmentsTable.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -71,10 +70,9 @@ export default function AppointmentsTable({
   const formatTime = (input: string | null) => {
     if (!input) return '—';
 
-    const date = new Date(input); // input هو UTC ISO
+    const date = new Date(input);
     if (isNaN(date.getTime())) return '—';
 
-    // عرض الوقت في التوقيت المحلي (Africa/Cairo)
     const formatter = new Intl.DateTimeFormat('ar-EG', {
       hour: 'numeric',
       minute: '2-digit',
@@ -151,7 +149,7 @@ export default function AppointmentsTable({
   const getAvailableTimesForDate = (selectedDate: string | null) => {
     if (!selectedDate) return [];
 
-    const dateObj = new Date(selectedDate);
+    const dateObj = new Date(selectedDate + 'T00:00:00');
     const dayOfWeek = dateObj.getDay();
 
     const wh = workingHoursByDay[dayOfWeek];
@@ -192,7 +190,7 @@ export default function AppointmentsTable({
       );
 
       if (!isBooked) {
-        const formatted = formatTime(utcIso); // ← عرض في التوقيت المحلي
+        const formatted = formatTime(utcIso);
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -256,10 +254,7 @@ export default function AppointmentsTable({
     const appointmentId = formData.get('appointment_id') as string;
     const originalAppt = appointments.find(a => a.id === appointmentId);
 
-    const newDate = formData.get('date') as string | null;
-    const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? newDate + 'T' + newTime + ':00Z' : null;
-
+    // تحديث مؤقت بدون حساب التاريخ (السيرفر سيتولى ذلك)
     setAppointments(prev =>
       prev.map(appt =>
         appt.id === appointmentId
@@ -267,7 +262,7 @@ export default function AppointmentsTable({
               ...appt,
               full_name: formData.get('full_name') as string | null,
               phone: formData.get('phone') as string | null,
-              date_time: newDateTime,
+              date_time: null, // سيتم تحديثه بعد الرفريش
               status: formData.get('status') as string | null,
             }
           : appt
@@ -305,15 +300,11 @@ export default function AppointmentsTable({
 
     const tempId = 'temp-' + Date.now().toString();
 
-    const newDate = formData.get('date') as string | null;
-    const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? newDate + 'T' + newTime + ':00Z' : null;
-
     const optimisticAppt: Appointment = {
       id: tempId,
       full_name: formData.get('full_name') as string | null,
       phone: formData.get('phone') as string | null,
-      date_time: newDateTime,
+      date_time: null, // السيرفر سيحدده
       reason: formData.get('reason') as string | null,
       status: formData.get('status') as string | null ?? 'confirmed',
     };
