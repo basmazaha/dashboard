@@ -3,23 +3,34 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
+import { zonedTimeToUtc } from 'date-fns-tz';
 
 type AppointmentInput = {
   full_name: string;
   phone: string;
-  date: string;
-  time: string;
+  date: string;  // '2026-03-09'
+  time: string;  // '12:00'
   reason?: string;
   status?: string;
 };
 
 export async function insertAppointmentAction(input: AppointmentInput) {
   try {
-    // جمع التاريخ والوقت كوقت محلي
-    const localDateTime = new Date(`\( {input.date}T \){input.time}:00`);
+    // جلب timezone العيادة
+    const { data: settings, error: tzError } = await supabaseServer
+      .from('business_settings')
+      .select('timezone')
+      .single();
 
-    // تحويل إلى UTC (طريقة بسيطة - قد تحتاج date-fns-tz لاحقًا للدقة مع DST)
-    const utcDate = new Date(localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60 * 1000);
+    if (tzError || !settings?.timezone) {
+      throw new Error('لم يتم العثور على timezone في business_settings');
+    }
+
+    const tz = settings.timezone;
+
+    // تحويل الوقت المحلي إلى UTC بدقة
+    const localDate = new Date(`\( {input.date}T \){input.time}:00`);
+    const utcDate = zonedTimeToUtc(localDate, tz);
 
     const { error } = await supabaseServer.from('appointments').insert({
       full_name: input.full_name,
@@ -31,19 +42,26 @@ export async function insertAppointmentAction(input: AppointmentInput) {
 
     if (error) throw error;
 
-    // إعادة تحميل البيانات بعد الإضافة
     revalidatePath('/test-timezone');
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err.message || 'حدث خطأ أثناء الإضافة' };
+    console.error('Insert error:', err);
+    return { success: false, error: err.message || 'خطأ أثناء الإضافة' };
   }
 }
 
 export async function updateAppointmentAction(id: string, input: AppointmentInput) {
   try {
-    const localDateTime = new Date(`\( {input.date}T \){input.time}:00`);
-    const utcDate = new Date(localDateTime.getTime() - localDateTime.getTimezoneOffset() * 60 * 1000);
+    const { data: settings } = await supabaseServer
+      .from('business_settings')
+      .select('timezone')
+      .single();
+
+    const tz = settings?.timezone || 'Africa/Cairo';
+
+    const localDate = new Date(`\( {input.date}T \){input.time}:00`);
+    const utcDate = zonedTimeToUtc(localDate, tz);
 
     const { error } = await supabaseServer
       .from('appointments')
@@ -62,6 +80,6 @@ export async function updateAppointmentAction(id: string, input: AppointmentInpu
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err.message || 'حدث خطأ أثناء التعديل' };
+    return { success: false, error: err.message || 'خطأ أثناء التعديل' };
   }
 }
