@@ -3,13 +3,13 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
-import { zonedTimeToUtc } from 'date-fns-tz';  // ← ده الاستيراد الصحيح
+import { fromZonedTime } from 'date-fns-tz';  // ← الاسم الجديد في v3+
 
 type AppointmentInput = {
   full_name: string;
   phone: string;
-  date: string;  // '2026-03-09'
-  time: string;  // '12:00'
+  date: string;   // 'YYYY-MM-DD'
+  time: string;   // 'HH:mm'
   reason?: string;
   status?: string;
 };
@@ -31,9 +31,9 @@ export async function insertAppointmentAction(input: AppointmentInput) {
     // إنشاء تاريخ محلي كامل
     const localDateTimeStr = `\( {input.date}T \){input.time}:00`;
 
-    // تحويل إلى UTC بدقة باستخدام date-fns-tz
+    // تحويل الوقت المحلي إلى UTC بدقة (الاسم الجديد)
     const localDate = new Date(localDateTimeStr);
-    const utcDate = zonedTimeToUtc(localDate, tz);
+    const utcDate = fromZonedTime(localDate, tz);
 
     const { error } = await supabaseServer.from('appointments').insert({
       full_name: input.full_name,
@@ -65,7 +65,7 @@ export async function updateAppointmentAction(id: string, input: AppointmentInpu
 
     const localDateTimeStr = `\( {input.date}T \){input.time}:00`;
     const localDate = new Date(localDateTimeStr);
-    const utcDate = zonedTimeToUtc(localDate, tz);
+    const utcDate = fromZonedTime(localDate, tz);
 
     const { error } = await supabaseServer
       .from('appointments')
