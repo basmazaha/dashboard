@@ -1,5 +1,5 @@
 // app/test-timezone/page.tsx
-// ملف Server Component (لا نضع 'use client' هنا)
+// Server Component - لا نضع 'use client' هنا
 
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
@@ -12,7 +12,7 @@ type Appointment = {
   id: string;
   full_name: string | null;
   phone: string | null;
-  date_time: string | null;
+  date_time: string | null; // timestamptz → ISO string (UTC)
   reason: string | null;
   status: string | null;
 };
@@ -23,11 +23,15 @@ export default async function TestTimezonePage() {
     redirect('/sign-in');
   }
 
-  // جلب timezone
-  const { data: settings } = await supabaseServer
+  // جلب timezone العيادة
+  const { data: settings, error: tzError } = await supabaseServer
     .from('business_settings')
     .select('timezone')
     .maybeSingle();
+
+  if (tzError) {
+    return <div style={{ padding: '2rem', color: 'red' }}>خطأ في جلب الـ timezone</div>;
+  }
 
   const timezone = settings?.timezone || 'Africa/Cairo';
 
