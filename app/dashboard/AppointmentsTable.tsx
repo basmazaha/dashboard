@@ -53,7 +53,7 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
-  // ─── دوال مساعدة للتنسيق ───
+  // تنسيق التاريخ حسب الـ timezone
   const formatDate = (iso: string | null) => {
     if (!iso) return '—';
     try {
@@ -69,6 +69,7 @@ export default function AppointmentsTable({
     }
   };
 
+  // تنسيق الوقت – الدالة المصححة النهائية
   const formatTime = (isoOrTime: string | null) => {
     if (!isoOrTime) return '—';
 
@@ -82,14 +83,10 @@ export default function AppointmentsTable({
       hours = date.getHours();
       minutes = date.getMinutes();
     } catch {
-      // إذا فشل new Date، نحاول تحليل يدوي (HH:mm)
       const match = isoOrTime.match(/^(\d{1,2}):(\d{2})$/);
-      if (match) {
-        hours = parseInt(match[1], 10);
-        minutes = parseInt(match[2], 10);
-      } else {
-        return '—';
-      }
+      if (!match) return '—';
+      hours = parseInt(match[1], 10);
+      minutes = parseInt(match[2], 10);
     }
 
     const hour12 = hours % 12 || 12;
@@ -139,7 +136,7 @@ export default function AppointmentsTable({
     const dates: string[] = [];
     const today = new Date();
 
-    for (let i = 0; i < 60; i++) {  // زيادة العدد لتجنب مشاكل العرض
+    for (let i = 0; i < 60; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const isoDate = d.toISOString().split('T')[0];
@@ -190,7 +187,6 @@ export default function AppointmentsTable({
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
 
-      // للتحقق من الحجز: نحول إلى UTC ISO
       const localIso = `\( {selectedDate}T \){isoTime}:00`;
       const localDate = new Date(localIso);
       const utcIso = localDate.toISOString();
@@ -273,8 +269,9 @@ export default function AppointmentsTable({
               ...appt,
               full_name: formData.get('full_name') as string | null,
               phone: formData.get('phone') as string | null,
-              appointment_date: formData.get('date') as string | null,
-              appointment_time: formData.get('time') as string | null,
+              date_time: formData.get('date') && formData.get('time')
+                ? `\( {formData.get('date')}T \){formData.get('time')}:00Z`
+                : null,
               status: formData.get('status') as string | null,
             }
           : appt
@@ -311,13 +308,16 @@ export default function AppointmentsTable({
     setFormErrors({});
 
     const tempId = 'temp-' + Date.now().toString();
+
+    const newDate = formData.get('date') as string | null;
+    const newTime = formData.get('time') as string | null;
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null;
+
     const optimisticAppt: Appointment = {
       id: tempId,
       full_name: formData.get('full_name') as string | null,
       phone: formData.get('phone') as string | null,
-      date_time: formData.get('date') && formData.get('time')
-        ? `\( {formData.get('date')}T \){formData.get('time')}:00Z`
-        : null,
+      date_time: newDateTime,
       reason: formData.get('reason') as string | null,
       status: formData.get('status') as string | null ?? 'confirmed',
     };
@@ -671,4 +671,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                              }
+}
