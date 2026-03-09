@@ -36,6 +36,18 @@ function normalizeTime(time: string | null): string {
   return time.split(':').slice(0, 2).join(':');
 }
 
+const DAY_OF_WEEK_MAP = {
+  sun: 0,
+  mon: 1,
+  tue: 2,
+  wed: 3,
+  thu: 4,
+  fri: 5,
+  sat: 6,
+} as const;
+
+type DayShort = keyof typeof DAY_OF_WEEK_MAP;
+
 export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
@@ -130,21 +142,14 @@ export default function AppointmentsTable({
         continue;
       }
 
-      // تصحيح حساب يوم الأسبوع مع الـ timezone
-      const dayOfWeekStr = new Date(isoDate + 'T12:00:00').toLocaleDateString('en-US', {
-        timeZone: timezone,
-        weekday: 'short',
-      }).toLowerCase();
+      const dayOfWeekStr = new Date(isoDate + 'T12:00:00')
+        .toLocaleDateString('en-US', {
+          timeZone: timezone,
+          weekday: 'short',
+        })
+        .toLowerCase() as DayShort;
 
-      const dayOfWeek = {
-        sun: 0,
-        mon: 1,
-        tue: 2,
-        wed: 3,
-        thu: 4,
-        fri: 5,
-        sat: 6,
-      }[dayOfWeekStr as keyof typeof dayOfWeekMap] ?? 0;
+      const dayOfWeek = DAY_OF_WEEK_MAP[dayOfWeekStr] ?? 0;
 
       const wh = workingHoursByDay[dayOfWeek];
 
@@ -161,21 +166,14 @@ export default function AppointmentsTable({
   const getAvailableTimesForDate = (selectedDate: string | null) => {
     if (!selectedDate) return [];
 
-    // تصحيح حساب يوم الأسبوع
-    const dayOfWeekStr = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', {
-      timeZone: timezone,
-      weekday: 'short',
-    }).toLowerCase();
+    const dayOfWeekStr = new Date(selectedDate + 'T12:00:00')
+      .toLocaleDateString('en-US', {
+        timeZone: timezone,
+        weekday: 'short',
+      })
+      .toLowerCase() as DayShort;
 
-    const dayOfWeek = {
-      sun: 0,
-      mon: 1,
-      tue: 2,
-      wed: 3,
-      thu: 4,
-      fri: 5,
-      sat: 6,
-    }[dayOfWeekStr as keyof typeof dayOfWeekMap] ?? 0;
+    const dayOfWeek = DAY_OF_WEEK_MAP[dayOfWeekStr] ?? 0;
 
     const wh = workingHoursByDay[dayOfWeek];
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
@@ -532,7 +530,9 @@ export default function AppointmentsTable({
                               placeholder="الاسم الكامل"
                               className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.full_name && <span className="form-error">{formErrors.full_name}</span>}
+                            {formErrors.full_name && (
+                              <span className="form-error">{formErrors.full_name}</span>
+                            )}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.full_name || '—'}</span>
@@ -554,7 +554,9 @@ export default function AppointmentsTable({
                               placeholder="01xxxxxxxxx أو +201..."
                               className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.phone && <span className="form-error">{formErrors.phone}</span>}
+                            {formErrors.phone && (
+                              <span className="form-error">{formErrors.phone}</span>
+                            )}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.phone || '—'}</span>
@@ -676,4 +678,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                                            }
+}
