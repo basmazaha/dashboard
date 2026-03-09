@@ -23,6 +23,13 @@ type WorkingHour = {
   break_end: string | null;
 };
 
+interface AppointmentsTableProps {
+  initialAppointments: Appointment[];
+  initialOffDays: string[];
+  initialWorkingHours: WorkingHour[];
+  timezone: string;
+}
+
 function normalizeTime(time: string | null): string {
   if (!time) return '';
   return time.split(':').slice(0, 2).join(':');
@@ -32,13 +39,8 @@ export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
   initialWorkingHours,
-  businessTimezone = 'Africa/Cairo', // fallback
-}: {
-  initialAppointments: Appointment[];
-  initialOffDays: string[];
-  initialWorkingHours: WorkingHour[];
-  businessTimezone?: string;
-}) {
+  timezone,
+}: AppointmentsTableProps) {
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -56,7 +58,41 @@ export default function AppointmentsTable({
     return map;
   }, [initialWorkingHours]);
 
-  const tz = businessTimezone;
+  // ─── دوال التنسيق بناءً على الـ timezone ───
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '—';
+    try {
+      return new Intl.DateTimeFormat('ar-EG', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: timezone,
+      }).format(new Date(dateStr));
+    } catch (e) {
+      console.error('خطأ في تنسيق التاريخ:', e);
+      return dateStr;
+    }
+  };
+
+  const formatTime = (timeStr: string | null) => {
+    if (!timeStr) return '—';
+    try {
+      const date = new Date(`1970-01-01T${timeStr}Z`); // نستخدم تاريخ وهمي + Z لتجنب تأثير الـ timezone المحلي
+      return new Intl.DateTimeFormat('ar-EG', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone,
+      })
+        .format(date)
+        .replace('ص', 'صباحاً')
+        .replace('م', 'مساءً');
+    } catch (e) {
+      console.error('خطأ في تنسيق الوقت:', e);
+      return normalizeTime(timeStr);
+    }
+  };
 
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
@@ -72,13 +108,11 @@ export default function AppointmentsTable({
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    // استخدام timezone الشركة بدلاً من توقيت المتصفح
-    const now = new Date();
-    const nowInTz = new Date(now.toLocaleString('en-US', { timeZone: tz }));
+    const today = new Date();
 
     for (let i = 0; i < 30; i++) {
-      const d = new Date(nowInTz);
-      d.setDate(nowInTz.getDate() + i);
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
       const isoDate = d.toISOString().split('T')[0];
 
       if (offDaysSet.has(isoDate)) continue;
@@ -87,17 +121,12 @@ export default function AppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const formatted = d.toLocaleDateString('ar-EG', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
+        const formatted = formatDate(isoDate);
         dates.push(isoDate + '|' + formatted);
       }
     }
     return dates;
-  }, [offDaysSet, workingHoursByDay, tz]);
+  }, [offDaysSet, workingHoursByDay, timezone]);
 
   const getAvailableTimesForDate = (selectedDate: string | null) => {
     if (!selectedDate) return [];
@@ -108,37 +137,29 @@ export default function AppointmentsTable({
     const wh = workingHoursByDay[dayOfWeek];
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
-    const now = new Date();
-    const nowInTz = new Date(now.toLocaleString('en-US', { timeZone: tz }));
-    const isToday = 
-      dateObj.getFullYear() === nowInTz.getFullYear() &&
-      dateObj.getMonth() === nowInTz.getMonth() &&
-      dateObj.getDate() === nowInTz.getDate();
+    const start = new Date(`1970-01-01T${wh.start_time}`);
+    const end = new Date(`1970-01-01T${wh.end_time}`);
 
-    let minStartMinutes = 0;
+    const slotDuration = wh.slot_duration_minutes ?? 15;
+    const slotMs = slotDuration * 60 * 1000;
 
-    const [startH, startM] = wh.start_time.split(':').map(Number);
-    const startMinutes = startH * 60 + startM;
-
-    if (isToday) {
-      const oneHourLater = new Date(nowInTz.getTime() + 60 * 60 * 1000);
-      minStartMinutes = oneHourLater.getHours() * 60 + oneHourLater.getMinutes();
-      // تقريب لأعلى إلى أقرب slot
-      minStartMinutes = Math.ceil(minStartMinutes / (wh.slot_duration_minutes || 15)) * (wh.slot_duration_minutes || 15);
+    let breakStartMs = Infinity;
+    let breakEndMs = -Infinity;
+    if (wh.break_start && wh.break_end) {
+      breakStartMs = new Date(`1970-01-01T${wh.break_start}`).getTime();
+      breakEndMs = new Date(`1970-01-01T${wh.break_end}`).getTime();
     }
 
-    minStartMinutes = Math.max(minStartMinutes, startMinutes);
-
-    const [endH, endM] = wh.end_time.split(':').map(Number);
-    const endMinutes = endH * 60 + endM;
-
-    const slotDuration = wh.slot_duration_minutes || 15;
     const times: string[] = [];
 
-    for (let m = minStartMinutes; m < endMinutes; m += slotDuration) {
-      const hour = Math.floor(m / 60);
-      const minute = m % 60;
-      const isoTime = `\( {hour.toString().padStart(2, '0')}: \){minute.toString().padStart(2, '0')}`;
+    for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
+      const slotStart = current;
+      const slotEnd = current + slotMs;
+
+      if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
+
+      const timeDate = new Date(slotStart);
+      const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
 
       const isBooked = appointments.some(a =>
         a.appointment_date === selectedDate &&
@@ -148,22 +169,13 @@ export default function AppointmentsTable({
       );
 
       if (!isBooked) {
-        const timeDate = new Date(`2000-01-01T${isoTime}`);
-        const formatted = timeDate.toLocaleTimeString('ar-EG', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        }).replace('ص', 'صباحاً').replace('م', 'مساءً');
-
+        const formatted = formatTime(isoTime);
         times.push(isoTime + '|' + formatted);
       }
     }
 
     return times;
   };
-
-  // باقي الدوال (toggleEdit, toggleAdd, getStatusText, handleUpdate, handleInsert) تبقى كما هي
-  // لكن في handleUpdate و handleInsert نضمن أننا نحفظ appointment_date و appointment_time كما أدخلها المستخدم
 
   const toggleEdit = (id: string, initialValues: Appointment) => {
     if (editingId === id) {
@@ -178,7 +190,6 @@ export default function AppointmentsTable({
         date: initialValues.appointment_date || '',
         time: normalizeTime(initialValues.appointment_time),
         status: initialValues.status || 'confirmed',
-        reason: initialValues.reason || '',
       });
       setFormErrors({});
     }
@@ -232,7 +243,6 @@ export default function AppointmentsTable({
               appointment_date: formData.get('date') as string | null,
               appointment_time: formData.get('time') as string | null,
               status: formData.get('status') as string | null,
-              reason: formData.get('reason') as string | null,
             }
           : appt
       )
@@ -529,14 +539,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {appt.appointment_date
-                              ? new Date(appt.appointment_date).toLocaleDateString('ar-EG', {
-                                  weekday: 'long',
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric',
-                                })
-                              : '—'}
+                            {formatDate(appt.appointment_date)}
                           </span>
                         )}
                       </td>
@@ -558,13 +561,7 @@ export default function AppointmentsTable({
                           </select>
                         ) : (
                           <span className="cell-content">
-                            {appt.appointment_time
-                              ? new Date(`2000-01-01T${appt.appointment_time}`).toLocaleTimeString('ar-EG', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true,
-                                }).replace('ص', 'صباحاً').replace('م', 'مساءً')
-                              : '—'}
+                            {formatTime(appt.appointment_time)}
                           </span>
                         )}
                       </td>
@@ -640,4 +637,4 @@ export default function AppointmentsTable({
       )}
     </>
   );
-                            }
+}
