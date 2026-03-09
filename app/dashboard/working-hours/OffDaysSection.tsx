@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { addOffDay, deleteOffDay, upsertOffDays } from './actions';
 import type { OffDay } from './types';
 
 type Props = {
   initialOffDays: OffDay[];
+  timezone: string;
 };
 
-export default function OffDaysSection({ initialOffDays }: Props) {
+export default function OffDaysSection({ initialOffDays, timezone }: Props) {
   const [offDays, setOffDays] = useState<OffDay[]>(initialOffDays);
   const [originalOffDays, setOriginalOffDays] = useState<OffDay[]>(initialOffDays);
   const [isEditing, setIsEditing] = useState(false);
@@ -84,6 +87,17 @@ export default function OffDaysSection({ initialOffDays }: Props) {
     setMessage(null);
   };
 
+  const formatOffDayDate = (dateStr: string) => {
+    try {
+      // نضيف وقت افتراضي لأن date فقط بدون وقت
+      const zoned = toZonedTime(`${dateStr}T00:00:00`, timezone);
+      return format(zoned, 'EEEE، d MMMM yyyy');
+    } catch (err) {
+      console.error('خطأ في تنسيق تاريخ الإجازة:', err);
+      return dateStr;
+    }
+  };
+
   return (
     <section className="off-days-section">
       <div className="section-header">
@@ -136,12 +150,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
                       }
                     />
                   ) : (
-                    new Date(day.date).toLocaleDateString('ar-EG', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })
+                    formatOffDayDate(day.date)
                   )}
                 </td>
                 <td>
