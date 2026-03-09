@@ -1,15 +1,14 @@
-// app/dashboard/AppointmentsTable.tsx
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { format, parse, isValid, addMinutes } from 'date-fns';
+import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
 import { updateAppointment, insertAppointment, fetchAppointments } from './actions';
 
 type Appointment = {
   id: string;
   full_name: string | null;
-  appointment_date: string | null;
-  appointment_time: string | null;
+  date_time: string | null;   // ISO string in UTC (timestamptz)
   phone: string | null;
   reason: string | null;
   status: string | null;
@@ -32,11 +31,6 @@ interface AppointmentsTableProps {
   timezone: string;
 }
 
-function normalizeTime(time: string | null): string {
-  if (!time) return '';
-  return time.split(':').slice(0, 2).join(':');
-}
-
 export default function AppointmentsTable({
   initialAppointments,
   initialOffDays,
@@ -54,57 +48,48 @@ export default function AppointmentsTable({
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => {
-      map[wh.day_of_week] = wh;
-    });
+    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
     return map;
   }, [initialWorkingHours]);
 
-  // ─── دوال التنسيق بناءً على الـ timezone ───
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '—';
+  // ─── عرض التاريخ والوقت بتنسيق محلي (timezone النشاط) ───
+  const formatDateLocal = useCallback((iso: string | null) => {
+    if (!iso) return '—';
     try {
-      return new Intl.DateTimeFormat('ar-EG', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: timezone,
-      }).format(new Date(dateStr));
-    } catch (e) {
-      console.error('خطأ في تنسيق التاريخ:', e);
-      return dateStr;
+      const zoned = utcToZonedTime(iso, timezone);
+      return format(zoned, 'EEEE، d MMMM yyyy', { timeZone: timezone, locale: { localize: { day: (n) => ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][n] } } });
+    } catch {
+      return iso.split('T')[0] || '—';
     }
-  };
+  }, [timezone]);
 
-  const formatTime = (timeStr: string | null) => {
-    if (!timeStr) return '—';
+  const formatTimeLocal = useCallback((iso: string | null) => {
+    if (!iso) return '—';
     try {
-      const date = new Date(`1970-01-01T${timeStr}Z`); // نستخدم تاريخ وهمي + Z لتجنب تأثير الـ timezone المحلي
-      return new Intl.DateTimeFormat('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: timezone,
-      })
-        .format(date)
-        .replace('ص', 'صباحاً')
-        .replace('م', 'مساءً');
-    } catch (e) {
-      console.error('خطأ في تنسيق الوقت:', e);
-      return normalizeTime(timeStr);
+      const zoned = utcToZonedTime(iso, timezone);
+      let str = format(zoned, 'hh:mm a', { timeZone: timezone });
+      str = str.replace('AM', 'صباحاً').replace('PM', 'مساءً');
+      return str;
+    } catch {
+      return iso.split('T')[1]?.slice(0,5) || '—';
     }
-  };
+  }, [timezone]);
+
+  const getDateOnly = useCallback((iso: string | null) => {
+    if (!iso) return '';
+    return format(utcToZonedTime(iso, timezone), 'yyyy-MM-dd', { timeZone: timezone });
+  }, [timezone]);
+
+  const getTimeOnly = useCallback((iso: string | null) => {
+    if (!iso) return '';
+    return format(utcToZonedTime(iso, timezone), 'HH:mm', { timeZone: timezone });
+  }, [timezone]);
 
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
-      if (!a.appointment_date && b.appointment_date) return 1;
-      if (b.appointment_date && !a.appointment_date) return -1;
-      if (!a.appointment_date && !b.appointment_date) return 0;
-
-      const dtA = new Date(a.appointment_date + 'T' + (a.appointment_time || '00:00:00'));
-      const dtB = new Date(b.appointment_date + 'T' + (b.appointment_time || '00:00:00'));
-      return dtA.getTime() - dtB.getTime();
+      const ta = a.date_time ? new Date(a.date_time).getTime() : Infinity;
+      const tb = b.date_time ? new Date(b.date_time).getTime() : Infinity;
+      return ta - tb;
     });
   }, [appointments]);
 
@@ -115,7 +100,7 @@ export default function AppointmentsTable({
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
-      const isoDate = d.toISOString().split('T')[0];
+      const isoDate = format(d, 'yyyy-MM-dd');
 
       if (offDaysSet.has(isoDate)) continue;
 
@@ -123,63 +108,74 @@ export default function AppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const formatted = formatDate(isoDate);
-        dates.push(isoDate + '|' + formatted);
+        const label = format(d, 'EEEE، d MMMM yyyy', {
+          locale: { localize: { day: (n) => ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][n] } }
+        });
+        dates.push(isoDate + '|' + label);
       }
     }
     return dates;
-  }, [offDaysSet, workingHoursByDay, timezone]);
+  }, [offDaysSet, workingHoursByDay]);
 
-  const getAvailableTimesForDate = (selectedDate: string | null) => {
+  const getAvailableTimesForDate = useCallback((selectedDate: string | null) => {
     if (!selectedDate) return [];
 
-    const dateObj = new Date(selectedDate);
+    const dateObj = parse(selectedDate, 'yyyy-MM-dd', new Date());
     const dayOfWeek = dateObj.getDay();
-
     const wh = workingHoursByDay[dayOfWeek];
+
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
-    const start = new Date(`1970-01-01T${wh.start_time}`);
-    const end = new Date(`1970-01-01T${wh.end_time}`);
+    const startTime = wh.start_time;
+    const endTime   = wh.end_time;
+    const slotMin   = wh.slot_duration_minutes ?? 15;
 
-    const slotDuration = wh.slot_duration_minutes ?? 15;
-    const slotMs = slotDuration * 60 * 1000;
+    const start = parse(startTime, 'HH:mm:ss', new Date());
+    const end   = parse(endTime,   'HH:mm:ss', new Date());
 
-    let breakStartMs = Infinity;
-    let breakEndMs = -Infinity;
-    if (wh.break_start && wh.break_end) {
-      breakStartMs = new Date(`1970-01-01T${wh.break_start}`).getTime();
-      breakEndMs = new Date(`1970-01-01T${wh.break_end}`).getTime();
-    }
+    let current = start.getTime();
+    const endMs = end.getTime();
+
+    const breakStartMs = wh.break_start ? parse(wh.break_start, 'HH:mm:ss', new Date()).getTime() : Infinity;
+    const breakEndMs   = wh.break_end   ? parse(wh.break_end,   'HH:mm:ss', new Date()).getTime() : -Infinity;
 
     const times: string[] = [];
 
-    for (let current = start.getTime(); current < end.getTime(); current += slotMs) {
-      const slotStart = current;
-      const slotEnd = current + slotMs;
+    while (current < endMs) {
+      const slotEnd = current + slotMin * 60 * 1000;
 
-      if (slotStart < breakEndMs && slotEnd > breakStartMs) continue;
+      if (slotEnd > breakStartMs && current < breakEndMs) {
+        current = breakEndMs;
+        continue;
+      }
 
-      const timeDate = new Date(slotStart);
-      const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
+      const timeStr = format(new Date(current), 'HH:mm');
+      const isBooked = appointments.some(a => {
+        if (!a.date_time || a.status === 'cancelled') return false;
+        if (editingId && a.id === editingId) return false;
 
-      const isBooked = appointments.some(a =>
-        a.appointment_date === selectedDate &&
-        normalizeTime(a.appointment_time) === isoTime &&
-        a.status !== 'cancelled' &&
-        a.id !== editingId
-      );
+        const apptDate = getDateOnly(a.date_time);
+        const apptTime = getTimeOnly(a.date_time);
+
+        return apptDate === selectedDate && apptTime === timeStr;
+      });
 
       if (!isBooked) {
-        const formatted = formatTime(isoTime);
-        times.push(isoTime + '|' + formatted);
+        let display = format(new Date(current), 'hh:mm a')
+          .replace('AM', 'صباحاً')
+          .replace('PM', 'مساءً');
+        times.push(timeStr + '|' + display);
       }
+
+      current += slotMin * 60 * 1000;
     }
 
     return times;
-  };
+  }, [appointments, editingId, getDateOnly, getTimeOnly, workingHoursByDay]);
 
-  const toggleEdit = (id: string, initialValues: Appointment) => {
+  // ─── Handlers ────────────────────────────────────────────────
+
+  const toggleEdit = (id: string, appt: Appointment) => {
     if (editingId === id) {
       setEditingId(null);
       setFormValues({});
@@ -187,11 +183,11 @@ export default function AppointmentsTable({
     } else {
       setEditingId(id);
       setFormValues({
-        full_name: initialValues.full_name || '',
-        phone: initialValues.phone || '',
-        date: initialValues.appointment_date || '',
-        time: normalizeTime(initialValues.appointment_time),
-        status: initialValues.status || 'confirmed',
+        full_name: appt.full_name || '',
+        phone: appt.phone || '',
+        date: getDateOnly(appt.date_time),
+        time: getTimeOnly(appt.date_time),
+        status: appt.status || 'confirmed',
       });
       setFormErrors({});
     }
@@ -233,43 +229,37 @@ export default function AppointmentsTable({
     setFormErrors({});
 
     const appointmentId = formData.get('appointment_id') as string;
-    const originalAppt = appointments.find(a => a.id === appointmentId);
+    const original = appointments.find(a => a.id === appointmentId);
 
+    // optimistic update (local)
     setAppointments(prev =>
-      prev.map(appt =>
-        appt.id === appointmentId
+      prev.map(a =>
+        a.id === appointmentId
           ? {
-              ...appt,
+              ...a,
               full_name: formData.get('full_name') as string | null,
               phone: formData.get('phone') as string | null,
-              appointment_date: formData.get('date') as string | null,
-              appointment_time: formData.get('time') as string | null,
               status: formData.get('status') as string | null,
+              // date_time سيُحدث من السيرفر
             }
-          : appt
+          : a
       )
     );
 
-    const result = await updateAppointment(formData);
+    const result = await updateAppointment(formData, timezone);
 
     if ('errors' in result) {
       setFormErrors(result.errors as Record<string, string>);
-      if (originalAppt) {
-        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
-      }
+      if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
     } else if ('success' in result) {
-      const fetchResult = await fetchAppointments();
-      if ('appointments' in fetchResult) {
-        setAppointments(fetchResult.appointments ?? []);
-      }
-      setFormErrors({});
+      const fresh = await fetchAppointments(timezone);
+      if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
       setEditingId(null);
       setFormValues({});
+      setFormErrors({});
     } else {
-      alert('حدث خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-      if (originalAppt) {
-        setAppointments(prev => prev.map(a => (a.id === appointmentId ? originalAppt : a)));
-      }
+      alert('خطأ: ' + (result.error || 'غير معروف'));
+      if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
     }
 
     setIsSubmitting(false);
@@ -279,34 +269,31 @@ export default function AppointmentsTable({
     setIsSubmitting(true);
     setFormErrors({});
 
-    const tempId = 'temp-' + Date.now().toString();
-    const optimisticAppt: Appointment = {
+    const tempId = 'temp-' + Date.now();
+    const optimistic = {
       id: tempId,
       full_name: formData.get('full_name') as string | null,
       phone: formData.get('phone') as string | null,
-      appointment_date: formData.get('date') as string | null,
-      appointment_time: formData.get('time') as string | null,
+      date_time: null, // سيأتي من السيرفر
       reason: formData.get('reason') as string | null,
       status: formData.get('status') as string | null ?? 'confirmed',
     };
 
-    setAppointments(prev => [optimisticAppt, ...prev]);
+    setAppointments(prev => [optimistic, ...prev]);
 
-    const result = await insertAppointment(formData);
+    const result = await insertAppointment(formData, timezone);
 
     if ('errors' in result) {
       setFormErrors(result.errors as Record<string, string>);
       setAppointments(prev => prev.filter(a => a.id !== tempId));
     } else if ('success' in result) {
-      const fetchResult = await fetchAppointments();
-      if ('appointments' in fetchResult) {
-        setAppointments(fetchResult.appointments ?? []);
-      }
-      setFormErrors({});
+      const fresh = await fetchAppointments(timezone);
+      if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
       setIsAdding(false);
       setFormValues({});
+      setFormErrors({});
     } else {
-      alert('حدث خطأ أثناء الإضافة: ' + (result.error || 'غير معروف'));
+      alert('خطأ: ' + (result.error || 'غير معروف'));
       setAppointments(prev => prev.filter(a => a.id !== tempId));
     }
 
@@ -342,7 +329,6 @@ export default function AppointmentsTable({
                     setFormErrors(prev => ({ ...prev, full_name: '' }));
                   }}
                   className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
-                  placeholder="الاسم الكامل"
                 />
                 {formErrors.full_name && <p className="form-error">{formErrors.full_name}</p>}
               </div>
@@ -358,7 +344,6 @@ export default function AppointmentsTable({
                     setFormErrors(prev => ({ ...prev, phone: '' }));
                   }}
                   className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
-                  placeholder="01xxxxxxxxx"
                 />
                 {formErrors.phone && <p className="form-error">{formErrors.phone}</p>}
               </div>
@@ -406,7 +391,6 @@ export default function AppointmentsTable({
                   value={formValues.reason || ''}
                   onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
                   className="form-input"
-                  placeholder="سبب الحجز"
                 />
               </div>
 
@@ -429,11 +413,7 @@ export default function AppointmentsTable({
             </div>
 
             <div className="form-actions">
-              <button
-                type="button"
-                onClick={toggleAdd}
-                className="btn btn--secondary"
-              >
+              <button type="button" onClick={toggleAdd} className="btn btn--secondary">
                 إلغاء
               </button>
               <button
@@ -471,7 +451,7 @@ export default function AppointmentsTable({
                 {sortedAppointments.map(appt => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
-                  const currentDate = isEditing ? formValues.date : appt.appointment_date;
+                  const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
                   return (
@@ -488,12 +468,9 @@ export default function AppointmentsTable({
                                 setFormValues({ ...formValues, full_name: e.target.value });
                                 setFormErrors(prev => ({ ...prev, full_name: '' }));
                               }}
-                              placeholder="الاسم الكامل"
                               className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.full_name && (
-                              <span className="form-error">{formErrors.full_name}</span>
-                            )}
+                            {formErrors.full_name && <span className="form-error">{formErrors.full_name}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.full_name || '—'}</span>
@@ -512,12 +489,9 @@ export default function AppointmentsTable({
                                 setFormValues({ ...formValues, phone: e.target.value });
                                 setFormErrors(prev => ({ ...prev, phone: '' }));
                               }}
-                              placeholder="01xxxxxxxxx أو +201..."
                               className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                             />
-                            {formErrors.phone && (
-                              <span className="form-error">{formErrors.phone}</span>
-                            )}
+                            {formErrors.phone && <span className="form-error">{formErrors.phone}</span>}
                           </div>
                         ) : (
                           <span className="cell-content">{appt.phone || '—'}</span>
@@ -540,9 +514,7 @@ export default function AppointmentsTable({
                             })}
                           </select>
                         ) : (
-                          <span className="cell-content">
-                            {formatDate(appt.appointment_date)}
-                          </span>
+                          <span className="cell-content">{formatDateLocal(appt.date_time)}</span>
                         )}
                       </td>
 
@@ -562,9 +534,7 @@ export default function AppointmentsTable({
                             })}
                           </select>
                         ) : (
-                          <span className="cell-content">
-                            {formatTime(appt.appointment_time)}
-                          </span>
+                          <span className="cell-content">{formatTimeLocal(appt.date_time)}</span>
                         )}
                       </td>
 
@@ -640,5 +610,3 @@ export default function AppointmentsTable({
     </>
   );
 }
-
-
