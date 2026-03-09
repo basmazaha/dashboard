@@ -11,42 +11,37 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
-  const today = new Date().toISOString();
+  const today = new Date().toISOString().split('T')[0];
 
-  // جلب timezone الشركة (من الجدول)
-  const { data: settings, error: settingsError } = await supabaseServer
-    .from('business_settings')
-    .select('timezone')
-    .eq('id', 1)
-    .single();
-
-  if (settingsError || !settings) {
-    console.error('خطأ في جلب timezone:', settingsError);
-    // fallback إذا لم يوجد
-    const fallbackTz = 'Africa/Cairo';
-  }
-
-  const timezone = settings?.timezone || 'Africa/Cairo';
-
-  // جلب المواعيد (مع التحويل إلى التوقيت المحلي إذا أردت، لكن هنا نجلب الأصلي فقط)
+  // جلب المواعيد المستقبلية
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
     .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
-    .gte('appointment_date', today.split('T')[0])
+    .gte('appointment_date', today)
     .order('appointment_date', { ascending: true })
     .order('appointment_time', { ascending: true })
     .limit(100);
 
+  // جلب أيام الإجازة
   const { data: offDaysData, error: offError } = await supabaseServer
     .from('off_days')
     .select('date');
 
+  // جلب ساعات العمل
   const { data: workingHours, error: hoursError } = await supabaseServer
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
-  if (apptError || offError || hoursError) {
-    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError });
+  // ─── جلب الـ timezone من business_settings ───
+  const { data: settingsData, error: settingsError } = await supabaseServer
+    .from('business_settings')
+    .select('timezone')
+    .maybeSingle(); // إذا كان فيه صف واحد فقط – أو .limit(1) إذا متعدد
+
+  const timezone = settingsData?.timezone || 'Africa/Cairo'; // fallback مهم جداً
+
+  if (apptError || offError || hoursError || settingsError) {
+    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError, settingsError });
     return (
       <div className="no-appointments">
         حدث خطأ أثناء جلب البيانات.
@@ -62,16 +57,13 @@ export default async function DashboardPage() {
     <div>
       <div className="dashboard-page-header">
         <h2 className="dashboard-page-title">المواعيد</h2>
-        <p style={{ color: '#6b7280', marginTop: '0.5rem' }}>
-          المنطقة الزمنية للشركة: <strong>{timezone}</strong>
-        </p>
       </div>
 
-      <AppointmentsTable 
-        initialAppointments={appointments || []} 
+      <AppointmentsTable
+        initialAppointments={appointments || []}
         initialOffDays={offDays}
         initialWorkingHours={workingHours || []}
-        businessTimezone={timezone}  // ← تمرير timezone للمكون
+        timezone={timezone}
       />
     </div>
   );
