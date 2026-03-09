@@ -1,5 +1,3 @@
-// app/dashboard/AppointmentsTable.tsx
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -8,7 +6,7 @@ import { updateAppointment, insertAppointment, fetchAppointments } from './actio
 type Appointment = {
   id: string;
   full_name: string | null;
-  date_time: string | null; // ISO in UTC
+  date_time: string | null; // ISO string in UTC
   phone: string | null;
   reason: string | null;
   status: string | null;
@@ -100,7 +98,7 @@ export default function AppointmentsTable({
     if (!iso) return '—';
     try {
       const timeStr = extractTime(iso) || '00:00';
-      const date = new Date(`1970-01-01T${timeStr}:00Z`);
+      const date = new Date(`1970-01-01T${timeStr}:00`);
       return new Intl.DateTimeFormat('ar-EG', {
         hour: '2-digit',
         minute: '2-digit',
@@ -118,12 +116,19 @@ export default function AppointmentsTable({
 
   const sortedAppointments = useMemo(() => {
     return [...appointments].sort((a, b) => {
-      if (!a.date_time && b.date_time) return 1;
-      if (b.date_time && !a.date_time) return -1;
+      // التعامل مع الحالات التي يكون فيها date_time = null
       if (!a.date_time && !b.date_time) return 0;
+      if (!a.date_time) return 1;   // المواعيد بدون تاريخ تذهب للأسفل
+      if (!b.date_time) return -1;
 
       const dtA = new Date(a.date_time);
       const dtB = new Date(b.date_time);
+
+      // حماية إضافية في حال كان السلسلة غير صالحة (invalid date)
+      if (isNaN(dtA.getTime()) && isNaN(dtB.getTime())) return 0;
+      if (isNaN(dtA.getTime())) return 1;
+      if (isNaN(dtB.getTime())) return -1;
+
       return dtA.getTime() - dtB.getTime();
     });
   }, [appointments]);
@@ -190,20 +195,19 @@ export default function AppointmentsTable({
       const timeDate = new Date(slotStart);
       const isoTime = timeDate.toTimeString().slice(0, 5); // HH:mm
 
-      // Check if booked
+      // تحويل الوقت المحلي المختار إلى ISO UTC للمقارنة
       const slotIso = `\( {selectedDate}T \){isoTime}:00`;
       const slotDate = new Date(slotIso);
-      slotDate.setMinutes(slotDate.getMinutes() - new Date().getTimezoneOffset());
-      const slotUtcIso = slotDate.toISOString();
+      const utcIso = slotDate.toISOString();
 
       const isBooked = appointments.some(a =>
-        a.date_time === slotUtcIso &&
+        a.date_time === utcIso &&
         a.status !== 'cancelled' &&
         a.id !== editingId
       );
 
       if (!isBooked) {
-        const formatted = formatTime(slotIso + 'Z');
+        const formatted = formatTime(slotIso);
         times.push(isoTime + '|' + formatted);
       }
     }
@@ -269,7 +273,7 @@ export default function AppointmentsTable({
 
     const newDate = formData.get('date') as string | null;
     const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null; // Temporary for optimistic
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00` : null;
 
     setAppointments(prev =>
       prev.map(appt =>
@@ -318,7 +322,7 @@ export default function AppointmentsTable({
 
     const newDate = formData.get('date') as string | null;
     const newTime = formData.get('time') as string | null;
-    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00Z` : null; // Temporary
+    const newDateTime = newDate && newTime ? `\( {newDate}T \){newTime}:00` : null;
 
     const optimisticAppt: Appointment = {
       id: tempId,
