@@ -1,13 +1,13 @@
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
-import { format, parse, isValid } from 'date-fns';
-import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
+import { format, parse } from 'date-fns';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
 type Appointment = {
   id: string;
   full_name: string | null;
-  date_time: string | null;          // ← timestamptz ISO string
+  date_time: string | null;          // timestamptz ISO string (UTC)
   phone: string | null;
   reason: string | null;
   status: string | null;
@@ -41,35 +41,38 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
 
   if (dateStr && timeStr && status !== 'cancelled') {
     try {
-      // نحول التاريخ + الوقت المحلي (حسب timezone النشاط) إلى UTC → timestamptz
       const localDateTimeStr = `${dateStr} ${timeStr}:00`;
       const zonedDate = parse(localDateTimeStr, 'yyyy-MM-dd HH:mm:ss', new Date());
-      const utcDate = zonedTimeToUtc(zonedDate, businessTimezone);
+      const utcDate = fromZonedTime(zonedDate, businessTimezone);
       date_time = utcDate.toISOString();
     } catch (err) {
+      console.error(err);
       return { error: 'صيغة التاريخ أو الوقت غير صحيحة' };
     }
   }
 
-  // التحقق من عدم التداخل في نفس اليوم + نفس الدقيقة (نفس الـ slot)
+  // التحقق من عدم التداخل في نفس اليوم + نفس الدقيقة
   if (status !== 'cancelled' && date_time) {
-    const targetDateLocal = utcToZonedTime(date_time, businessTimezone);
+    const targetDateLocal = toZonedTime(date_time, businessTimezone);
     const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd', { timeZone: businessTimezone });
     const targetTimeOnly = format(targetDateLocal, 'HH:mm', { timeZone: businessTimezone });
 
     const { data: existing, error } = await supabaseServer
       .from('appointments')
       .select('id, status, date_time')
-      .gte('date_time', `${targetDateOnly} 00:00:00+00`)
-      .lt('date_time', `${targetDateOnly} 23:59:59+00`);
+      .gte('date_time', `${targetDateOnly}T00:00:00Z`)
+      .lt('date_time', `${targetDateOnly}T23:59:59Z`);
 
-    if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
+    if (error) {
+      console.error('خطأ في التحقق من التداخل:', error);
+      return { error: 'خطأ في التحقق من توفر الموعد' };
+    }
 
     const conflict = existing?.some(a => {
       if (a.status === 'cancelled' || a.id === id) return false;
       if (!a.date_time) return false;
 
-      const existingZoned = utcToZonedTime(a.date_time, businessTimezone);
+      const existingZoned = toZonedTime(a.date_time, businessTimezone);
       const existingTime = format(existingZoned, 'HH:mm', { timeZone: businessTimezone });
 
       return existingTime === targetTimeOnly;
@@ -94,7 +97,7 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
     }
   }
 
-  if (Object.keys(updates).length <= 2) { // full_name + phone فقط
+  if (Object.keys(updates).length <= 2) { // فقط full_name + phone بدون تغييرات جوهرية
     return { message: 'لا توجد تغييرات جوهرية' };
   }
 
@@ -138,23 +141,24 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
   try {
     const localDateTimeStr = `${dateStr} ${timeStr}:00`;
     const zonedDate = parse(localDateTimeStr, 'yyyy-MM-dd HH:mm:ss', new Date());
-    const utcDate = zonedTimeToUtc(zonedDate, businessTimezone);
+    const utcDate = fromZonedTime(zonedDate, businessTimezone);
     date_time = utcDate.toISOString();
   } catch (err) {
+    console.error(err);
     return { error: 'صيغة التاريخ أو الوقت غير صحيحة' };
   }
 
   // التحقق من عدم التداخل
   if (date_time) {
-    const targetDateLocal = utcToZonedTime(date_time, businessTimezone);
+    const targetDateLocal = toZonedTime(date_time, businessTimezone);
     const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd', { timeZone: businessTimezone });
     const targetTimeOnly = format(targetDateLocal, 'HH:mm', { timeZone: businessTimezone });
 
     const { data: existing, error } = await supabaseServer
       .from('appointments')
       .select('id, status, date_time')
-      .gte('date_time', `${targetDateOnly} 00:00:00+00`)
-      .lt('date_time', `${targetDateOnly} 23:59:59+00`);
+      .gte('date_time', `${targetDateOnly}T00:00:00Z`)
+      .lt('date_time', `${targetDateOnly}T23:59:59Z`);
 
     if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
@@ -162,7 +166,7 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
       if (a.status === 'cancelled') return false;
       if (!a.date_time) return false;
 
-      const exZoned = utcToZonedTime(a.date_time, businessTimezone);
+      const exZoned = toZonedTime(a.date_time, businessTimezone);
       const exTime = format(exZoned, 'HH:mm', { timeZone: businessTimezone });
 
       return exTime === targetTimeOnly;
@@ -203,11 +207,5 @@ export async function fetchAppointments(businessTimezone: string) {
     return { error: error.message, appointments: [] as Appointment[] };
   }
 
-  // تحويل timestamptz → عرض محلي للـ frontend
-  const normalized = (data ?? []).map(appt => ({
-    ...appt,
-    // سنحولها في الـ component لاحقاً – هنا نتركها ISO
-  }));
-
-  return { appointments: normalized };
+  return { appointments: data ?? [] };
 }
