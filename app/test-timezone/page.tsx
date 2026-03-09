@@ -1,240 +1,141 @@
-// app/test-timezone/page.tsx
+// app/dashboard/app/test-timezone/page.tsx
 import { supabaseServer } from '@/lib/supabaseServer';
-import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache'; // ← أضف هذا الاستيراد (كان مفقودًا)
 
 export const dynamic = 'force-dynamic';
 
-export default async function TestTimezonePage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
-  // جلب timezone الشركة
+export default async function TestTimezonePage() {
+  // جلب timezone من الإعدادات
   const { data: settings } = await supabaseServer
     .from('business_settings')
     .select('timezone')
-    .eq('id', 1)
-    .single();
+    .maybeSingle();
 
   const timezone = settings?.timezone || 'Africa/Cairo';
 
-  // جلب آخر 5 مواعيد للعرض
-  const { data: appointments } = await supabaseServer
-    .from('appointments')
-    .select('id, full_name, appointment_datetime')
-    .order('appointment_datetime', { ascending: false })
-    .limit(5);
-
-  // رسائل النجاح أو الخطأ من query params
-  const success = searchParams.success === 'true';
-  const error = typeof searchParams.error === 'string' ? searchParams.error : null;
+  // ─── بعض التواريخ للاختبار ───
+  const testDates = [
+    '2025-03-10', // يوم إثنين (مثال)
+    '2025-03-15',
+    '2025-03-20',
+    '2025-03-25',
+    '2025-03-30',
+  ];
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto', direction: 'rtl', fontFamily: 'Tajawal, sans-serif' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '2.5rem', color: '#1f2937' }}>
-        صفحة اختبار التوقيت المحلي
-      </h1>
-
-      {/* حالة الإعدادات */}
-      <div style={{ background: '#f0f9ff', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem', border: '1px solid #bfdbfe' }}>
-        <h2 style={{ marginTop: 0, color: '#1d4ed8' }}>المنطقة الزمنية الحالية للشركة</h2>
-        <p style={{ fontSize: '1.4rem', fontWeight: 'bold', color: '#2563eb' }}>
-          {timezone}
-        </p>
-        <small style={{ color: '#6b7280' }}>
-          (من جدول business_settings – يمكن تغييرها من صفحة الإعدادات)
-        </small>
-      </div>
-
-      {/* رسائل النجاح / الخطأ */}
-      {success && (
-        <div style={{
-          padding: '1rem',
-          marginBottom: '1.5rem',
-          background: '#ecfdf5',
-          color: '#065f46',
-          borderRadius: '8px',
-          border: '1px solid #6ee7b7',
-          textAlign: 'center',
-          fontWeight: 500,
-        }}>
-          تم حفظ الموعد بنجاح! (اعمل refresh إذا لم يظهر فوراً)
-        </div>
-      )}
-
-      {error && (
-        <div style={{
-          padding: '1rem',
-          marginBottom: '1.5rem',
-          background: '#fef2f2',
-          color: '#991b1b',
-          borderRadius: '8px',
-          border: '1px solid #fca5a5',
-          textAlign: 'center',
-          fontWeight: 500,
-        }}>
-          خطأ: {error}
-        </div>
-      )}
-
-      {/* جدول المواعيد الموجودة */}
-      <h2 style={{ margin: '2rem 0 1rem', color: '#1f2937' }}>
-        آخر المواعيد المسجلة (بالتوقيت المحلي)
-      </h2>
-
-      {appointments && appointments.length > 0 ? (
-        <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: '#f3f4f6' }}>
-                <th style={{ padding: '1rem', borderBottom: '2px solid #d1d5db', textAlign: 'right' }}>الاسم</th>
-                <th style={{ padding: '1rem', borderBottom: '2px solid #d1d5db', textAlign: 'right' }}>التاريخ والوقت (محلي)</th>
-                <th style={{ padding: '1rem', borderBottom: '2px solid #d1d5db', textAlign: 'right' }}>UTC الأصلي</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map(appt => {
-                const localDateTime = appt.appointment_datetime
-                  ? new Date(appt.appointment_datetime).toLocaleString('ar-EG', {
-                      dateStyle: 'full',
-                      timeStyle: 'short',
-                      timeZone: timezone,
-                    })
-                  : '—';
-
-                return (
-                  <tr key={appt.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>{appt.full_name || 'غير محدد'}</td>
-                    <td style={{ padding: '1rem', textAlign: 'right' }}>{localDateTime}</td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontSize: '0.9rem', color: '#6b7280' }}>
-                      {appt.appointment_datetime || '—'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p style={{ textAlign: 'center', color: '#6b7280', padding: '2rem' }}>
-          لا توجد مواعيد مسجلة بعد.
-        </p>
-      )}
-
-      {/* نموذج إضافة موعد جديد */}
-      <h2 style={{ margin: '3rem 0 1.5rem', color: '#1f2937' }}>إضافة موعد جديد (اختبار)</h2>
-
-      <form
-        action={async (formData: FormData) => {
-          'use server';
-
-          const full_name = (formData.get('full_name') as string)?.trim();
-          const datetimeLocal = formData.get('datetime') as string;
-
-          if (!full_name || full_name.length < 3) {
-            redirect('/test-timezone?error=' + encodeURIComponent('الاسم مطلوب ويجب أن يكون 3 حروف على الأقل'));
-          }
-
-          if (!datetimeLocal) {
-            redirect('/test-timezone?error=' + encodeURIComponent('التاريخ والوقت مطلوب'));
-          }
-
-          // تحويل التوقيت المحلي إلى UTC
-          const appointment_datetime = new Date(datetimeLocal).toISOString();
-
-          const { error } = await supabaseServer
-            .from('appointments')
-            .insert({
-              full_name,
-              appointment_datetime,
-              status: 'confirmed',
-            });
-
-          if (error) {
-            console.error('خطأ حفظ:', error);
-            redirect('/test-timezone?error=' + encodeURIComponent(error.message || 'فشل في حفظ الموعد'));
-          }
-
-          // نجاح: تحديث البيانات وإعادة توجيه مع رسالة
-          revalidatePath('/test-timezone');
-          redirect('/test-timezone?success=true');
-        }}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.5rem',
-          background: '#ffffff',
-          padding: '2rem',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          border: '1px solid #e5e7eb',
-        }}
-      >
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-            الاسم الكامل
-          </label>
-          <input
-            type="text"
-            name="full_name"
-            required
-            minLength={3}
-            style={{
-              width: '100%',
-              padding: '0.8rem',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              fontSize: '1rem',
-            }}
-            placeholder="اكتب الاسم الكامل"
-          />
-        </div>
-
-        <div>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
-            التاريخ والوقت
-          </label>
-          <input
-            type="datetime-local"
-            name="datetime"
-            required
-            style={{
-              width: '100%',
-              padding: '0.8rem',
-              borderRadius: '6px',
-              border: '1px solid #d1d5db',
-              fontSize: '1rem',
-            }}
-          />
-          <small style={{ color: '#6b7280', display: 'block', marginTop: '0.4rem' }}>
-            اختر بالتوقيت المحلي – النظام سيحفظ الوقت بـ UTC تلقائيًا
-          </small>
-        </div>
-
-        <button
-          type="submit"
-          style={{
-            padding: '1rem',
-            background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '1.1rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-        >
-          حفظ الموعد الجديد
-        </button>
-      </form>
-
-      <p style={{ marginTop: '2rem', textAlign: 'center', color: '#6b7280', fontSize: '0.95rem' }}>
-        بعد الضغط على حفظ، ستتم إعادة التوجيه مع رسالة النتيجة.
-        <br />
-        إذا نجح الحفظ، اعمل refresh لترى الموعد الجديد في الجدول أعلاه.
+    <div dir="rtl" style={{ fontFamily: 'Tajawal, sans-serif', padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
+      <h1>اختبار عرض التواريخ والأوقات حسب Timezone العيادة</h1>
+      <p style={{ color: '#555', marginBottom: '2rem' }}>
+        Timezone المخزن في الإعدادات: <strong>{timezone}</strong>
       </p>
+
+      <h2>كيف يظهر التاريخ حاليًا (من السيرفر / بدون تعديل timezone)</h2>
+      <table border={1} cellPadding={8} style={{ borderCollapse: 'collapse', marginBottom: '3rem' }}>
+        <thead>
+          <tr style={{ background: '#f0f0f0' }}>
+            <th>التاريخ ISO</th>
+            <th>new Date() محلي (متصفح)</th>
+            <th>Intl ar-EG بدون timezone محدد</th>
+            <th>Intl ar-EG مع timezone={timezone}</th>
+            <th>يوم الأسبوع (getDay) محلي</th>
+          </tr>
+        </thead>
+        <tbody>
+          {testDates.map((dateStr) => {
+            const dLocal = new Date(dateStr);
+            const dWithTz = new Date(dateStr + 'T00:00:00');
+
+            return (
+              <tr key={dateStr}>
+                <td>{dateStr}</td>
+                <td>{dLocal.toLocaleDateString('ar-EG')}</td>
+                <td>
+                  {new Intl.DateTimeFormat('ar-EG', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  }).format(dWithTz)}
+                </td>
+                <td style={{ background: '#e6f3ff' }}>
+                  {new Intl.DateTimeFormat('ar-EG', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    timeZone: timezone,
+                  }).format(dWithTz)}
+                </td>
+                <td>{dLocal.getDay()}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <h2>اختبار الأوقات المتاحة (مثال افتراضي)</h2>
+      <p>افتراض: ساعات العمل من 09:00 إلى 21:00، فترة راحة 14:00–15:00، مدة الموعد 30 دقيقة</p>
+
+      <TestAvailableTimes timezone={timezone} date="2025-03-16" />
+
+      <div style={{ marginTop: '3rem', padding: '1.5rem', background: '#fff3cd', borderRadius: '8px' }}>
+        <strong>ملاحظة مهمة:</strong>
+        <ul>
+          <li>يوم الأسبوع (getDay) يعتمد على timezone المتصفح → غير موثوق</li>
+          <li>للحصول على أيام أسبوع صحيحة حسب timezone العيادة → يجب الحساب على السيرفر</li>
+          <li>الحل المقترح: نقل منطق توليد التواريخ المتاحة إلى Server Component أو Server Action</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+// كومبوننت client-side لعرض الأوقات (للتوضيح فقط)
+'use client';
+
+import { useMemo } from 'react';
+
+function TestAvailableTimes({ timezone, date }: { timezone: string; date: string }) {
+  const slots = useMemo(() => {
+    const start = new Date(`1970-01-01T09:00:00`);
+    const end = new Date(`1970-01-01T21:00:00`);
+    const slotMs = 30 * 60 * 1000;
+    const breakStart = new Date(`1970-01-01T14:00:00`).getTime();
+    const breakEnd = new Date(`1970-01-01T15:00:00`).getTime();
+
+    const result: string[] = [];
+
+    for (let t = start.getTime(); t < end.getTime(); t += slotMs) {
+      if (t >= breakStart && t < breakEnd) continue;
+
+      const slotDate = new Date(t);
+      const timeStr = slotDate.toTimeString().slice(0, 5);
+
+      const formatted = new Intl.DateTimeFormat('ar-EG', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: timezone,
+      })
+        .format(slotDate)
+        .replace('ص', 'صباحًا')
+        .replace('م', 'مساءً');
+
+      result.push(`${timeStr} → ${formatted}`);
+    }
+
+    return result;
+  }, [timezone]);
+
+  return (
+    <div>
+      <h3>الأوقات المتاحة ليوم {date} (timezone: {timezone})</h3>
+      <ul style={{ columns: '3', listStyle: 'none', padding: 0 }}>
+        {slots.map((slot, i) => (
+          <li key={i} style={{ marginBottom: '0.5rem' }}>
+            {slot}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
