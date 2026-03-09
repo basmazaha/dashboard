@@ -1,5 +1,3 @@
-// app/dashboard/page.tsx
-
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -13,15 +11,26 @@ export default async function DashboardPage() {
     redirect('/sign-in');
   }
 
+  // ─── جلب الـ timezone أولاً ───
+  const { data: settings, error: tzError } = await supabaseServer
+    .from('business_settings')
+    .select('timezone')
+    .maybeSingle();
+
+  const timezone = settings?.timezone || 'Africa/Cairo';
+
+  if (tzError) {
+    console.error('خطأ في جلب الـ timezone:', tzError);
+  }
+
   const today = new Date().toISOString().split('T')[0];
 
   // جلب المواعيد المستقبلية
   const { data: appointments, error: apptError } = await supabaseServer
     .from('appointments')
-    .select('id, full_name, appointment_date, appointment_time, phone, reason, status')
-    .gte('appointment_date', today)
-    .order('appointment_date', { ascending: true })
-    .order('appointment_time', { ascending: true })
+    .select('id, full_name, date_time, phone, reason, status')
+    .gte('date_time', `${today}T00:00:00Z`) // تقريبي – يفضل تحسينه لاحقاً
+    .order('date_time', { ascending: true })
     .limit(100);
 
   // جلب أيام الإجازة
@@ -34,16 +43,8 @@ export default async function DashboardPage() {
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
-  // ─── جلب الـ timezone من business_settings ───
-  const { data: settingsData, error: settingsError } = await supabaseServer
-    .from('business_settings')
-    .select('timezone')
-    .maybeSingle(); // إذا كان فيه صف واحد فقط – أو .limit(1) إذا متعدد
-
-  const timezone = settingsData?.timezone || 'Africa/Cairo'; // fallback مهم جداً
-
-  if (apptError || offError || hoursError || settingsError) {
-    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError, settingsError });
+  if (apptError || offError || hoursError) {
+    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError });
     return (
       <div className="no-appointments">
         حدث خطأ أثناء جلب البيانات.
