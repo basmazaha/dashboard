@@ -1,10 +1,11 @@
-// app/dashboard/page.tsx
+// app/dashboard/page.tsx   ← الملف الوحيد الذي يحتاج تعديل
+
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AppointmentsTable from './AppointmentsTable';
 import { startOfDay, formatISO } from 'date-fns';
-import { utcToZonedTime, zonedTimeToUtc } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';   // ← التغيير هنا
 
 export const dynamic = 'force-dynamic';
 
@@ -23,10 +24,10 @@ export default async function DashboardPage() {
   if (settingsError || !settings) {
     console.error('خطأ في جلب timezone:', settingsError);
     return (
-      <div className="p-8 text-center text-red-600">
+      <div className="p-8 text-center text-red-600 bg-red-50 rounded-lg">
         تعذر جلب إعدادات المنطقة الزمنية
         <br />
-        <small>{settingsError?.message || 'لا توجد بيانات إعدادات'}</small>
+        <small className="text-sm">{settingsError?.message || 'لا توجد بيانات إعدادات'}</small>
       </div>
     );
   }
@@ -34,14 +35,17 @@ export default async function DashboardPage() {
   const timezone = settings.timezone || 'Africa/Cairo';
 
   // 2. حساب بداية اليوم الحالي في الـ timezone المحدد → ثم تحويلها إلى UTC
-  // نأخذ الوقت الحالي في UTC ثم نحوله إلى المنطقة الزمنية المطلوبة
-  const nowInTz = utcToZonedTime(new Date(), timezone);
-  const startOfTodayInTz = startOfDay(nowInTz);           // 00:00:00 في الـ timezone
-  const startOfTodayUTC = zonedTimeToUtc(startOfTodayInTz, timezone); // تحويل إلى UTC
+  const nowUTC = new Date();                           // الوقت الحالي (يُعامل كـ UTC داخلياً في JS)
+  const nowInTz = toZonedTime(nowUTC, timezone);       // نقل الوقت إلى المنطقة المطلوبة
+  const startOfTodayInTz = startOfDay(nowInTz);        // 00:00:00 في المنطقة الزمنية
+  const startOfTodayUTC = fromZonedTime(startOfTodayInTz, timezone);  // إرجاعه إلى UTC
 
   const startOfTodayISO = formatISO(startOfTodayUTC, { representation: 'complete' });
 
-  // 3. جلب البيانات (مع error handling أفضل)
+  console.log('[DEBUG] timezone:', timezone);
+  console.log('[DEBUG] startOfTodayISO:', startOfTodayISO);
+
+  // 3. جلب البيانات
   const [
     { data: appointments, error: apptError },
     { data: offDaysData, error: offError },
@@ -64,10 +68,10 @@ export default async function DashboardPage() {
   if (apptError || offError || hoursError) {
     console.error('أخطاء في جلب البيانات:', { apptError, offError, hoursError });
     return (
-      <div className="p-8 text-center text-red-600">
-        حدث خطأ أثناء جلب بيانات المواعيد
+      <div className="p-8 text-center text-red-600 bg-red-50 rounded-lg">
+        حدث خطأ أثناء جلب بيانات المواعيد أو ساعات العمل أو أيام الإجازة
         <br />
-        <small>يرجى التحقق من سجلات Vercel</small>
+        <small>يرجى مراجعة Vercel Logs للتفاصيل</small>
       </div>
     );
   }
@@ -78,7 +82,6 @@ export default async function DashboardPage() {
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">المواعيد اليومية</h1>
-        {/* يمكنك إضافة زر إضافة موعد هنا إذا أردت */}
       </div>
 
       <AppointmentsTable
