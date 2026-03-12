@@ -85,8 +85,8 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
 
   const updates: Record<string, any> = { full_name, phone };
 
-  if (status === 'cancelled') {
-    updates.status = 'cancelled';
+  if (status === 'cancelled' || status === 'absent') {
+    updates.status = status;
     updates.manage_token = null;
     updates.reminder_sent_6h = false;
   } else {
