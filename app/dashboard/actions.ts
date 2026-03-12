@@ -87,7 +87,7 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
 
   if (status === 'cancelled') {
     updates.status = 'cancelled';
-    updates.date_time = null;
+    updates.manage_token = null;
     updates.reminder_sent_6h = false;
   } else {
     if (date_time !== null) updates.date_time = date_time;
