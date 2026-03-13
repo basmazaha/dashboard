@@ -610,7 +610,7 @@ export default function AppointmentsTable({
                               onClick={() => toggleEdit(appt.id, appt)}
                               className="btn btn--cancel"
                             >
-                              إلغاء
+                              رجوع
                             </button>
                           </div>
                         ) : (
