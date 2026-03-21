@@ -214,11 +214,3 @@ export async function fetchAppointments(businessTimezone: string) {
 
   return { appointments: data ?? [] };
 }
-
-  if (error) {
-    console.error('خطأ في جلب المواعيد:', error);
-    return { error: error.message, appointments: [] as Appointment[] };
-  }
-
-  return { appointments: data ?? [] };
-}
