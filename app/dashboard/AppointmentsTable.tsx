@@ -2,7 +2,9 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { format, parse, addMinutes } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { updateAppointment, insertAppointment, fetchAppointments } from './actions';
@@ -39,12 +41,35 @@ export default function AppointmentsTable({
   initialWorkingHours,
   timezone,
 }: AppointmentsTableProps) {
+  const router = useRouter();
+  const supabase = createClientComponentClient();
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+  const channel = supabase
+    .channel('appointments-realtime')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'appointments',
+      },
+      () => {
+        router.refresh(); // 🔥 يحدث البيانات تلقائي
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [supabase, router]);
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
