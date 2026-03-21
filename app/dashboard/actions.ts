@@ -203,13 +203,13 @@ export async function fetchAppointments(businessTimezone: string) {
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
-    .gte('date_time', `${today}T00:00:00Z`) // ✅ نفس فلترة الصفحة
+    .gte('date_time', `${today}T00:00:00Z`)
     .order('date_time', { ascending: true })
     .limit(100);
 
   if (error) {
     console.error('خطأ في جلب المواعيد:', error);
-    return { error: error.message, appointments: [] };
+    return { error: error.message, appointments: [] }; 
   }
 
   return { appointments: data ?? [] };
