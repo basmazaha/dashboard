@@ -1,4 +1,4 @@
-// dashboard/app/dashboard/AppointmentsTable.tsx
+//dashboard/app/dashboard/AppointmentsTable.tsx
 
 'use client';
 
