@@ -166,74 +166,78 @@ body {
 
 /* ------------------ Appointments Table ------------------ */
 
+.
+}
+
 .appointments__actions {
   margin-bottom: 1.5rem;
-  text-align: left;
   display: flex;
-  flex-direction: column; /* 🔥 ده المهم */
-  gap: 10px;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start; /* يخليهم شمال فعلاً */
 }
 
-.btn {
-  padding: 0.65rem 1.4rem;
-  font-size: 1rem;
-  font-weight: 500;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
+/* زر الريفريش */
 .btn--refresh {
-  width: 45px;
-  height: 45px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+
+  border-radius: 50%;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   color: white;
   border: none;
-  font-size: 20px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
+  font-size: 20px;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  transition: all 0.2s ease;
-  align-self: flex-end; /* شمال */
+
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+
+  /* مهم جداً */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  align-self: flex-start; /* شمال */
 }
 
+/* Hover ناعم */
 .btn--refresh:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.15);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.2);
 }
 
-/* حركة لف */
+/* Click */
 .btn--refresh:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
+/* Loading */
 .btn--refresh.is-loading {
   pointer-events: none;
   opacity: 0.7;
 }
 
-.btn--refresh.is-loading::before {
-  content: "⟳";
-  animation: spin 1s linear infinite;
+/* هنستخدم span جوا الزر */
+.btn--refresh .icon {
+  display: inline-block;
 }
 
-.btn--refresh.is-loading {
-  color: transparent;
+/* دوران نضيف */
+.btn--refresh.is-loading .icon {
+  animation: spin 0.8s linear infinite;
 }
 
+/* Animation */
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
+/*زر الاضافة*/
 .btn--success {
   background: #10b981;
   color: white;
