@@ -164,6 +164,19 @@ export default function AppointmentsTable({
       }
 
       const slotDate = new Date(current);
+      // ❌ تجاهل الأوقات الماضية لو التاريخ هو اليوم
+      const now = new Date();
+      const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
+
+      const isToday =
+       selected.getFullYear() === now.getFullYear() &&
+       selected.getMonth() === now.getMonth() &&
+       selected.getDate() === now.getDate();
+
+      if (isToday && slotDate < now) {
+       current += slotMin * 60 * 1000;
+     continue;
+      }
       const timeStr = format(slotDate, 'HH:mm');
 
       const isBooked = appointments.some(a => {
