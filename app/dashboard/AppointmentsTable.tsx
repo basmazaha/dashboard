@@ -88,7 +88,7 @@ export default function AppointmentsTable({
     if (!iso) return '—';
     try {
       const zoned = toZonedTime(iso, timezone);
-      return format(zoned, 'EEEE، d MMMM yyyy');
+      return format(zoned, 'EEEE، d MMMM yyyy', { locale: ar });
     } catch (e) {
       console.error('خطأ تنسيق التاريخ:', e);
       return iso.split('T')[0] || '—';
@@ -112,7 +112,7 @@ export default function AppointmentsTable({
     if (!iso) return '';
     try {
       const zoned = toZonedTime(iso, timezone);
-      return format(zoned, 'EEEE، d MMMM yyyy', { locale: ar });
+      return format(zoned, 'yyyy-MM-dd');
     } catch {
       return '';
     }
