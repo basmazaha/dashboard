@@ -1,3 +1,5 @@
+// dashboard/app/dashboard/AppointmentsTable.tsx
+
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
