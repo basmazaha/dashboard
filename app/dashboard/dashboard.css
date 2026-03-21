@@ -166,8 +166,6 @@ body {
 
 /* ------------------ Appointments Table ------------------ */
 
-.
-}
 
 .appointments__actions {
   margin-bottom: 1.5rem;
@@ -241,7 +239,7 @@ body {
 .btn--success {
   background: #10b981;
   color: white;
-  align-self: flex-end; /* شمال */
+  align-self: flex-end; 
 }
 
 .btn--success:hover {
