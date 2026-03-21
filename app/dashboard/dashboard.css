@@ -65,6 +65,29 @@
   background: #dc2626;
 }
 
+.btn--refresh {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.btn--refresh:hover {
+  background: #2563eb;
+}
+
+/* حركة لف */
+.btn--refresh:active {
+  transform: rotate(180deg);
+}
+
+
 /* Sidebar */
 
 .dashboard-sidebar {
