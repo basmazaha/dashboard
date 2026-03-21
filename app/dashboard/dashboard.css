@@ -65,28 +65,6 @@
   background: #dc2626;
 }
 
-.btn--refresh {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: #3b82f6;
-  color: white;
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.btn--refresh:hover {
-  background: #2563eb;
-}
-
-/* حركة لف */
-.btn--refresh:active {
-  transform: rotate(180deg);
-}
-
 
 /* Sidebar */
 
@@ -194,7 +172,6 @@ body {
   display: flex;
   flex-direction: column; /* 🔥 ده المهم */
   gap: 10px;
-  align-items: flex-start; /* يخليهم شمال */
 }
 
 .btn {
@@ -207,9 +184,33 @@ body {
   transition: all 0.2s ease;
 }
 
+.btn--refresh {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  align-self: flex-end; /* شمال */
+}
+
+.btn--refresh:hover {
+  background: #2563eb;
+}
+
+/* حركة لف */
+.btn--refresh:active {
+  transform: rotate(180deg);
+}
+
 .btn--success {
   background: #10b981;
   color: white;
+  align-self: flex-end; /* شمال */
 }
 
 .btn--success:hover {
