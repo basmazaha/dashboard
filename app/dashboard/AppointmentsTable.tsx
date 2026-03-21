@@ -358,7 +358,7 @@ export default function AppointmentsTable({
   return (
     <>
      
-      <div className="appointments__actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+      <div className="appointments__actions">
   
            {/* زر الريفريش */}
       <button
