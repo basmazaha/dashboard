@@ -153,7 +153,7 @@ export default function AppointmentsTable({
       if (wh?.is_open && wh.start_time && wh.end_time) {
         // نستخدم toZonedTime هنا أيضاً للحصول على تاريخ محلي صحيح
         const zoned = toZonedTime(d, timezone);
-        const label = format(zoned, 'EEEE، d MMMM yyyy');
+        const label = format(zoned, 'EEEE d MMMM yyyy', { locale: ar });
         dates.push(isoDate + '|' + label);
       }
     }
