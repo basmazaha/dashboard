@@ -357,14 +357,28 @@ export default function AppointmentsTable({
 
   return (
     <>
-      <div className="appointments__actions">
-        <button
-          type="button"
-          onClick={toggleAdd}
-          className={`btn btn--${isAdding ? 'danger' : 'success'}`}
-        >
-          {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
-        </button>
+     
+      <div className="appointments__actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+  
+           {/* زر الريفريش */}
+      <button
+      type="button"
+      onClick={() => router.refresh()}
+      className="btn btn--refresh"
+      title="تحديث"
+       >
+       ⟳
+      </button>
+
+          {/* زر الإضافة */}
+      <button
+      type="button"
+      onClick={toggleAdd}
+      className={`btn btn--${isAdding ? 'danger' : 'success'}`}
+       >
+       {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
+      </button>
+       
       </div>
 
       {isAdding && (
