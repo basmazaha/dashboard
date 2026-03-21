@@ -43,10 +43,7 @@ export default function AppointmentsTable({
   timezone,
 }: AppointmentsTableProps) {
   const router = useRouter();
-  const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+  
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -54,26 +51,21 @@ export default function AppointmentsTable({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-  const channel = supabase
-    .channel('appointments-realtime')
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'appointments',
-      },
-      () => {
-        router.refresh(); // 🔥 يحدث البيانات تلقائي
-      }
-    )
-    .subscribe();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [supabase, router]);
+const handleRefresh = async () => {
+  setIsRefreshing(true);
+  try {
+    const fresh = await fetchAppointments(timezone);
+    if ('appointments' in fresh) {
+      setAppointments(fresh.appointments ?? []);
+    }
+  } catch (e) {
+    console.error('Refresh error:', e);
+  } finally {
+    setIsRefreshing(false);
+  }
+};
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
@@ -362,13 +354,13 @@ export default function AppointmentsTable({
   
            {/* زر الريفريش */}
       <button
-      type="button"
-      onClick={() => router.refresh()}
-      className="btn btn--refresh"
-      title="تحديث"
+        type="button"
+        onClick={handleRefresh}
+        className="btn btn--refresh"
+        title="تحديث"
        >
-       ⟳
-      </button>
+         {isRefreshing ? '...' : '⟳'}
+       </button>
 
           {/* زر الإضافة */}
       <button
