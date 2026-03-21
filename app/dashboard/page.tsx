@@ -1,3 +1,5 @@
+// dashboard/app/dashboard/page.tsx
+
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
