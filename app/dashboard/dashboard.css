@@ -191,6 +191,10 @@ body {
 .appointments__actions {
   margin-bottom: 1.5rem;
   text-align: left;
+  display: flex;
+  flex-direction: column; /* 🔥 ده المهم */
+  gap: 10px;
+  align-items: flex-start; /* يخليهم شمال */
 }
 
 .btn {
