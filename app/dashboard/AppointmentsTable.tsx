@@ -354,13 +354,12 @@ const handleRefresh = async () => {
   
            {/* زر الريفريش */}
       <button
-        type="button"
-        onClick={handleRefresh}
-        className="btn btn--refresh"
-        title="تحديث"
-       >
-         {isRefreshing ? '...' : '⟳'}
-       </button>
+      type="button"
+      onClick={handleRefresh}
+      className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
+      >
+      ⟳
+      </button>
 
           {/* زر الإضافة */}
       <button
