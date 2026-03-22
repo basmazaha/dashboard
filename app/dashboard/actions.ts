@@ -9,10 +9,20 @@ import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 type Appointment = {
   id: string;
   full_name: string | null;
-  date_time: string | null;          // timestamptz ISO string (UTC)
+  date_time: string | null;   // timestamptz ISO string (UTC)
   phone: string | null;
   reason: string | null;
   status: string | null;
+};
+
+type WorkingHour = {
+  day_of_week: number;
+  is_open: boolean;
+  start_time: string | null;
+  end_time: string | null;
+  slot_duration_minutes: number | null;
+  break_start: string | null;
+  break_end: string | null;
 };
 
 export async function updateAppointment(formData: FormData, businessTimezone: string) {
@@ -197,20 +207,54 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
   return { success: true, newAppointment: data };
 }
 
-export async function fetchAppointments(businessTimezone: string) {
+export async function fetchAppointments(
+  businessTimezone: string,
+  page: number = 1,
+  pageSize: number = 20
+) {
   const today = new Date().toISOString().split('T')[0];
 
+  const from = (page - 1) * pageSize;
+  const to   = from + pageSize - 1;
+
+  // حساب العدد الكلي للمواعيد (مهم لحساب عدد الصفحات)
+  const { count, error: countError } = await supabaseServer
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .gte('date_time', `${today}T00:00:00Z`);
+
+  if (countError) {
+    console.error('خطأ في حساب العدد الكلي للمواعيد:', countError);
+    return { 
+      error: countError.message, 
+      appointments: [], 
+      totalCount: 0 
+    };
+  }
+
+  const totalCount = count ?? 0;
+
+  // جلب المواعيد الخاصة بالصفحة المطلوبة فقط
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
     .gte('date_time', `${today}T00:00:00Z`)
     .order('date_time', { ascending: true })
-    .limit(100);
+    .range(from, to);
 
   if (error) {
     console.error('خطأ في جلب المواعيد:', error);
-    return { error: error.message, appointments: [] }; 
+    return { 
+      error: error.message, 
+      appointments: [], 
+      totalCount: 0 
+    };
   }
 
-  return { appointments: data ?? [] };
-}
+  return {
+    appointments: data ?? [],
+    totalCount,
+    page,
+    pageSize,
+  };
+  }
