@@ -1,24 +1,40 @@
-import { createServerClient } from '@/lib/supabaseServer'; // افترضت أن لديكِ هذا الـ helper
-import SearchAppointmentsTable from './SearchAppointmentsTable';
-import { getBusinessTimezone } from '../dashboard/actions'; // من actions اللي أضفناها قبل كده
+// app/dashboard/search/page.tsx
 
-// بافتراض أن لديكِ functions لجلب off_days و working_hours
-// إما من actions أو مباشرة هنا
+import { supabaseServer } from '@/lib/supabaseServer';
+import SearchAppointmentsTable from './SearchAppointmentsTable';
+import { getBusinessTimezone } from '@/app/dashboard/actions';   // تأكدي إن المسار ده صح
+
+// جلب الأيام المغلقة (off_days)
 async function getOffDays() {
-  const supabase = createServerClient();
-  const { data } = await supabase
-    .from('off_days')
+  const supabase = supabaseServer;
+
+  const { data, error } = await supabase
+    .from('off_days')                    // ← غيّري اسم الجدول لو مختلف عندك
     .select('date')
     .order('date', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching off days:', error);
+    return [];
+  }
+
   return data?.map(row => row.date) || [];
 }
 
+// جلب ساعات العمل (working_hours)
 async function getWorkingHours() {
-  const supabase = createServerClient();
-  const { data } = await supabase
-    .from('working_hours')
+  const supabase = supabaseServer;
+
+  const { data, error } = await supabase
+    .from('working_hours')               // ← غيّري اسم الجدول لو مختلف
     .select('*')
     .order('day_of_week');
+
+  if (error) {
+    console.error('Error fetching working hours:', error);
+    return [];
+  }
+
   return data || [];
 }
 
@@ -30,7 +46,7 @@ export default async function SearchPage() {
   return (
     <div className="dashboard-content">
       <h1 className="page-title">بحث في المواعيد</h1>
-      
+
       <SearchAppointmentsTable
         initialAppointments={[]}
         initialOffDays={offDays}
