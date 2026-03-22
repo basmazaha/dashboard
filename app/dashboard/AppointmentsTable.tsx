@@ -351,22 +351,7 @@ const handleRefresh = async () => {
     <>
      
       <div className="appointments__actions">
-  
-
-          {/* زر الإضافة */}
-      <button
-      type="button"
-      onClick={toggleAdd}
-      className={`btn btn--${isAdding ? 'danger' : 'success'}`}
-       >
-       {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
-      </button>
-
-
-               {/* زر الريفريش */}
-
-              <div className="appointments__actions">
-  
+        
 
           {/* زر الإضافة */}
       <button
