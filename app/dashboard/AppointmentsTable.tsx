@@ -357,8 +357,8 @@ const handleRefresh = async () => {
       type="button"
       onClick={handleRefresh}
       className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
-      >
-      <span className="refresh-icon">↻</span>
+       >
+        <span className="refresh-icon">⟳</span>
       </button>
 
           {/* زر الإضافة */}
