@@ -364,26 +364,45 @@ const handleRefresh = async () => {
 
 
                {/* زر الريفريش */}
-      <button
-  type="button"
-  onClick={handleRefresh}
-  className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
-  disabled={isRefreshing}   // اختياري: تعطيل الزر أثناء التحميل
-  aria-label="تحديث المواعيد"
+      <div 
+  style={{ 
+    width: '44px', 
+    height: '44px', 
+    minWidth: '44px', 
+    minHeight: '44px',
+    flexShrink: 0,
+    flexGrow: 0,
+    display: 'inline-block',   // أو 'inline-flex' لو عايز
+  }}
 >
-  <svg
-    className="refresh-icon-svg"
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
+  <button
+    type="button"
+    onClick={handleRefresh}
+    className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
+    style={{
+      width: '100% !important',
+      height: '100% !important',
+      minWidth: '100%',
+      minHeight: '100%',
+      padding: 0,
+      margin: 0,
+      boxSizing: 'border-box',
+    }}
+    disabled={isRefreshing}
   >
-    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-  </svg>
-</button>
+    <svg
+      className="refresh-icon-svg"
+      style={{ 
+        width: '24px', 
+        height: '24px',
+        flexShrink: 0,
+      }}
+      // باقي الـ svg attributes
+    >
+      {/* ... */}
+    </svg>
+  </button>
+</div>
        
       </div>
 
