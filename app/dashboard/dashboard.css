@@ -162,7 +162,7 @@ color: #1f2937;
 margin-bottom: 1.5rem;
 text-align: left;
 display: flex;
-flex-direction: column; /* 🔥 ده المهم */
+flex-direction: row; /* 🔥 ده المهم */
 gap: 20px;
 }
 
