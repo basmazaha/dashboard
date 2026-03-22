@@ -4,16 +4,24 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AppointmentsTable from './AppointmentsTable';
+import { fetchAppointments } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function DashboardPage() {
+interface Props {
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
+export default async function DashboardPage({ searchParams }: Props) {
   const { userId } = await auth();
   if (!userId) {
     redirect('/sign-in');
   }
 
-  // ─── جلب الـ timezone أولاً ───
+  const currentPage = Number(searchParams.page) || 1;
+  const pageSize = Number(searchParams.pageSize) || 20;
+
+  // جلب الـ timezone أولاً
   const { data: settings, error: tzError } = await supabaseServer
     .from('business_settings')
     .select('timezone')
@@ -25,15 +33,20 @@ export default async function DashboardPage() {
     console.error('خطأ في جلب الـ timezone:', tzError);
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  // جلب المواعيد مع الـ pagination
+  const appointmentsResult = await fetchAppointments(timezone, currentPage, pageSize);
 
-  // جلب المواعيد المستقبلية
-  const { data: appointments, error: apptError } = await supabaseServer
-    .from('appointments')
-    .select('id, full_name, date_time, phone, reason, status')
-    .gte('date_time', `${today}T00:00:00Z`) // تقريبي – يفضل تحسينه لاحقاً
-    .order('date_time', { ascending: true })
-    .limit(100);
+  if ('error' in appointmentsResult) {
+    return (
+      <div className="no-appointments">
+        حدث خطأ أثناء جلب المواعيد
+        <br />
+        <small>{appointmentsResult.error}</small>
+      </div>
+    );
+  }
+
+  const { appointments, totalCount } = appointmentsResult;
 
   // جلب أيام الإجازة
   const { data: offDaysData, error: offError } = await supabaseServer
@@ -45,13 +58,11 @@ export default async function DashboardPage() {
     .from('working_hours')
     .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
 
-  if (apptError || offError || hoursError) {
-    console.error('خطأ في جلب البيانات:', { apptError, offError, hoursError });
+  if (offError || hoursError) {
+    console.error('خطأ في جلب البيانات الإضافية:', { offError, hoursError });
     return (
       <div className="no-appointments">
-        حدث خطأ أثناء جلب البيانات.
-        <br />
-        <small>يرجى التحقق من الـ console</small>
+        حدث خطأ أثناء جلب البيانات الإضافية.
       </div>
     );
   }
@@ -69,6 +80,9 @@ export default async function DashboardPage() {
         initialOffDays={offDays}
         initialWorkingHours={workingHours || []}
         timezone={timezone}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={totalCount}
       />
     </div>
   );
