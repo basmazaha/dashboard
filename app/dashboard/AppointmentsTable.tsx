@@ -34,6 +34,9 @@ interface AppointmentsTableProps {
   initialOffDays: string[];
   initialWorkingHours: WorkingHour[];
   timezone: string;
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
 }
 
 export default function AppointmentsTable({
@@ -41,6 +44,9 @@ export default function AppointmentsTable({
   initialOffDays,
   initialWorkingHours,
   timezone,
+  currentPage,
+  pageSize,
+  totalCount,
 }: AppointmentsTableProps) {
   const router = useRouter();
   
@@ -53,19 +59,19 @@ export default function AppointmentsTable({
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-const handleRefresh = async () => {
-  setIsRefreshing(true);
-  try {
-    const fresh = await fetchAppointments(timezone);
-    if ('appointments' in fresh) {
-      setAppointments(fresh.appointments ?? []);
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const fresh = await fetchAppointments(timezone, currentPage, pageSize);
+      if ('appointments' in fresh) {
+        setAppointments(fresh.appointments ?? []);
+      }
+    } catch (e) {
+      console.error('Refresh error:', e);
+    } finally {
+      setIsRefreshing(false);
     }
-  } catch (e) {
-    console.error('Refresh error:', e);
-  } finally {
-    setIsRefreshing(false);
-  }
-};
+  };
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
@@ -75,7 +81,6 @@ const handleRefresh = async () => {
     return map;
   }, [initialWorkingHours]);
 
-  // ─── عرض التاريخ والوقت بتنسيق محلي (timezone النشاط) ───
   const formatDateLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
     try {
@@ -143,7 +148,6 @@ const handleRefresh = async () => {
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        // نستخدم toZonedTime هنا أيضاً للحصول على تاريخ محلي صحيح
         const zoned = toZonedTime(d, timezone);
         const label = format(zoned, 'EEEE d MMMM yyyy', { locale: ar });
         dates.push(isoDate + '|' + label);
@@ -185,7 +189,6 @@ const handleRefresh = async () => {
       }
 
       const slotDate = new Date(current);
-      // ❌ تجاهل الأوقات الماضية لو التاريخ هو اليوم
       const now = new Date();
       const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
@@ -196,7 +199,7 @@ const handleRefresh = async () => {
 
       if (isToday && slotDate < now) {
        current += slotMin * 60 * 1000;
-     continue;
+       continue;
       }
       const timeStr = format(slotDate, 'HH:mm');
 
@@ -279,7 +282,6 @@ const handleRefresh = async () => {
     const appointmentId = formData.get('appointment_id') as string;
     const original = appointments.find(a => a.id === appointmentId);
 
-    // optimistic update
     setAppointments(prev =>
       prev.map(a =>
         a.id === appointmentId
@@ -299,7 +301,7 @@ const handleRefresh = async () => {
       setFormErrors(result.errors as Record<string, string>);
       if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
     } else if ('success' in result) {
-      const fresh = await fetchAppointments(timezone);
+      const fresh = await fetchAppointments(timezone, currentPage, pageSize);
       if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
       setEditingId(null);
       setFormValues({});
@@ -334,7 +336,7 @@ const handleRefresh = async () => {
       setFormErrors(result.errors as Record<string, string>);
       setAppointments(prev => prev.filter(a => a.id !== tempId));
     } else if ('success' in result) {
-      const fresh = await fetchAppointments(timezone);
+      const fresh = await fetchAppointments(timezone, currentPage, pageSize);
       if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
       setIsAdding(false);
       setFormValues({});
@@ -347,69 +349,89 @@ const handleRefresh = async () => {
     setIsSubmitting(false);
   };
 
+  // ─── حساب نطاق الصفحات الذكي ───
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const maxPagesToShow = 7;
+
+  let startPage: number;
+  let endPage: number;
+
+  if (totalPages <= maxPagesToShow) {
+    startPage = 1;
+    endPage = totalPages;
+  } else {
+    const half = Math.floor(maxPagesToShow / 2);
+    startPage = Math.max(1, currentPage - half);
+    endPage = Math.min(totalPages, currentPage + half);
+
+    if (startPage === 1) {
+      endPage = maxPagesToShow;
+    } else if (endPage === totalPages) {
+      startPage = totalPages - maxPagesToShow + 1;
+    }
+  }
+
+  const pages = Array.from(
+    { length: endPage - startPage + 1 },
+    (_, i) => startPage + i
+  );
+
   return (
     <>
-     
       <div className="appointments__actions">
-        
+        <button
+          type="button"
+          onClick={toggleAdd}
+          className={`btn btn--${isAdding ? 'danger' : 'success'}`}
+        >
+          {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
+        </button>
 
-          {/* زر الإضافة */}
-      <button
-      type="button"
-      onClick={toggleAdd}
-      className={`btn btn--${isAdding ? 'danger' : 'success'}`}
-       >
-       {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
-      </button>
-
-
-               {/* زر الريفريش */}
-      <div 
-  style={{ 
-    width: '44px', 
-    height: '44px', 
-    minWidth: '44px', 
-    minHeight: '44px',
-    flexShrink: 0,
-    flexGrow: 0,
-    display: 'inline-block',   // أو 'inline-flex' لو عايز
-  }}
->
-  <button
-    type="button"
-    onClick={handleRefresh}
-    className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
-    style={{
-      width: '100% !important',
-      height: '100% !important',
-      minWidth: '100%',
-      minHeight: '100%',
-      padding: 0,
-      margin: 0,
-      boxSizing: 'border-box',
-    }}
-    disabled={isRefreshing}
-  >
-    <svg
-      className="refresh-icon-svg"
-      style={{ 
-        width: '24px', 
-        height: '24px',
-        flexShrink: 0,
-      }}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M23 4v6h-6M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-    </svg>
-  </button>
-</div>
-       
+        <div 
+          style={{ 
+            width: '44px', 
+            height: '44px', 
+            minWidth: '44px', 
+            minHeight: '44px',
+            flexShrink: 0,
+            flexGrow: 0,
+            display: 'inline-block',
+          }}
+        >
+          <button
+            type="button"
+            onClick={handleRefresh}
+            className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
+            style={{
+              width: '100% !important',
+              height: '100% !important',
+              minWidth: '100%',
+              minHeight: '100%',
+              padding: 0,
+              margin: 0,
+              boxSizing: 'border-box',
+            }}
+            disabled={isRefreshing}
+          >
+            <svg
+              className="refresh-icon-svg"
+              style={{ 
+                width: '24px', 
+                height: '24px',
+                flexShrink: 0,
+              }}
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M23 4v6h-6M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {isAdding && (
@@ -724,6 +746,83 @@ const handleRefresh = async () => {
           </div>
         </div>
       )}
+
+      {/* الـ Pagination */}
+      {totalCount > 0 && (
+        <div className="pagination-container">
+          <div className="pagination">
+            <button
+              className="pagination-btn"
+              disabled={currentPage === 1}
+              onClick={() => router.push(`/dashboard?page=1`)}
+            >
+              الأولى
+            </button>
+
+            <button
+              className="pagination-btn"
+              disabled={currentPage === 1}
+              onClick={() => router.push(`/dashboard?page=${currentPage - 1}`)}
+            >
+              السابق
+            </button>
+
+            {startPage > 1 && (
+              <>
+                <button
+                  className="pagination-btn"
+                  onClick={() => router.push(`/dashboard?page=1`)}
+                >
+                  1
+                </button>
+                {startPage > 2 && <span className="pagination-ellipsis">...</span>}
+              </>
+            )}
+
+            {pages.map(p => (
+              <button
+                key={p}
+                className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
+                onClick={() => router.push(`/dashboard?page=${p}`)}
+              >
+                {p}
+              </button>
+            ))}
+
+            {endPage < totalPages && (
+              <>
+                {endPage < totalPages - 1 && <span className="pagination-ellipsis">...</span>}
+                <button
+                  className="pagination-btn"
+                  onClick={() => router.push(`/dashboard?page=${totalPages}`)}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button
+              className="pagination-btn"
+              disabled={currentPage === totalPages}
+              onClick={() => router.push(`/dashboard?page=${currentPage + 1}`)}
+            >
+              التالي
+            </button>
+
+            <button
+              className="pagination-btn"
+              disabled={currentPage === totalPages}
+              onClick={() => router.push(`/dashboard?page=${totalPages}`)}
+            >
+              الأخيرة
+            </button>
+          </div>
+
+          <div className="pagination-info">
+            عرض {(currentPage - 1) * pageSize + 1} – {Math.min(currentPage * pageSize, totalCount)} من أصل {totalCount} موعد
+          </div>
+        </div>
+      )}
     </>
   );
-}
+        }
