@@ -1,0 +1,38 @@
+.search-page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.search-form-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+}
+
+.form-grid-5cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.search-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.no-results {
+  text-align: center;
+  padding: 3rem;
+  color: #6b7280;
+  font-size: 1.1rem;
+}
+
+/* إذا أردتِ تمييز صفحة البحث بلون مختلف قليلاً */
+.dashboard-content:has(.search-form-card) h1 {
+  color: #1e40af; /* أزرق غامق مثلاً */
+}
