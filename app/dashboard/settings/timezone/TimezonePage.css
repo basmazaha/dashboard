@@ -4,7 +4,7 @@
    Block: settings-page
    ========================================================================== */
 
-.settings-page {
+.timezone-page {
   min-height: 100vh;
   background-color: #f8f9fa;
   padding: 2rem 1rem;
@@ -13,7 +13,7 @@
   text-align: right;
 }
 
-.settings-page__container {
+.timezone-page__container {
   max-width: 480px;
   margin: 0 auto;
   background-color: white;
@@ -22,20 +22,20 @@
   overflow: hidden;
 }
 
-.settings-page__header {
+.timezone-page__header {
   padding: 2rem 1.5rem;
   border-bottom: 1px solid #e9ecef;
   text-align: center;
 }
 
-.settings-page__title {
+.timezone-page__title {
   margin: 0 0 0.5rem;
   font-size: 1.75rem;
   font-weight: 700;
   color: #1f2937;
 }
 
-.settings-page__description {
+.timezone-page__description {
   margin: 0;
   color: #6b7280;
   font-size: 1rem;
@@ -45,26 +45,26 @@
    Block: settings-form
    ========================================================================== */
 
-.settings-form {
+.timezone-form {
   padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.settings-form__group {
+.timezone-form__group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.settings-form__label {
+.timezone-form__label {
   font-size: 0.95rem;
   font-weight: 500;
   color: #374151;
 }
 
-.settings-form__select {
+.timezone-form__select {
   padding: 0.75rem 1rem;
   font-size: 1rem;
   border: 1px solid #d1d5db;
@@ -80,13 +80,13 @@
   cursor: pointer;
 }
 
-.settings-form__select:focus {
+.timezone-form__select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.settings-form__submit {
+.timezone-form__submit {
   padding: 0.875rem;
   font-size: 1rem;
   font-weight: 600;
@@ -98,22 +98,22 @@
   transition: all 0.2s ease;
 }
 
-.settings-form__submit:hover {
+.timezone-form__submit:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
 }
 
-.settings-form__submit:active {
+.timezone-form__submit:active {
   transform: translateY(0);
 }
 
 /* Responsive */
 @media (max-width: 480px) {
-  .settings-page__container {
+  .timezone-page__container {
     margin: 0 1rem;
   }
 
-  .settings-page__title {
+  .timezone-page__title {
     font-size: 1.5rem;
   }
 }
