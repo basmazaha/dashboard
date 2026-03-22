@@ -166,6 +166,19 @@ flex-direction: row-reverse; /* 🔥 ده المهم */
 gap: 20px;
 }
 
+
+.btn {
+padding: 0.65rem 1.4rem;
+font-size: 1rem;
+font-weight: 500;
+border: none;
+border-radius: 0.5rem;
+cursor: pointer;
+transition: all 0.2s ease;
+}
+
+
+
 .btn--refresh {
   width: 44px;                /* قيمة ثابتة مريحة */
   height: 44px;
