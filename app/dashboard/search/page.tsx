@@ -2,7 +2,7 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 import SearchAppointmentsTable from './SearchAppointmentsTable';
-import { getBusinessTimezone } from '@/app/dashboard/actions';   // تأكدي إن المسار ده صح
+import { getBusinessTimezone } from './actions';   // تأكدي إن المسار ده صح
 
 // جلب الأيام المغلقة (off_days)
 async function getOffDays() {
