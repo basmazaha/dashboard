@@ -183,7 +183,7 @@ border-radius: 12px;
 background: linear-gradient(135deg, #3b82f6, #2563eb);
 color: white;
 border: none;
-font-size: 20px;
+font-size: 40px;
 display: flex;
 align-items: center;
 justify-content: center;
@@ -193,43 +193,15 @@ transition: all 0.2s ease;
 align-self: flex-end; /* شمال */
 }
 
-.btn--refresh:hover {
-transform: translateY(-2px);
-box-shadow: 0 6px 14px rgba(0,0,0,0.15);
-}
 
-/* حركة لف */
-.btn--refresh:active {
-transform: scale(0.95);
-}
 
-.btn--refresh.is-loading {
-pointer-events: none;
-opacity: 0.7;
-}
 
-.btn--refresh.is-loading::before {
-content: "⟳";
-animation: spin 1s linear infinite;
-}
-
-.btn--refresh.is-loading {
-color: transparent;
-}
-
-@keyframes spin {
-from {
-transform: rotate(0deg);
-}
-to {
-transform: rotate(360deg);
-}
-}
+/*زر الاضافة*/
 
 .btn--success {
 background: #10b981;
 color: white;
-align-self: flex-end; /* شمال */
+align-self: flex-end;
 }
 
 .btn--success:hover {
