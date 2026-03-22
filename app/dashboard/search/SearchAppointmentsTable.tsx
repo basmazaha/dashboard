@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { format, parse } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
-import { updateAppointment, searchAppointments } from './actions';
+import { updateAppointment, searchAppointments } from '@/app/dashboard/actions';
 
 type Appointment = {
   id: string;
