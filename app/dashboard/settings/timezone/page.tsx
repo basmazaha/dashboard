@@ -1,7 +1,7 @@
 // app/dashboard/settings/timezone/page.tsx
 import { supabaseServer } from '@/lib/supabaseServer';
 import TimezoneForm from './TimezoneForm';
-import './SettingsPage.css';
+import './TimezonePage.css';
 
 export default async function TimezoneSettingsPage() {
   const { data: settings, error } = await supabaseServer
