@@ -364,7 +364,7 @@ const handleRefresh = async () => {
       height="18"
       viewBox="0 0 24 24"
       fill="none"
-      stroke="currentColor"
+      stroke="#374151"
       strokeWidth="2"
        >
        <path d="M21 12a9 9 0 1 1-3-6.7" />
