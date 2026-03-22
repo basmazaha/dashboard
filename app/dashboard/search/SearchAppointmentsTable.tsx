@@ -358,13 +358,13 @@ export default function SearchAppointmentsTable({
         <h3 className="appointment-form__title">بحث في المواعيد</h3>
         <div className="form-grid">
           <div className="form-field">
-            <label className="form-label">الاسم الكامل</label>
+            <label className="form-label">الاسم</label>
             <input
               type="text"
               value={searchValues.full_name}
               onChange={e => setSearchValues({ ...searchValues, full_name: e.target.value })}
               className="form-input"
-              placeholder="الاسم الكامل"
+              placeholder="الاسم"
             />
           </div>
 
@@ -375,7 +375,7 @@ export default function SearchAppointmentsTable({
               value={searchValues.phone}
               onChange={e => setSearchValues({ ...searchValues, phone: e.target.value })}
               className="form-input"
-              placeholder="01xxxxxxxxx أو +201..."
+              placeholder="01xxxxxxxxx"
             />
           </div>
 
