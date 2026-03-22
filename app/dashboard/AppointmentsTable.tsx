@@ -352,14 +352,6 @@ const handleRefresh = async () => {
      
       <div className="appointments__actions">
   
-           {/* زر الريفريش */}
-      <button
-      type="button"
-      onClick={handleRefresh}
-      className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
-       >
-        <span className="refresh-icon">⟳</span>
-      </button>
 
           {/* زر الإضافة */}
       <button
@@ -368,6 +360,16 @@ const handleRefresh = async () => {
       className={`btn btn--${isAdding ? 'danger' : 'success'}`}
        >
        {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
+      </button>
+
+
+               {/* زر الريفريش */}
+      <button
+      type="button"
+      onClick={handleRefresh}
+      className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
+       >
+        <span className="refresh-icon">⟳</span>
       </button>
        
       </div>
