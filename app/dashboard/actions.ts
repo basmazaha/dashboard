@@ -207,21 +207,27 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
   return { success: true, newAppointment: data };
 }
 
+
 export async function fetchAppointments(
   businessTimezone: string,
   page: number = 1,
   pageSize: number = 20
 ) {
-  const today = new Date().toISOString().split('T')[0];
+  // ⏰ الوقت الحالي حسب timezone البزنس
+  const now = new Date();
+  const zonedNow = toZonedTime(now, businessTimezone);
+
+  // نحوله لـ UTC عشان Supabase
+  const utcNow = fromZonedTime(zonedNow, businessTimezone).toISOString();
 
   const from = (page - 1) * pageSize;
   const to   = from + pageSize - 1;
 
-  // حساب العدد الكلي للمواعيد (مهم لحساب عدد الصفحات)
+  // 🟢 حساب العدد الكلي (المواعيد القادمة فقط)
   const { count, error: countError } = await supabaseServer
     .from('appointments')
     .select('*', { count: 'exact', head: true })
-    .gte('date_time', `${today}T00:00:00Z`);
+    .gte('date_time', utcNow);
 
   if (countError) {
     console.error('خطأ في حساب العدد الكلي للمواعيد:', countError);
@@ -234,11 +240,11 @@ export async function fetchAppointments(
 
   const totalCount = count ?? 0;
 
-  // جلب المواعيد الخاصة بالصفحة المطلوبة فقط
+  // 🟢 جلب المواعيد القادمة فقط (من الآن فصاعدًا)
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
-    .gte('date_time', `${today}T00:00:00Z`)
+    .gte('date_time', utcNow)
     .order('date_time', { ascending: true })
     .range(from, to);
 
@@ -257,5 +263,4 @@ export async function fetchAppointments(
     page,
     pageSize,
   };
-  }
-
+}
