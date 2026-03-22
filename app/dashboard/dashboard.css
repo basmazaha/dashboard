@@ -166,48 +166,55 @@ flex-direction: row-reverse; /* 🔥 ده المهم */
 gap: 20px;
 }
 
+
+
+
 .btn {
-padding: 0.65rem 1.4rem;
-font-size: 1rem;
-font-weight: 500;
-border: none;
-border-radius: 0.5rem;
-cursor: pointer;
-transition: all 0.2s ease;
+  /* حافظي على الـ padding والـ border-radius */
+  padding: 0.65rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  /* مهم جدًا هنا */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;          /* يساعد على استقرار الارتفاع */
 }
+
+/* ────────────────────────────────────── */
 
 .btn--refresh {
   background: #2563eb;
   color: white;
-  position: relative;
-  width: 2.8rem;            /* عرض ثابت للزر (اختياري) */
-  height: 2.8rem;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width:  2.5rem;           /* ← حددي عرض ثابت */
+  height: 2.5rem;           /* ← حددي ارتفاع ثابت */
+  padding: 0;               /* ألغي الـ padding الداخلي */
+  font-size: 0;             /* يمنع أي تأثير نص غير مرغوب */
 }
 
-.refresh-icon {
-  font-size: 2.2rem;          /* حجم كبير جدًا */
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+/* الأيقونة نفسها */
+.btn--refresh .refresh-icon {
+  font-size: 1.9rem;        /* حجم مريح وكبير نسبيًا */
   line-height: 1;
+  display: inline-block;
+  animation: none;          /* حالة افتراضية */
 }
 
+/* دوران فقط لما يكون loading */
 .btn--refresh.is-loading .refresh-icon {
-  animation: spin 1s linear infinite;
+  animation: spin 1.1s linear infinite;
 }
 
+/* الدوران النظيف */
 @keyframes spin {
-  to {
-    transform: translate(-50%, -50%) rotate(360deg);
+  100% {
+    transform: rotate(360deg);
   }
 }
-
-
 
 
 /*زر الاضافة*/
