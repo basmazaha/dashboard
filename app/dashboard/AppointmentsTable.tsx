@@ -367,9 +367,9 @@ const handleRefresh = async () => {
       <div 
   style={{ 
     width: '44px', 
-    height: '46px', 
+    height: '44px', 
     minWidth: '44px', 
-    minHeight: '46px',
+    minHeight: '44px',
     flexShrink: 0,
     flexGrow: 0,
     display: 'inline-block',   // أو 'inline-flex' لو عايز
