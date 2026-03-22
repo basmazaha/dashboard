@@ -365,12 +365,25 @@ const handleRefresh = async () => {
 
                {/* زر الريفريش */}
       <button
-      type="button"
-      onClick={handleRefresh}
-      className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
-       >
-        <span className="refresh-icon">⟳</span>
-      </button>
+  type="button"
+  onClick={handleRefresh}
+  className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
+  disabled={isRefreshing}   // اختياري: تعطيل الزر أثناء التحميل
+  aria-label="تحديث المواعيد"
+>
+  <svg
+    className="refresh-icon-svg"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+  </svg>
+</button>
        
       </div>
 
