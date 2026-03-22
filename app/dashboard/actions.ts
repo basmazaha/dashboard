@@ -259,21 +259,3 @@ export async function fetchAppointments(
   };
   }
 
-// ──────────────────────────────────────────────
-// دالة جديدة لجلب الـ timezone من جدول business_settings
-// ──────────────────────────────────────────────
-
-export async function getBusinessTimezone() {
-  const { data, error } = await supabaseServer
-    .from('business_settings')
-    .select('timezone')
-    .limit(1)
-    .single();
-
-  if (error) {
-    console.error('خطأ في جلب الـ timezone:', error);
-    return 'Africa/Cairo'; // fallback إذا حصل خطأ
-  }
-
-  return data?.timezone || 'Africa/Cairo';
-}
