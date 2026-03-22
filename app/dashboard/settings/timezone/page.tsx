@@ -14,7 +14,7 @@ export default async function TimezoneSettingsPage() {
     console.error('Error fetching timezone setting:', error);
     // fallback
     return (
-      <div className="settings-page__error">
+      <div className="timezone-page__error">
         حدث خطأ أثناء تحميل الإعدادات، حاول مرة أخرى لاحقًا.
       </div>
     );
