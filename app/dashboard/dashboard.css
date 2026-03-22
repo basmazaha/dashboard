@@ -179,8 +179,8 @@ transition: all 0.2s ease;
 .btn--refresh {
   background: #2563eb;
   color: white;
-  font-size: 20px;
-  align-self: flex-end; /* شمال */
+  font-size: 40px;
+  align-self: flex-start; /* شمال */
 }
 
 .refresh-icon {
@@ -206,7 +206,7 @@ transition: all 0.2s ease;
 .btn--success {
 background: #10b981;
 color: white;
-align-self: flex-end;
+align-self: flex-start;
 }
 
 .btn--success:hover {
