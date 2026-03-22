@@ -379,22 +379,6 @@ export default function SearchAppointmentsTable({
             />
           </div>
 
-          <div className="form-field">
-            <label className="form-label">الحالة</label>
-            <select
-              value={searchValues.status}
-              onChange={e => setSearchValues({ ...searchValues, status: e.target.value })}
-              className="form-select"
-            >
-              <option value="">الكل</option>
-              <option value="pending">معلق</option>
-              <option value="confirmed">مؤكد</option>
-              <option value="cancelled">ملغي</option>
-              <option value="rescheduled">معاد جدولته</option>
-              <option value="completed">مكتمل</option>
-              <option value="absent">متغيب</option>
-            </select>
-          </div>
 
           <div className="form-field">
             <label className="form-label">من تاريخ</label>
@@ -415,6 +399,24 @@ export default function SearchAppointmentsTable({
               className="form-input"
             />
           </div>
+
+            <div className="form-field">
+            <label className="form-label">الحالة</label>
+            <select
+              value={searchValues.status}
+              onChange={e => setSearchValues({ ...searchValues, status: e.target.value })}
+              className="form-select"
+            >
+              <option value="">الكل</option>
+              <option value="pending">معلق</option>
+              <option value="confirmed">مؤكد</option>
+              <option value="cancelled">ملغي</option>
+              <option value="rescheduled">معاد جدولته</option>
+              <option value="completed">مكتمل</option>
+              <option value="absent">متغيب</option>
+             </select>
+             </div>
+          
         </div>
 
         <div className="form-actions">
