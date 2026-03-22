@@ -364,7 +364,8 @@ const handleRefresh = async () => {
 
 
                {/* زر الريفريش */}
-      <div 
+
+        <div 
   style={{ 
     width: '44px', 
     height: '44px', 
@@ -372,7 +373,7 @@ const handleRefresh = async () => {
     minHeight: '44px',
     flexShrink: 0,
     flexGrow: 0,
-    display: 'inline-block',   // أو 'inline-flex' لو عايز
+    display: 'inline-block',
   }}
 >
   <button
@@ -380,27 +381,43 @@ const handleRefresh = async () => {
     onClick={handleRefresh}
     className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
     style={{
-      width: '100% !important',
-      height: '100% !important',
-      minWidth: '100%',
-      minHeight: '100%',
+      width: '100%',
+      height: '100%',
       padding: 0,
       margin: 0,
-      boxSizing: 'border-box',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#2563eb',
+      color: 'white',
+      border: 'none',
+      borderRadius: '0.5rem',
+      cursor: 'pointer',
     }}
+    onMouseEnter={(e) => { e.currentTarget.style.background = '#1d4ed8'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = '#2563eb'; }}
     disabled={isRefreshing}
   >
     <svg
-      className="refresh-icon-svg"
-      style={{ 
-        width: '24px', 
-        height: '24px',
-        flexShrink: 0,
-      }}
-      // باقي الـ svg attributes
-    >
-      {/* ... */}
-    </svg>
+  className="refresh-icon-svg"
+  style={{ width: '24px', height: '24px', flexShrink: 0 }}
+  xmlns="http://www.w3.org/2000/svg"
+  fill="none"
+  viewBox="0 0 24 24"
+>
+  <circle 
+    className="opacity-25" 
+    cx="12" 
+    cy="12" 
+    r="10" 
+    stroke="currentColor" 
+    strokeWidth="4" 
+  />
+  <path
+    fill="currentColor"
+    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+  />
+</svg>
   </button>
 </div>
        
