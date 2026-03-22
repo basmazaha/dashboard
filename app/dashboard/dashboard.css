@@ -179,31 +179,9 @@ transition: all 0.2s ease;
 .btn--refresh {
   background: #2563eb;
   color: white;
-  font-size: 20px;
-  align-self: flex-start; /* شمال */
 }
 
-.refresh-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-}
 
-.btn--refresh.is-loading .refresh-icon {
-  animation: spin 0.8s linear infinite;
-  transform-origin: center;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 
 /*زر الاضافة*/
@@ -211,7 +189,6 @@ transition: all 0.2s ease;
 .btn--success {
 background: #10b981;
 color: white;
-align-self: flex-start;
 }
 
 .btn--success:hover {
