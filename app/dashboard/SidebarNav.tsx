@@ -1,4 +1,5 @@
 // app/dashboard/SidebarNav.tsx
+
 'use client';
 
 import Link from 'next/link';
@@ -16,6 +17,14 @@ export default function SidebarNav() {
             className={`nav-link ${pathname === '/dashboard' ? 'nav-link--active' : ''}`}
           >
             المواعيد
+          </Link>
+        </li>
+        <li>
+          <Link 
+            href="/dashboard/search" 
+            className={`nav-link ${pathname === '/dashboard/search' ? 'nav-link--active' : ''}`}
+          >
+            بحث
           </Link>
         </li>
         <li>
