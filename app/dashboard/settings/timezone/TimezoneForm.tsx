@@ -34,21 +34,21 @@ export default function TimezoneForm({ initialTimezone }: Props) {
   return (
     <>
       {state.message && (
-        <div className={`settings-message ${state.success ? 'success' : 'error'}`}>
+        <div className={`timezone-message ${state.success ? 'success' : 'error'}`}>
           {state.message}
         </div>
       )}
 
-      <form action={formAction} className="settings-form">
-        <div className="settings-form__group">
-          <label htmlFor="timezone" className="settings-form__label">
+      <form action={formAction} className="timezone-form">
+        <div className="timezone-form__group">
+          <label htmlFor="timezone" className="timezone-form__label">
             المنطقة الزمنية
           </label>
           <select
             id="timezone"
             name="timezone"
             defaultValue={initialTimezone}
-            className="settings-form__select"
+            className="timezone-form__select"
             disabled={pending}
           >
             {COMMON_TIMEZONES.map((tz) => (
@@ -61,7 +61,7 @@ export default function TimezoneForm({ initialTimezone }: Props) {
 
         <button
           type="submit"
-          className="settings-form__submit"
+          className="timezone-form__submit"
           disabled={pending}
         >
           {pending ? 'جاري الحفظ...' : 'حفظ التغييرات'}
