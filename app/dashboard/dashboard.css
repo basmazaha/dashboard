@@ -166,35 +166,32 @@ flex-direction: row-reverse; /* 🔥 ده المهم */
 gap: 20px;
 }
 
-.btn {
-padding: 0.65rem 1.4rem;
-font-size: 1rem;
-font-weight: 500;
-border: none;
-border-radius: 0.5rem;
-cursor: pointer;
-transition: all 0.2s ease;
-}
-
 .btn--refresh {
-  background: #2563eb;
-  color: white;
-  position: relative;
-  width: 2.8rem;            /* عرض ثابت للزر (اختياري) */
-  height: 2.8rem;
+  width: 44px;                /* قيمة ثابتة مريحة */
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.5rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.btn--refresh:hover {
+  background: #1d4ed8;
 }
 
 .refresh-icon {
-  font-size: 2.2rem;          /* حجم كبير جدًا */
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  font-size: 24px;            /* حجم مريح */
   line-height: 1;
+  font-family: system-ui, sans-serif;  /* أكثر استقرارًا */
 }
 
 .btn--refresh.is-loading .refresh-icon {
@@ -203,10 +200,9 @@ transition: all 0.2s ease;
 
 @keyframes spin {
   to {
-    transform: translate(-50%, -50%) rotate(360deg);
+    transform: rotate(360deg);
   }
 }
-
 
 
 
