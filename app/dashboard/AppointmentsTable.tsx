@@ -9,6 +9,8 @@ import { format, parse, addMinutes } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
 import { updateAppointment, insertAppointment, fetchAppointments } from './actions';
+import { DEFAULT_TIMEZONE } from '@/lib/timezone';
+
 
 type Appointment = {
   id: string;
@@ -48,6 +50,7 @@ export default function AppointmentsTable({
   pageSize,
   totalCount,
 }: AppointmentsTableProps) {
+  const tz = timezone || DEFAULT_TIMEZONE;
   const router = useRouter();
   
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
@@ -84,7 +87,7 @@ export default function AppointmentsTable({
   const formatDateLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       return format(zoned, 'EEEE، d MMMM yyyy', { locale: ar });
     } catch (e) {
       console.error('خطأ تنسيق التاريخ:', e);
@@ -95,7 +98,7 @@ export default function AppointmentsTable({
   const formatTimeLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       let str = format(zoned, 'hh:mm a');
       str = str.replace('AM', 'صباحاً').replace('PM', 'مساءً');
       return str;
@@ -108,7 +111,7 @@ export default function AppointmentsTable({
   const getDateOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       return format(zoned, 'yyyy-MM-dd');
     } catch {
       return '';
@@ -118,7 +121,7 @@ export default function AppointmentsTable({
   const getTimeOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       return format(zoned, 'HH:mm');
     } catch {
       return '';
@@ -130,8 +133,8 @@ export default function AppointmentsTable({
     if (!a.date_time) return 1;
     if (!b.date_time) return -1;
 
-    const ta = toZonedTime(a.date_time, timezone).getTime();
-    const tb = toZonedTime(b.date_time, timezone).getTime();
+    const ta = toZonedTime(a.date_time, tz).getTime();
+    const tb = toZonedTime(b.date_time, tz).getTime();
 
     return ta - tb;
   });
@@ -139,7 +142,7 @@ export default function AppointmentsTable({
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const today = toZonedTime(new Date(), timezone);
+    const today = toZonedTime(new Date(), tz);
 
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
@@ -152,7 +155,7 @@ export default function AppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const zoned = toZonedTime(d, timezone);
+        const zoned = toZonedTime(d, tz);
         const label = format(zoned, 'EEEE d MMMM yyyy', { locale: ar });
         dates.push(isoDate + '|' + label);
       }
@@ -200,7 +203,7 @@ export default function AppointmentsTable({
       }
 
       const slotDate = new Date(current);
-      const now = toZonedTime(new Date(), timezone);
+      const now = toZonedTime(new Date(), tz);
       const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
       const isToday =
