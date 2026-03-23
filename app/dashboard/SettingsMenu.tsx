@@ -58,13 +58,17 @@ export default function SettingsMenu({
   <div className="dropdown-divider" />
 
   {/* ⚙️ الإعدادات */}
-  <Link href="/dashboard/settings" className="dropdown-item">
+  <Link href="/dashboard/settings" className="dropdown-item"
+    onClick={() => setOpenMenu(false)}
+    >
      الإعدادات
   </Link>
 
   {/* 🚪 تسجيل الخروج */}
   <SignOutButton>
-    <button className="dropdown-item logout-item">
+    <button className="dropdown-item logout-item"
+      onClick={() => setOpenMenu(false)}
+      >
        تسجيل الخروج
     </button>
   </SignOutButton>
