@@ -35,12 +35,12 @@ export default function SettingsMenu() {
 
       <div className={`settings-dropdown ${openMenu ? 'open' : ''}`}>
         <Link href="/dashboard/settings" className="dropdown-item">
-          ⚙️ الإعدادات
+         الإعدادات
         </Link>
 
         <SignOutButton>
           <button className="dropdown-item logout-item">
-             تسجيل الخروج
+           تسجيل الخروج
           </button>
         </SignOutButton>
       </div>
