@@ -126,7 +126,7 @@ export default function AppointmentsTable({
   }, [timezone]);
 
   const sortedAppointments = useMemo(() => {
-  const now = new Date();
+  const now = toZonedTime(new Date(), timezone);
 
   return [...appointments].sort((a, b) => {
     if (!a.date_time) return 1;
@@ -195,7 +195,7 @@ export default function AppointmentsTable({
       }
 
       const slotDate = new Date(current);
-      const now = new Date();
+      const now = toZonedTime(new Date(), timezone);
       const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
       const isToday =
