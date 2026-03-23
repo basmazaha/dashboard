@@ -17,7 +17,7 @@ export default function SettingsDashboard() {
           <div className="settings-card">
             <h2 className="settings-card__title">ساعات العمل والعطلات</h2>
             
-            <Link href="/dashboard/settings/timezone" className="settings-card__link">
+            <Link href="/dashboard/working-hours" className="settings-card__link">
              تعديل →
             </Link>
           </div>
@@ -28,7 +28,7 @@ export default function SettingsDashboard() {
             <p className="settings-card__description">
               تحديد التوقيت المحلي الافتراضي للشركة (يؤثر على عرض المواعيد وحساب الأوقات المتاحة).
             </p>
-            <Link href="/dashboard/working-hours" className="settings-card__link">
+            <Link href="/dashboard/settings/timezone" className="settings-card__link">
               تعديل →
             </Link>
           </div>
