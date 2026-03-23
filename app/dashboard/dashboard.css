@@ -636,3 +636,26 @@ display: none;
 .logout-item {
   color: #ef4444;
 }
+
+/*رسائل النجاح والخطأ*/
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: white;
+  padding: 0.75rem 1.4rem;
+  border-radius: 0.6rem;
+  font-size: 0.95rem;
+  z-index: 9999;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  animation: toastFade 3s ease forwards;
+}
+
+@keyframes toastFade {
+  0%   { opacity: 0; transform: translate(-50%, 20px); }
+  10%  { opacity: 1; transform: translate(-50%, 0); }
+  90%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, 20px); }
+}
