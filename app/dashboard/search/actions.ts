@@ -2,6 +2,7 @@
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
+import { DEFAULT_TIMEZONE } from '@/lib/timezone';
 import { format, parse } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 
@@ -23,10 +24,10 @@ export async function getBusinessTimezone() {
 
   if (error) {
     console.error('خطأ في جلب الـ timezone:', error);
-    return 'Africa/Cairo'; // fallback قيمة افتراضية شائعة في مصر
+    return DEFAULT_TIMEZONE;
   }
 
-  return data?.timezone || 'Africa/Cairo';
+  return data?.timezone || DEFAULT_TIMEZONE;
 }
 
 export async function searchAppointments(
