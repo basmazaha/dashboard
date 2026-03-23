@@ -45,7 +45,6 @@ export default async function SearchPage() {
 
   return (
     <div className="dashboard-content">
-      <h1 className="page-title">كل المواعيد</h1>
 
       <SearchAppointmentsTable
         initialAppointments={[]}
