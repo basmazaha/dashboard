@@ -206,7 +206,7 @@ export default function SearchAppointmentsTable({
       }
 
       const slotDate = new Date(current);
-      const now = new Date();
+      const now = toZonedTime(new Date(), timezone);
       const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
       const isToday =
