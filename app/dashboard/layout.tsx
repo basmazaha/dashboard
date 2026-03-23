@@ -35,7 +35,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
             </div>
 
             {/* ⚙️ زر الإعدادات */}
-            <SettingsMenu />
+            <SettingsMenu user={user} userId={userId} />
           </div>
         </div>
       </header>
