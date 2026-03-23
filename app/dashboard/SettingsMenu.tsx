@@ -6,7 +6,13 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { SignOutButton } from '@clerk/nextjs';
 
-export default function SettingsMenu() {
+export default function SettingsMenu({
+  user,
+  userId,
+}: {
+  user: any;
+  userId: string;
+}) {
   const [openMenu, setOpenMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
