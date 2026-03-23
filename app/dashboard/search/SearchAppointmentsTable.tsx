@@ -486,7 +486,7 @@ export default function SearchAppointmentsTable({
         </div>
       </div>
 
-      {sortedAppointments.length === 0 ? (
+      {appointments.length === 0 ? (
         <div className="no-appointments">
           لا توجد نتائج مطابقة للبحث
         </div>
@@ -550,7 +550,7 @@ export default function SearchAppointmentsTable({
                                 setFormValues({ ...formValues, phone: e.target.value });
                                 setFormErrors(prev => ({ ...prev, phone: '' }));
                               }}
-                              placeholder="01xxxxxxxxx أو +201..."
+                              placeholder="01xxxxxxxxx"
                               className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                             />
                             {formErrors.phone && (
