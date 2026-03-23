@@ -539,7 +539,7 @@ display: none;
   font-size: 0.95rem;
 }
 
-/* ⚙️ Settings Menu */
+/* ⚙️ Notion Style Dropdown */
 
 .settings-menu-wrapper {
   position: relative;
@@ -560,24 +560,37 @@ display: none;
   background: #e5e7eb;
 }
 
+/* ✨ dropdown animation */
 .settings-dropdown {
   position: absolute;
-  top: 50px;
+  top: 55px;
   left: 0;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-  min-width: 160px;
+  border-radius: 0.6rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  min-width: 180px;
   z-index: 100;
-  overflow: hidden;
+
+  opacity: 0;
+  transform: translateY(-8px) scale(0.97);
+  pointer-events: none;
+  transition: all 0.18s ease;
+}
+
+.settings-dropdown.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 .dropdown-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   padding: 0.75rem 1rem;
-  text-align: center;
+  text-align: right;
   background: white;
   border: none;
   cursor: pointer;
