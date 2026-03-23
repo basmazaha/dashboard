@@ -319,22 +319,48 @@ export default function AppointmentsTable({
 
     const result = await updateAppointment(formData, timezone);
 
-    if ('errors' in result) {
-      setFormErrors(result.errors as Record<string, string>);
-      if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
-    } else if ('success' in result) {
-      const fresh = await fetchAppointments(timezone, currentPage, pageSize);
-      if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
-      setEditingId(null);
-      setFormValues({});
-      setFormErrors({});
-    } else {
-      setToast('خطأ: ' + (result.error || 'غير معروف'));
-      if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
-    }
+if ('errors' in result) {
+  setFormErrors(result.errors as Record<string, string>);
 
+  if (original) {
+    setAppointments(prev =>
+      prev.map(a => a.id === appointmentId ? original : a)
+    );
+  }
+
+  // ✅ toast validation
+  setToast(Object.values(result.errors)[0] || 'بيانات غير صحيحة');
+
+} else if ('success' in result) {
+  const fresh = await fetchAppointments(timezone, currentPage, pageSize);
+
+  if ('appointments' in fresh) {
+    setAppointments(fresh.appointments ?? []);
+  }
+
+  setEditingId(null);
+  setFormValues({});
+  setFormErrors({});
+
+  // ✅ (اختياري) success toast
+  setToast('تم التحديث بنجاح ✅');
+
+} else if ('error' in result) {
+  // 🔥 دي الحالة اللي كانت ناقصة
+  setToast(result.error || 'حدث خطأ');
+
+  if (original) {
+    setAppointments(prev =>
+      prev.map(a => a.id === appointmentId ? original : a)
+    );
+  }
+
+} else {
+  // fallback احتياطي
+  setToast('حدث خطأ غير متوقع');
+}
     setIsSubmitting(false);
-  };
+};
 
   const handleInsert = async (formData: FormData) => {
     setIsSubmitting(true);
@@ -357,6 +383,7 @@ export default function AppointmentsTable({
     if ('errors' in result) {
       setFormErrors(result.errors as Record<string, string>);
       setAppointments(prev => prev.filter(a => a.id !== tempId));
+      setToast(Object.values(result.errors)[0] || 'بيانات غير صحيحة');
     } else if ('success' in result) {
       const fresh = await fetchAppointments(timezone, currentPage, pageSize);
       if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
