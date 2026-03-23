@@ -15,12 +15,21 @@ export default function SettingsDashboard() {
 
         <div className="settings-dashboard__sections">
           <div className="settings-card">
+            <h2 className="settings-card__title">ساعات العمل والعطلات</h2>
+            
+            <Link href="/dashboard/settings/timezone" className="settings-card__link">
+             تعديل →
+            </Link>
+          </div>
+
+        <div className="settings-dashboard__sections">
+          <div className="settings-card">
             <h2 className="settings-card__title">المنطقة الزمنية</h2>
             <p className="settings-card__description">
               تحديد التوقيت المحلي الافتراضي للشركة (يؤثر على عرض المواعيد وحساب الأوقات المتاحة).
             </p>
-            <Link href="/dashboard/settings/timezone" className="settings-card__link">
-              تعديل المنطقة الزمنية →
+            <Link href="/dashboard/working-hours" className="settings-card__link">
+              تعديل →
             </Link>
           </div>
 
