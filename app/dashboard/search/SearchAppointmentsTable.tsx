@@ -659,27 +659,32 @@ export default function SearchAppointmentsTable({
                               رجوع
                             </button>
                           </div>
-                        ) : (
-                          () => {
-                                 const isPast = appt.date_time
-                                 ? new Date(appt.date_time).getTime() < new Date().getTime()
-                                 : false;
+                        ) : (() => {
+                                const nowZoned = toZonedTime(new Date(), timezone);
 
-                                 const isLockedStatus = ['cancelled', 'completed', 'absent'].includes(appt.status || '');
+                                const apptZoned = appt.date_time
+                                ? toZonedTime(appt.date_time, timezone)
+                                : null;
 
-                                 const isDisabled = isPast || isLockedStatus;
-    
-                                 return (
-                                <button
-                                 type="button"
-                                 onClick={() => !isDisabled && toggleEdit(appt.id, appt)}
-                                 className={`btn btn--edit ${isDisabled ? 'btn--disabled' : ''}`}
-                                 disabled={isDisabled}
-                                  >
-                                   تعديل
-                               </button>
-                           );
-                           })()}
+                                const isPast = apptZoned
+                                ? apptZoned.getTime() < nowZoned.getTime()
+                                : false;
+
+                                const isLockedStatus = ['cancelled', 'completed', 'absent'].includes(appt.status || '');
+
+                                const isDisabled = isPast || isLockedStatus;
+
+                                return (
+                              <button
+                               type="button"
+                               onClick={() => !isDisabled && toggleEdit(appt.id, appt)}
+                               className={`btn btn--edit ${isDisabled ? 'btn--disabled' : ''}`}
+                               disabled={isDisabled}
+                               >
+                                  تعديل
+                              </button>
+                              );
+                             })()}
                     
 
                         <form id={formId} action={handleUpdate} className="form--hidden">
