@@ -16,7 +16,7 @@ export default function SidebarNav() {
             href="/dashboard" 
             className={`nav-link ${pathname === '/dashboard' ? 'nav-link--active' : ''}`}
           >
-            المواعيد
+            المواعيد القادمة
           </Link>
         </li>
         <li>
@@ -24,7 +24,7 @@ export default function SidebarNav() {
             href="/dashboard/search" 
             className={`nav-link ${pathname === '/dashboard/search' ? 'nav-link--active' : ''}`}
           >
-            بحث
+            كل المواعيد
           </Link>
         </li>
         <li>
