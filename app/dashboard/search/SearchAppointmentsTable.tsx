@@ -140,13 +140,7 @@ export default function SearchAppointmentsTable({
     }
   }, [timezone]);
 
-  const sortedAppointments = useMemo(() => {
-    return [...appointments].sort((a, b) => {
-      const ta = a.date_time ? new Date(a.date_time).getTime() : Infinity;
-      const tb = b.date_time ? new Date(b.date_time).getTime() : Infinity;
-      return ta - tb;
-    });
-  }, [appointments]);
+  
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
@@ -512,7 +506,7 @@ export default function SearchAppointmentsTable({
                 </tr>
               </thead>
               <tbody>
-                {sortedAppointments.map(appt => {
+                {appointments.map(appt => {
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
