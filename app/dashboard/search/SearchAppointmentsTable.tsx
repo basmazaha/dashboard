@@ -660,7 +660,7 @@ export default function SearchAppointmentsTable({
                             </button>
                           </div>
                         ) : (
-                          {(() => {
+                          () => {
                                  const isPast = appt.date_time
                                  ? new Date(appt.date_time).getTime() < new Date().getTime()
                                  : false;
@@ -680,7 +680,7 @@ export default function SearchAppointmentsTable({
                                </button>
                            );
                            })()}
-                        )}
+                    
 
                         <form id={formId} action={handleUpdate} className="form--hidden">
                           <input type="hidden" name="appointment_id" value={appt.id} />
