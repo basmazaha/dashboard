@@ -3,8 +3,25 @@
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
+import { DEFAULT_TIMEZONE } from '@/lib/timezone';
 import { format, parse } from 'date-fns';
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+
+
+export async function getBusinessTimezone() {
+  const { data, error } = await supabaseServer
+    .from('business_settings')
+    .select('timezone')
+    .limit(1)
+    .single();
+
+  if (error) {
+    console.error('خطأ في جلب الـ timezone:', error);
+    return DEFAULT_TIMEZONE;
+  }
+
+  return data?.timezone || DEFAULT_TIMEZONE;
+}
 
 type Appointment = {
   id: string;
