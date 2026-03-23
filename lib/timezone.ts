@@ -1,1 +1,2 @@
-const tz = timezone || DEFAULT_TIMEZONE;
+// timezone fallback
+const DEFAULT_TIMEZONE = 'Africa/Cairo';
