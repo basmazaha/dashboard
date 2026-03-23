@@ -178,15 +178,23 @@ export default function SearchAppointmentsTable({
     const endTime   = wh.end_time;
     const slotMin   = wh.slot_duration_minutes ?? 15;
 
-    const start = parse(startTime, 'HH:mm:ss', new Date());
-    const end   = parse(endTime,   'HH:mm:ss', new Date());
+    const baseDate = parse(selectedDate, 'yyyy-MM-dd', new Date());
+
+    const start = parse(`${selectedDate} ${startTime}`, 'yyyy-MM-dd HH:mm:ss', baseDate);
+    const end   = parse(`${selectedDate} ${endTime}`,   'yyyy-MM-dd HH:mm:ss', baseDate);
+
 
     let current = start.getTime();
     const endMs = end.getTime();
 
-    const breakStartMs = wh.break_start ? parse(wh.break_start, 'HH:mm:ss', new Date()).getTime() : Infinity;
-    const breakEndMs   = wh.break_end   ? parse(wh.break_end,   'HH:mm:ss', new Date()).getTime() : -Infinity;
+    const breakStartMs = wh.break_start
+     ? parse(`${selectedDate} ${wh.break_start}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
+     : Infinity;
 
+    const breakEndMs = wh.break_end
+     ? parse(`${selectedDate} ${wh.break_end}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
+     : -Infinity;
+    
     const times: string[] = [];
 
     while (current < endMs) {
