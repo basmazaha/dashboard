@@ -124,6 +124,33 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
     return { error: 'لا يوجد معرف للموعد' };
   }
 
+  // 🚫 منع تعديل المواعيد المقفولة أو الماضية
+const { data: existingAppointment, error: fetchError } = await supabaseServer
+  .from('appointments')
+  .select('date_time, status')
+  .eq('id', id)
+  .single();
+
+if (fetchError || !existingAppointment) {
+  return { error: 'تعذر جلب بيانات الموعد' };
+}
+
+// تحقق من الحالة
+const lockedStatuses = ['cancelled', 'completed', 'absent'];
+if (lockedStatuses.includes(existingAppointment.status)) {
+  return { error: 'لا يمكن تعديل هذا الموعد' };
+}
+
+// تحقق من أن الموعد لم يمر
+if (existingAppointment.date_time) {
+  const appointmentTime = new Date(existingAppointment.date_time).getTime();
+  const now = new Date().getTime();
+
+  if (appointmentTime < now) {
+    return { error: 'لا يمكن تعديل موعد سابق' };
+  }
+}
+
   const errors: Record<string, string> = {};
 
   if (!full_name) {
