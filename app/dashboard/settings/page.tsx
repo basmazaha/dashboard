@@ -16,6 +16,9 @@ export default function SettingsDashboard() {
         <div className="settings-dashboard__sections">
           <div className="settings-card">
             <h2 className="settings-card__title">ساعات العمل والعطلات</h2>
+            <p className="settings-card__description">
+             تحديد مواعيد العمل الرسمية وساعات الراحة وايام العطلات والفواصل الزمنية بين المواعيد المحجوزة
+            </p>
             <Link href="/dashboard/working-hours" className="settings-card__link">
               تعديل →
             </Link>
