@@ -71,9 +71,9 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="dashboard-page-header">
-        <h2 className="dashboard-page-title">المواعيد القادمة</h2>
-      </div>
+      /* <div className="dashboard-page-header">
+       <h2 className="dashboard-page-title">المواعيد القادمة</h2>
+        </div>  */
 
       <AppointmentsTable
         initialAppointments={appointments || []}
