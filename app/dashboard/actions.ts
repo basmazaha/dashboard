@@ -108,7 +108,7 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
     });
 
     if (conflict) {
-      return { error: 'هذا الوقت محجوز بالفعل' };
+      return { error: 'هذا الوقت محجوز بالفعل ⚠️' };
     }
   }
 
@@ -201,7 +201,7 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
       return exTime === targetTimeOnly;
     });
 
-    if (conflict) return { error: 'هذا الوقت محجوز بالفعل' };
+    if (conflict) return { error: 'هذا الوقت محجوز بالفعل ⚠️' };
   }
 
   const insertData = {
