@@ -1,7 +1,12 @@
 // app/dashboard/layout.tsx
+
+'use client';
+
 import type { ReactNode } from 'react';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { useState } from 'react';
+import Link from 'next/link';
 import { SignOutButton } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import SidebarNav from './SidebarNav';
 import './dashboard.css'; // ← تأكد إن السطر ده موجود هنا
 
@@ -10,14 +15,11 @@ export const metadata = {
   description: 'إدارة المواعيد وساعات العمل',
 };
 
-export default async function DashboardLayout({ children }: { children: ReactNode }) {
-  const { userId } = await auth();
-  if (!userId) {
-    return null; // أو redirect('/sign-in')
-  }
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const [openMenu, setOpenMenu] = useState(false);
+  const { user, isLoaded } = useUser();
 
-  const user = await currentUser();
-
+   if (!isLoaded) return null;
   return (
     <div className="dashboard-wrapper">
       <header className="dashboard-header">
@@ -30,11 +32,28 @@ export default async function DashboardLayout({ children }: { children: ReactNod
               <span className="user-id">(ID: {userId?.slice(0, 8)}...)</span>
             </div>
 
-            <SignOutButton>
-              <button className="btn btn--logout">
+            <div className="settings-menu-wrapper">
+             <button
+              className="settings-btn"
+              onClick={() => setOpenMenu(prev => !prev)}
+            >
+               ⚙️
+             </button>
+
+             {openMenu && (
+             <div className="settings-dropdown">
+             <Link href="/dashboard/settings" className="dropdown-item">
+                الإعدادات
+             </Link>
+
+             <SignOutButton>
+             <button className="dropdown-item logout-item">
                 تسجيل الخروج
-              </button>
-            </SignOutButton>
+             </button>
+             </SignOutButton>
+             </div>
+             )}
+           </div>
           </div>
         </div>
       </header>
