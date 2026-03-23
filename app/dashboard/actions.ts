@@ -217,44 +217,41 @@ export async function fetchAppointments(
   const now = new Date();
   const zonedNow = toZonedTime(now, businessTimezone);
 
-  // نحوله لـ UTC عشان Supabase
+  // تحويله لـ UTC
   const utcNow = fromZonedTime(zonedNow, businessTimezone).toISOString();
 
   const from = (page - 1) * pageSize;
   const to   = from + pageSize - 1;
 
-  // 🟢 حساب العدد الكلي (المواعيد القادمة فقط)
+  // 🎯 الحالات المسموح عرضها
+  const allowedStatuses = ['confirmed', 'pending', 'rescheduled'];
+
+  // 🟢 العدد الكلي
   const { count, error: countError } = await supabaseServer
     .from('appointments')
     .select('*', { count: 'exact', head: true })
-    .gte('date_time', utcNow);
+    .gte('date_time', utcNow)
+    .in('status', allowedStatuses);
 
   if (countError) {
-    console.error('خطأ في حساب العدد الكلي للمواعيد:', countError);
-    return { 
-      error: countError.message, 
-      appointments: [], 
-      totalCount: 0 
-    };
+    console.error('خطأ في حساب العدد:', countError);
+    return { error: countError.message, appointments: [], totalCount: 0 };
   }
 
   const totalCount = count ?? 0;
 
-  // 🟢 جلب المواعيد القادمة فقط (من الآن فصاعدًا)
+  // 🟢 جلب البيانات
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
     .gte('date_time', utcNow)
+    .in('status', allowedStatuses)
     .order('date_time', { ascending: true })
     .range(from, to);
 
   if (error) {
     console.error('خطأ في جلب المواعيد:', error);
-    return { 
-      error: error.message, 
-      appointments: [], 
-      totalCount: 0 
-    };
+    return { error: error.message, appointments: [], totalCount: 0 };
   }
 
   return {
