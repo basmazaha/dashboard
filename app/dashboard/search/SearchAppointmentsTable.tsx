@@ -7,6 +7,8 @@ import { format, parse } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
 import { updateAppointment, searchAppointments } from './actions';
+import { DEFAULT_TIMEZONE } from '@/lib/timezone';
+
 
 type Appointment = {
   id: string;
@@ -46,6 +48,7 @@ export default function SearchAppointmentsTable({
   pageSize,
   totalCount,
 }: SearchAppointmentsTableProps) {
+  const tz = timezone || DEFAULT_TIMEZONE;
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -99,7 +102,7 @@ export default function SearchAppointmentsTable({
   const formatDateLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       return format(zoned, 'EEEE، d MMMM yyyy', { locale: ar });
     } catch (e) {
       console.error('خطأ تنسيق التاريخ:', e);
@@ -110,7 +113,7 @@ export default function SearchAppointmentsTable({
   const formatTimeLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       let str = format(zoned, 'hh:mm a');
       str = str.replace('AM', 'صباحاً').replace('PM', 'مساءً');
       return str;
@@ -123,7 +126,7 @@ export default function SearchAppointmentsTable({
   const getDateOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       return format(zoned, 'yyyy-MM-dd');
     } catch {
       return '';
@@ -133,7 +136,7 @@ export default function SearchAppointmentsTable({
   const getTimeOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
     try {
-      const zoned = toZonedTime(iso, timezone);
+      const zoned = toZonedTime(iso, tz);
       return format(zoned, 'HH:mm');
     } catch {
       return '';
@@ -157,7 +160,7 @@ export default function SearchAppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const zoned = toZonedTime(d, timezone);
+        const zoned = toZonedTime(d, tz);
         const label = format(zoned, 'EEEE d MMMM yyyy', { locale: ar });
         dates.push(isoDate + '|' + label);
       }
@@ -206,7 +209,7 @@ export default function SearchAppointmentsTable({
       }
 
       const slotDate = new Date(current);
-      const now = toZonedTime(new Date(), timezone);
+      const now = toZonedTime(new Date(), tz);
       const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
       const isToday =
@@ -662,10 +665,10 @@ export default function SearchAppointmentsTable({
                             </button>
                           </div>
                         ) : (() => {
-                                const nowZoned = toZonedTime(new Date(), timezone);
+                                const nowZoned = toZonedTime(new Date(), tz);
 
                                 const apptZoned = appt.date_time
-                                ? toZonedTime(appt.date_time, timezone)
+                                ? toZonedTime(appt.date_time, tz);
                                 : null;
 
                                 const isPast = apptZoned
