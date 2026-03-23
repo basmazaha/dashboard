@@ -1,6 +1,6 @@
 // app/dashboard/settings/page.tsx
 import Link from 'next/link';
-import './SettingsDashboard.css'; // ملف CSS منفصل إذا أردت
+import './SettingsDashboard.css';
 
 export default function SettingsDashboard() {
   return (
@@ -16,13 +16,11 @@ export default function SettingsDashboard() {
         <div className="settings-dashboard__sections">
           <div className="settings-card">
             <h2 className="settings-card__title">ساعات العمل والعطلات</h2>
-            
             <Link href="/dashboard/working-hours" className="settings-card__link">
-             تعديل →
+              تعديل →
             </Link>
           </div>
 
-        <div className="settings-dashboard__sections">
           <div className="settings-card">
             <h2 className="settings-card__title">المنطقة الزمنية</h2>
             <p className="settings-card__description">
@@ -33,7 +31,6 @@ export default function SettingsDashboard() {
             </Link>
           </div>
 
-          {/* يمكنك إضافة بطاقات أخرى لاحقًا */}
           <div className="settings-card settings-card--disabled">
             <h2 className="settings-card__title">إعدادات الحجز</h2>
             <p className="settings-card__description">
