@@ -34,16 +34,36 @@ export default function SettingsMenu() {
       </button>
 
       <div className={`settings-dropdown ${openMenu ? 'open' : ''}`}>
-        <Link href="/dashboard/settings" className="dropdown-item">
-         الإعدادات
-        </Link>
 
-        <SignOutButton>
-          <button className="dropdown-item logout-item">
-           تسجيل الخروج
-          </button>
-        </SignOutButton>
-      </div>
+  {/* 👤 المستخدم */}
+  <div className="dropdown-user-box">
+    <div className="current-user-info">
+      المستخدم الحالي:{' '}
+      <strong>
+        {user?.firstName || user?.username || 'غير معروف'}
+      </strong>
+      <span className="user-id">
+        (ID: {userId?.slice(0, 8)}...)
+      </span>
+    </div>
+  </div>
+
+  {/* 🔥 خط */}
+  <div className="dropdown-divider" />
+
+  {/* ⚙️ الإعدادات */}
+  <Link href="/dashboard/settings" className="dropdown-item">
+     الإعدادات
+  </Link>
+
+  {/* 🚪 تسجيل الخروج */}
+  <SignOutButton>
+    <button className="dropdown-item logout-item">
+       تسجيل الخروج
+    </button>
+  </SignOutButton>
+
+</div>
     </div>
   );
 }
