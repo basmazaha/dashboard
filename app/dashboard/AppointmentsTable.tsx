@@ -329,7 +329,7 @@ if ('errors' in result) {
   }
 
   // ✅ toast validation
-  setToast(Object.values(result.errors)[0] || 'بيانات غير صحيحة');
+  setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة');
 
 } else if ('success' in result) {
   const fresh = await fetchAppointments(timezone, currentPage, pageSize);
@@ -383,7 +383,7 @@ if ('errors' in result) {
     if ('errors' in result) {
       setFormErrors(result.errors as Record<string, string>);
       setAppointments(prev => prev.filter(a => a.id !== tempId));
-      setToast(Object.values(result.errors)[0] || 'بيانات غير صحيحة');
+      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة');
     } else if ('success' in result) {
       const fresh = await fetchAppointments(timezone, currentPage, pageSize);
       if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
