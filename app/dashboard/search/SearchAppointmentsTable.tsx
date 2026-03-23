@@ -284,7 +284,7 @@ export default function SearchAppointmentsTable({
     return map[status ?? 'confirmed'] ?? 'مؤكد';
   };
 
-  const handleUpdate = async (formData: FormData) => {
+ const handleUpdate = async (formData: FormData) => {
     setIsSubmitting(true);
     setFormErrors({});
 
@@ -307,33 +307,39 @@ export default function SearchAppointmentsTable({
     const result = await updateAppointment(formData, timezone);
 
     if ('errors' in result) {
-  setFormErrors(result.errors as Record<string, string>);
-  if (original) {
-    setAppointments(prev =>
-      prev.map(a => a.id === appointmentId ? original : a)
-    );
-  }
+      setFormErrors(result.errors as Record<string, string>);
 
-  setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❗️');
+      if (original) {
+        setAppointments(prev =>
+          prev.map(a => a.id === appointmentId ? original : a)
+        );
+      }
 
-} else if ('success' in result) {
-  await handleFetch(currentPageState);
+      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❗️');
 
-  setEditingId(null);
-  setFormValues({});
-  setFormErrors({});
+    } else if ('success' in result) {
+      await handleFetch(currentPageState);
 
-  setToast('تم التحديث بنجاح ✅');
+      setEditingId(null);
+      setFormValues({});
+      setFormErrors({});
 
-} else {
-  setToast(result.error || 'حدث خطأ ❗️');
+      setToast('تم التحديث بنجاح ✅');
 
-  if (original) {
-    setAppointments(prev =>
-      prev.map(a => a.id === appointmentId ? original : a)
-    );
-  }
+    } else {
+      setToast(result.error || 'حدث خطأ ❗️');
+
+      if (original) {
+        setAppointments(prev =>
+          prev.map(a => a.id === appointmentId ? original : a)
+        );
+      }
     }
+
+    setIsSubmitting(false);
+  };
+
+  
   const handleSearch = () => {
     setCurrentPageState(1);
     handleFetch(1);
