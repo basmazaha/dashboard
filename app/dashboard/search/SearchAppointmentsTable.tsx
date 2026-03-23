@@ -1,3 +1,5 @@
+//app/dashboard/search/SearchAppointmentsTable.tsx
+
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
