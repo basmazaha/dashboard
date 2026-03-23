@@ -126,8 +126,6 @@ export default function AppointmentsTable({
   }, [timezone]);
 
   const sortedAppointments = useMemo(() => {
-  const now = toZonedTime(new Date(), timezone);
-
   return [...appointments].sort((a, b) => {
     if (!a.date_time) return 1;
     if (!b.date_time) return -1;
@@ -141,7 +139,7 @@ export default function AppointmentsTable({
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
-    const today = new Date();
+    const today = toZonedTime(new Date(), timezone);
 
     for (let i = 0; i < 30; i++) {
       const d = new Date(today);
@@ -175,8 +173,10 @@ export default function AppointmentsTable({
     const endTime   = wh.end_time;
     const slotMin   = wh.slot_duration_minutes ?? 15;
 
-    const start = parse(startTime, 'HH:mm:ss', new Date());
-    const end   = parse(endTime,   'HH:mm:ss', new Date());
+    const baseDate = parse(selectedDate, 'yyyy-MM-dd', new Date());
+
+    const start = parse(`${selectedDate} ${startTime}`, 'yyyy-MM-dd HH:mm:ss', baseDate);
+    const end   = parse(`${selectedDate} ${endTime}`,   'yyyy-MM-dd HH:mm:ss', baseDate);
 
     let current = start.getTime();
     const endMs = end.getTime();
