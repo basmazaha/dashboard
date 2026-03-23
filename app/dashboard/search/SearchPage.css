@@ -32,10 +32,11 @@
   font-size: 1.1rem;
 }
 
-.btn--disabled {
-  opacity: 0.5;
+.btn--edit.btn--disabled {
+  background-color: #e5e7eb;
+  color: #9ca3af;
+  border: 1px solid #d1d5db;
   cursor: not-allowed;
-  pointer-events: none;
 }
 
 /* إذا أردتِ تمييز صفحة البحث بلون مختلف قليلاً */
