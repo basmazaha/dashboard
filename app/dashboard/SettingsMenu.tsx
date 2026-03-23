@@ -40,7 +40,7 @@ export default function SettingsMenu() {
 
         <SignOutButton>
           <button className="dropdown-item logout-item">
-            🚪 تسجيل الخروج
+             تسجيل الخروج
           </button>
         </SignOutButton>
       </div>
