@@ -32,6 +32,12 @@
   font-size: 1.1rem;
 }
 
+.btn--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* إذا أردتِ تمييز صفحة البحث بلون مختلف قليلاً */
 .dashboard-content:has(.search-form-card) h1 {
   color: #1e40af; /* أزرق غامق مثلاً */
