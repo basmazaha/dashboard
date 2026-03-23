@@ -217,7 +217,7 @@ if (existingAppointment.date_time) {
     });
 
     if (conflict) {
-      return { error: 'هذا الوقت محجوز بالفعل' };
+      return { error: 'هذا الوقت محجوز بالفعل ⚠️' };
     }
   }
 
