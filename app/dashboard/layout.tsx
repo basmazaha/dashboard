@@ -1,6 +1,8 @@
 // app/dashboard/layout.tsx
 
 import type { ReactNode } from 'react';
+import { supabaseServer } from '@/lib/supabaseServer';
+import { DEFAULT_TIMEZONE, TIMEZONE_LABELS } from '@/lib/timezone';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import SidebarNav from './SidebarNav';
 import SettingsMenu from './SettingsMenu';
@@ -19,20 +21,24 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   const user = await currentUser();
 
+  const { data: settings } = await supabaseServer
+  .from('business_settings')
+  .select('timezone')
+  .eq('id', 1)
+  .single();
+
+  const tz = settings?.timezone || DEFAULT_TIMEZONE;
+  const timezoneLabel = TIMEZONE_LABELS[tz] || tz;
+
   return (
     <div className="dashboard-wrapper">
       <header className="dashboard-header">
         <div className="header-container">
           <h1 className="dashboard-logo">لوحة التحكم</h1>
 
-          <div className="user-info">
-            <div className="current-user-info">
-              المستخدم الحالي:{' '}
-              <strong>{user?.firstName || user?.username || 'غير معروف'}</strong>
-              <span className="user-id">
-                (ID: {userId?.slice(0, 8)}...)
-              </span>
-            </div>
+          <div className="current-user-info">
+            🕒 توقيت: <strong>{timezoneLabel}</strong>
+          </div>
 
             {/* ⚙️ زر الإعدادات */}
             <SettingsMenu
