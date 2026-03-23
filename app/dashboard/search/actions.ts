@@ -141,12 +141,12 @@ if (lockedStatuses.includes(existingAppointment.status)) {
   return { error: 'لا يمكن تعديل هذا الموعد' };
 }
 
-// تحقق من أن الموعد لم يمر
+// تحقق من أن الموعد لم يمر (حسب timezone)
 if (existingAppointment.date_time) {
-  const appointmentTime = new Date(existingAppointment.date_time).getTime();
-  const now = new Date().getTime();
+  const nowZoned = toZonedTime(new Date(), businessTimezone);
+  const apptZoned = toZonedTime(existingAppointment.date_time, businessTimezone);
 
-  if (appointmentTime < now) {
+  if (apptZoned.getTime() < nowZoned.getTime()) {
     return { error: 'لا يمكن تعديل موعد سابق' };
   }
 }
