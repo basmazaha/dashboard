@@ -668,7 +668,7 @@ export default function SearchAppointmentsTable({
                                 const nowZoned = toZonedTime(new Date(), tz);
 
                                 const apptZoned = appt.date_time
-                                ? toZonedTime(appt.date_time, tz);
+                                ? toZonedTime(appt.date_time, tz)
                                 : null;
 
                                 const isPast = apptZoned
