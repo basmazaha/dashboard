@@ -126,12 +126,18 @@ export default function AppointmentsTable({
   }, [timezone]);
 
   const sortedAppointments = useMemo(() => {
-    return [...appointments].sort((a, b) => {
-      const ta = a.date_time ? new Date(a.date_time).getTime() : Infinity;
-      const tb = b.date_time ? new Date(b.date_time).getTime() : Infinity;
-      return ta - tb;
-    });
-  }, [appointments]);
+  const now = new Date();
+
+  return [...appointments].sort((a, b) => {
+    if (!a.date_time) return 1;
+    if (!b.date_time) return -1;
+
+    const ta = toZonedTime(a.date_time, timezone).getTime();
+    const tb = toZonedTime(b.date_time, timezone).getTime();
+
+    return ta - tb;
+  });
+}, [appointments, timezone]);
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
