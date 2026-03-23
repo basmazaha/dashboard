@@ -329,7 +329,7 @@ if ('errors' in result) {
   }
 
   // ✅ toast validation
-  setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة');
+  setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌️');
 
 } else if ('success' in result) {
   const fresh = await fetchAppointments(timezone, currentPage, pageSize);
@@ -347,7 +347,7 @@ if ('errors' in result) {
 
 } else if ('error' in result) {
   // 🔥 دي الحالة اللي كانت ناقصة
-  setToast(result.error || 'حدث خطأ');
+  setToast(result.error || 'حدث خطأ ❗️');
 
   if (original) {
     setAppointments(prev =>
@@ -357,7 +357,7 @@ if ('errors' in result) {
 
 } else {
   // fallback احتياطي
-  setToast('حدث خطأ غير متوقع');
+  setToast('حدث خطأ غير متوقع ❗️');
 }
     setIsSubmitting(false);
 };
@@ -383,7 +383,7 @@ if ('errors' in result) {
     if ('errors' in result) {
       setFormErrors(result.errors as Record<string, string>);
       setAppointments(prev => prev.filter(a => a.id !== tempId));
-      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة');
+      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌️');
     } else if ('success' in result) {
       const fresh = await fetchAppointments(timezone, currentPage, pageSize);
       if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
@@ -392,7 +392,7 @@ if ('errors' in result) {
       setFormErrors({});
       setToast('تم إضافة الموعد بنجاح ✅');
     } else {
-      setToast('خطأ: ' + (result.error || 'غير معروف'));
+      setToast('خطأ: ' + (result.error || 'غير معروف ❗️'));
       setAppointments(prev => prev.filter(a => a.id !== tempId));
     }
 
