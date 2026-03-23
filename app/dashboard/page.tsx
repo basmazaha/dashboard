@@ -4,9 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
 import AppointmentsTable from './AppointmentsTable';
-import { fetchAppointments } from './actions';
-import { getBusinessTimezone } from './actions';
-
+import { fetchAppointments, getBusinessTimezone } from './actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +14,7 @@ interface Props {
 
 export default async function DashboardPage({ searchParams }: Props) {
   const { userId } = await auth();
+
   if (!userId) {
     redirect('/sign-in');
   }
@@ -23,20 +22,15 @@ export default async function DashboardPage({ searchParams }: Props) {
   const currentPage = Number(searchParams.page) || 1;
   const pageSize = Number(searchParams.pageSize) || 20;
 
-  // جلب الـ timezone أولاً
-  const { data: settings, error: tzError } = await supabaseServer
-    .from('business_settings')
-    .select('timezone')
-    .maybeSingle();
-
-  const timezone = settings?.timezone || 'Africa/Cairo';
-
-  if (tzError) {
-    console.error('خطأ في جلب الـ timezone:', tzError);
-  }
+  // ✅ جلب الـ timezone من الدالة الموحدة (مع fallback تلقائي)
+  const timezone = await getBusinessTimezone();
 
   // جلب المواعيد مع الـ pagination
-  const appointmentsResult = await fetchAppointments(timezone, currentPage, pageSize);
+  const appointmentsResult = await fetchAppointments(
+    timezone,
+    currentPage,
+    pageSize
+  );
 
   if ('error' in appointmentsResult) {
     return (
@@ -58,7 +52,9 @@ export default async function DashboardPage({ searchParams }: Props) {
   // جلب ساعات العمل
   const { data: workingHours, error: hoursError } = await supabaseServer
     .from('working_hours')
-    .select('day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end');
+    .select(
+      'day_of_week, is_open, start_time, end_time, slot_duration_minutes, break_start, break_end'
+    );
 
   if (offError || hoursError) {
     console.error('خطأ في جلب البيانات الإضافية:', { offError, hoursError });
@@ -69,7 +65,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     );
   }
 
-  const offDays = offDaysData?.map(row => row.date) || [];
+  const offDays = offDaysData?.map((row) => row.date) || [];
 
   return (
     <div>
