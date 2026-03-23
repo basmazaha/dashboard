@@ -214,9 +214,8 @@ export async function fetchAppointments(
   pageSize: number = 20
 ) {
   // ⏰ الوقت الحالي حسب timezone البزنس
-  const now = new Date();
-  const zonedNow = toZonedTime(now, businessTimezone);
-
+  const now = toZonedTime(new Date(), timezone);
+  
   // تحويله لـ UTC
   const utcNow = fromZonedTime(zonedNow, businessTimezone).toISOString();
 
