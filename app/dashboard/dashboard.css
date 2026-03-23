@@ -640,10 +640,10 @@ display: none;
 /*رسائل النجاح والخطأ*/
 .toast {
   position: fixed;
-  bottom: 20px;
+  top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: #ef4444;
+  background: #45434d;
   color: white;
   padding: 0.75rem 1.4rem;
   border-radius: 0.6rem;
