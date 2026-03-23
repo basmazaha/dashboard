@@ -59,8 +59,16 @@ export default function AppointmentsTable({
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+  if (toast) {
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }
+}, [toast]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -321,7 +329,7 @@ export default function AppointmentsTable({
       setFormValues({});
       setFormErrors({});
     } else {
-      alert('خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
+      setToast('خطأ: ' + (result.error || 'غير معروف'));
       if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
     }
 
@@ -356,7 +364,7 @@ export default function AppointmentsTable({
       setFormValues({});
       setFormErrors({});
     } else {
-      alert('خطأ أثناء الإضافة: ' + (result.error || 'غير معروف'));
+      setToast('خطأ: ' + (result.error || 'غير معروف'));
       setAppointments(prev => prev.filter(a => a.id !== tempId));
     }
 
@@ -837,6 +845,13 @@ export default function AppointmentsTable({
           </div>
         </div>
       )}
+
+        {toast && (
+        <div className="toast">
+         {toast}
+        </div>
+      )}
+      
     </>
   );
         }
