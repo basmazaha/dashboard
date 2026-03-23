@@ -49,6 +49,7 @@ export default function SearchAppointmentsTable({
   totalCount,
 }: SearchAppointmentsTableProps) {
   const tz = timezone || DEFAULT_TIMEZONE;
+  const [toast, setToast] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -67,6 +68,13 @@ export default function SearchAppointmentsTable({
   });
   const [currentPageState, setCurrentPageState] = useState(currentPage);
   const [totalCountState, setTotalCountState] = useState(totalCount);
+
+  useEffect(() => {
+  if (toast) {
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }
+}, [toast]);
 
   const handleFetch = useCallback(async (page: number) => {
     setIsSearching(true);
@@ -299,21 +307,33 @@ export default function SearchAppointmentsTable({
     const result = await updateAppointment(formData, timezone);
 
     if ('errors' in result) {
-      setFormErrors(result.errors as Record<string, string>);
-      if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
-    } else if ('success' in result) {
-      await handleFetch(currentPageState);
-      setEditingId(null);
-      setFormValues({});
-      setFormErrors({});
-    } else {
-      alert('خطأ أثناء الحفظ: ' + (result.error || 'غير معروف'));
-      if (original) setAppointments(prev => prev.map(a => a.id === appointmentId ? original : a));
+  setFormErrors(result.errors as Record<string, string>);
+  if (original) {
+    setAppointments(prev =>
+      prev.map(a => a.id === appointmentId ? original : a)
+    );
+  }
+
+  setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❗️');
+
+} else if ('success' in result) {
+  await handleFetch(currentPageState);
+
+  setEditingId(null);
+  setFormValues({});
+  setFormErrors({});
+
+  setToast('تم التحديث بنجاح ✅');
+
+} else {
+  setToast(result.error || 'حدث خطأ ❗️');
+
+  if (original) {
+    setAppointments(prev =>
+      prev.map(a => a.id === appointmentId ? original : a)
+    );
+  }
     }
-
-    setIsSubmitting(false);
-  };
-
   const handleSearch = () => {
     setCurrentPageState(1);
     handleFetch(1);
@@ -780,6 +800,12 @@ export default function SearchAppointmentsTable({
             عرض {(currentPageState - 1) * pageSize + 1} – {Math.min(currentPageState * pageSize, totalCountState)} من أصل {totalCountState} موعد
           </div>
         </div>
+      )}
+
+      {toast && (
+       <div className="toast">
+      {toast}
+       </div>
       )}
     </>
   );
