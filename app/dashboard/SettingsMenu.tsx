@@ -7,10 +7,10 @@ import Link from 'next/link';
 import { SignOutButton } from '@clerk/nextjs';
 
 export default function SettingsMenu({
-  user,
+  userName,
   userId,
 }: {
-  user: any;
+  userName: string;
   userId: string;
 }) {
   const [openMenu, setOpenMenu] = useState(false);
@@ -46,7 +46,7 @@ export default function SettingsMenu({
     <div className="current-user-info">
       المستخدم الحالي:{' '}
       <strong>
-        {user?.firstName || user?.username || 'غير معروف'}
+        {userName}
       </strong>
       <span className="user-id">
         (ID: {userId?.slice(0, 8)}...)
