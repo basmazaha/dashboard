@@ -214,10 +214,11 @@ export async function fetchAppointments(
   pageSize: number = 20
 ) {
   // ⏰ الوقت الحالي حسب timezone البزنس
-  const now = toZonedTime(new Date(), timezone);
+  const zonedNow = toZonedTime(new Date(), businessTimezone);
   
   // تحويله لـ UTC
   const utcNow = fromZonedTime(zonedNow, businessTimezone).toISOString();
+  
 
   const from = (page - 1) * pageSize;
   const to   = from + pageSize - 1;
