@@ -1,2 +1,2 @@
 // timezone fallback
-const DEFAULT_TIMEZONE = 'Africa/Cairo';
+export const DEFAULT_TIMEZONE = 'Africa/Cairo';
