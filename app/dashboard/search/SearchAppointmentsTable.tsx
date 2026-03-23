@@ -660,13 +660,26 @@ export default function SearchAppointmentsTable({
                             </button>
                           </div>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => toggleEdit(appt.id, appt)}
-                            className="btn btn--edit"
-                          >
-                            تعديل
-                          </button>
+                          {(() => {
+                                 const isPast = appt.date_time
+                                 ? new Date(appt.date_time).getTime() < new Date().getTime()
+                                 : false;
+
+                                 const isLockedStatus = ['cancelled', 'completed', 'absent'].includes(appt.status || '');
+
+                                 const isDisabled = isPast || isLockedStatus;
+    
+                                 return (
+                                <button
+                                 type="button"
+                                 onClick={() => !isDisabled && toggleEdit(appt.id, appt)}
+                                 className={`btn btn--edit ${isDisabled ? 'btn--disabled' : ''}`}
+                                 disabled={isDisabled}
+                                  >
+                                   تعديل
+                               </button>
+                           );
+                           })()}
                         )}
 
                         <form id={formId} action={handleUpdate} className="form--hidden">
