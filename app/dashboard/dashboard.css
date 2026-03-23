@@ -1,5 +1,12 @@
 /* app/dashboard/dashboard.css */
 
+/*browser hover removal*/
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* ------------------ Layout & Header ------------------ */
 
 .dashboard-wrapper {
