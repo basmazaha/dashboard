@@ -27,22 +27,7 @@ export default function SidebarNav() {
             كل المواعيد
           </Link>
         </li>
-        <li>
-          <Link 
-            href="/dashboard/working-hours" 
-            className={`nav-link ${pathname === '/dashboard/working-hours' ? 'nav-link--active' : ''}`}
-          >
-            ساعات العمل
-          </Link>
-        </li>
-        <li>
-          <Link 
-            href="/dashboard/settings" 
-            className={`nav-link ${pathname === '/dashboard/settings' ? 'nav-link--active' : ''}`}
-          >
-            الإعدادات
-          </Link>
-        </li>
+        
       </ul>
     </nav>
   );
