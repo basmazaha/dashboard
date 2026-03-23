@@ -22,10 +22,10 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const user = await currentUser();
 
   const { data: settings } = await supabaseServer
-  .from('business_settings')
-  .select('timezone')
-  .eq('id', 1)
-  .single();
+    .from('business_settings')
+    .select('timezone')
+    .eq('id', 1)
+    .single();
 
   const tz = settings?.timezone || DEFAULT_TIMEZONE;
   const timezoneLabel = TIMEZONE_LABELS[tz] || tz;
@@ -36,15 +36,16 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <div className="header-container">
           <h1 className="dashboard-logo">لوحة التحكم</h1>
 
-          <div className="current-user-info">
-            🕒 توقيت: <strong>{timezoneLabel}</strong>
-          </div>
+          <div className="user-info">
+            <div className="current-user-info">
+              🕒 توقيت: <strong>{timezoneLabel}</strong>
+            </div>
 
             {/* ⚙️ زر الإعدادات */}
             <SettingsMenu
-             userName={user?.firstName || user?.username || 'غير معروف'}
-             userId={userId}
-             />
+              userName={user?.firstName || user?.username || 'غير معروف'}
+              userId={userId}
+            />
           </div>
         </div>
       </header>
