@@ -169,7 +169,7 @@ export default function TodayAppointmentsTable({
       // - 3 دقائق  →  3 * 60 * 1000
       // - 10 دقائق → 10 * 60 * 1000
       // - 15 دقيقة → 15 * 60 * 1000
-      const GRACE_PERIOD_MINUTES = 5;   // ←←← غيّر الرقم هنا فقط
+      const GRACE_PERIOD_MINUTES = 1;   // ←←← غيّر الرقم هنا فقط
       const aPast = ta + GRACE_PERIOD_MINUTES * 60 * 1000 < currentNow;
       const bPast = tb + GRACE_PERIOD_MINUTES * 60 * 1000 < currentNow;
       // ================================================================
@@ -655,7 +655,7 @@ export default function TodayAppointmentsTable({
                 {sortedAppointments.map((appt) => {
                   // ================================================================
                   // 👇👇👇 نفس الـ Grace Period المستخدم في الترتيب (للتنسيق البصري)
-                  const GRACE_PERIOD_MINUTES = 5;   // ←←← غيّر الرقم هنا أيضاً بنفس القيمة
+                  const GRACE_PERIOD_MINUTES = 1;   // ←←← غيّر الرقم هنا أيضاً بنفس القيمة
                   const isPast =
                     appt.date_time &&
                     toZonedTime(appt.date_time, tz).getTime() + GRACE_PERIOD_MINUTES * 60 * 1000 <
