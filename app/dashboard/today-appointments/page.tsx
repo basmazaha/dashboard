@@ -4,7 +4,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
 import TodayAppointmentsTable from './TodayAppointmentsTable';
-import { fetchTodayAppointments, getBusinessTimezone } from './actions';
+import { fetchTodayAppointments, getBusinessTimezone } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,9 @@ interface Props {
 export default async function TodayAppointmentsPage({ searchParams }: Props) {
   const { userId } = await auth();
 
-  if (!userId) redirect('/sign-in');
+  if (!userId) {
+    redirect('/sign-in');
+  }
 
   const currentPage = Number(searchParams.page) || 1;
   const pageSize = Number(searchParams.pageSize) || 20;
@@ -40,10 +42,12 @@ export default async function TodayAppointmentsPage({ searchParams }: Props) {
 
   const { appointments, totalCount } = appointmentsResult;
 
+  // جلب أيام الإجازة
   const { data: offDaysData } = await supabaseServer
     .from('off_days')
     .select('date');
 
+  // جلب ساعات العمل
   const { data: workingHours } = await supabaseServer
     .from('working_hours')
     .select(
@@ -53,14 +57,16 @@ export default async function TodayAppointmentsPage({ searchParams }: Props) {
   const offDays = offDaysData?.map((row) => row.date) || [];
 
   return (
-    <TodayAppointmentsTable
-      initialAppointments={appointments || []}
-      initialOffDays={offDays}
-      initialWorkingHours={workingHours || []}
-      timezone={timezone}
-      currentPage={currentPage}
-      pageSize={pageSize}
-      totalCount={totalCount}
-    />
+    <div>
+      <TodayAppointmentsTable
+        initialAppointments={appointments || []}
+        initialOffDays={offDays}
+        initialWorkingHours={workingHours || []}
+        timezone={timezone}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        totalCount={totalCount}
+      />
+    </div>
   );
 }
