@@ -824,6 +824,8 @@ export default function TodayAppointmentsTable({
                              disabled={isSubmitting || !hasChanges}
                              className={`btn btn--save ${(isSubmitting || !hasChanges) ? 'btn--disabled' : ''}`}
                             >
+                              {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
+                            </button>
 
                             <button
                               type="button"
