@@ -1,16 +1,14 @@
-//dashboard/app/dashboard/today-appointments/TodayAppointmentsTable.tsx
+// app/dashboard/today-appointments/TodayAppointmentsTable.tsx
 
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useReducer } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
-import { format, parse, addMinutes } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
 import { updateAppointment, insertAppointment, fetchTodayAppointments } from '../actions';
 import { DEFAULT_TIMEZONE } from '@/lib/timezone';
-
 
 type Appointment = {
   id: string;
@@ -41,7 +39,7 @@ interface AppointmentsTableProps {
   totalCount: number;
 }
 
-export default function AppointmentsTable({
+export default function TodayAppointmentsTable({
   initialAppointments,
   initialOffDays,
   initialWorkingHours,
@@ -52,7 +50,7 @@ export default function AppointmentsTable({
 }: AppointmentsTableProps) {
   const tz = timezone || DEFAULT_TIMEZONE;
   const router = useRouter();
-  
+
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -60,25 +58,31 @@ export default function AppointmentsTable({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // الوقت الحالي (يُحدث تلقائياً)
   const [now, setNow] = useState(() => toZonedTime(new Date(), tz));
 
+  // لإجبار React على إعادة حساب الـ sortedAppointments كل 30 ثانية
+  const [, forceUpdate] = useReducer((x) => x + 1, 0);
+
+  // تحديث الوقت الحالي + إجبار التحديث التلقائي كل 30 ثانية
   useEffect(() => {
-  if (toast) {
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }
-}, [toast]);
+    const interval = setInterval(() => {
+      setNow(toZonedTime(new Date(), tz));
+      forceUpdate(); // هذا هو المفتاح لتحديث ترتيب المواعيد تلقائياً
+    }, 30000); // كل 30 ثانية
 
+    return () => clearInterval(interval);
+  }, [tz]);
 
+  // إخفاء التوست تلقائياً
   useEffect(() => {
-  const interval = setInterval(() => {
-    setNow(toZonedTime(new Date(), tz));
-  }, 30000); // كل 30 ثانية
-
-  return () => clearInterval(interval);
-}, [tz]);
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [toast]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -98,10 +102,11 @@ export default function AppointmentsTable({
 
   const workingHoursByDay = useMemo(() => {
     const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
+    initialWorkingHours.forEach((wh) => (map[wh.day_of_week] = wh));
     return map;
   }, [initialWorkingHours]);
 
+  // ====================== تنسيقات التاريخ والوقت ======================
   const formatDateLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
     try {
@@ -111,7 +116,7 @@ export default function AppointmentsTable({
       console.error('خطأ تنسيق التاريخ:', e);
       return iso.split('T')[0] || '—';
     }
-  }, [timezone]);
+  }, [tz]);
 
   const formatTimeLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
@@ -124,7 +129,7 @@ export default function AppointmentsTable({
       console.error('خطأ تنسيق الوقت:', e);
       return iso.split('T')[1]?.slice(0, 5) || '—';
     }
-  }, [timezone]);
+  }, [tz]);
 
   const getDateOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
@@ -134,7 +139,7 @@ export default function AppointmentsTable({
     } catch {
       return '';
     }
-  }, [timezone]);
+  }, [tz]);
 
   const getTimeOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
@@ -144,31 +149,30 @@ export default function AppointmentsTable({
     } catch {
       return '';
     }
-  }, [timezone]);
+  }, [tz]);
 
+  // ====================== ترتيب المواعيد (الجزء المُصلح) ======================
   const sortedAppointments = useMemo(() => {
-  const now = toZonedTime(new Date(), tz).getTime();
+    const currentNow = now.getTime();
 
-  return [...appointments].sort((a, b) => {
-    if (!a.date_time) return 1;
-    if (!b.date_time) return -1;
+    return [...appointments].sort((a, b) => {
+      if (!a.date_time) return 1;
+      if (!b.date_time) return -1;
 
-    const ta = toZonedTime(a.date_time, tz).getTime();
-    const tb = toZonedTime(b.date_time, tz).getTime();
+      const ta = toZonedTime(a.date_time, tz).getTime();
+      const tb = toZonedTime(b.date_time, tz).getTime();
 
-    const aPast = ta < now;
-    const bPast = tb < now;
+      const aPast = ta < currentNow;
+      const bPast = tb < currentNow;
 
-    // المواعيد القادمة أولاً
-    if (aPast !== bPast) return aPast ? 1 : -1;
+      // المواعيد القادمة أولاً، ثم المواعيد الفائتة في الأسفل
+      if (aPast !== bPast) return aPast ? 1 : -1;
 
-    return ta - tb;
-  });
-}, [appointments, tz, now]);
+      return ta - tb;
+    });
+  }, [appointments, now, tz]);
 
-  
-  
-
+  // ====================== التواريخ المتاحة ======================
   const availableDates = useMemo(() => {
     const dates: string[] = [];
     const today = toZonedTime(new Date(), tz);
@@ -190,8 +194,9 @@ export default function AppointmentsTable({
       }
     }
     return dates;
-  }, [offDaysSet, workingHoursByDay, timezone]);
+  }, [offDaysSet, workingHoursByDay, tz]);
 
+  // ====================== الأوقات المتاحة لتاريخ معين ======================
   const getAvailableTimesForDate = useCallback((selectedDate: string | null) => {
     if (!selectedDate) return [];
 
@@ -202,24 +207,24 @@ export default function AppointmentsTable({
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
     const startTime = wh.start_time;
-    const endTime   = wh.end_time;
-    const slotMin   = wh.slot_duration_minutes ?? 15;
+    const endTime = wh.end_time;
+    const slotMin = wh.slot_duration_minutes ?? 15;
 
     const baseDate = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
     const start = parse(`${selectedDate} ${startTime}`, 'yyyy-MM-dd HH:mm:ss', baseDate);
-    const end   = parse(`${selectedDate} ${endTime}`,   'yyyy-MM-dd HH:mm:ss', baseDate);
-    
+    const end = parse(`${selectedDate} ${endTime}`, 'yyyy-MM-dd HH:mm:ss', baseDate);
+
     let current = start.getTime();
     const endMs = end.getTime();
 
     const breakStartMs = wh.break_start
-     ? parse(`${selectedDate} ${wh.break_start}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
-     : Infinity;
+      ? parse(`${selectedDate} ${wh.break_start}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
+      : Infinity;
 
     const breakEndMs = wh.break_end
-     ? parse(`${selectedDate} ${wh.break_end}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
-     : -Infinity;
+      ? parse(`${selectedDate} ${wh.break_end}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
+      : -Infinity;
 
     const times: string[] = [];
 
@@ -232,21 +237,20 @@ export default function AppointmentsTable({
       }
 
       const slotDate = new Date(current);
-      const now = toZonedTime(new Date(), tz);
-      const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
       const isToday =
-       selected.getFullYear() === now.getFullYear() &&
-       selected.getMonth() === now.getMonth() &&
-       selected.getDate() === now.getDate();
+        dateObj.getFullYear() === now.getFullYear() &&
+        dateObj.getMonth() === now.getMonth() &&
+        dateObj.getDate() === now.getDate();
 
       if (isToday && slotDate < now) {
-       current += slotMin * 60 * 1000;
-       continue;
+        current += slotMin * 60 * 1000;
+        continue;
       }
+
       const timeStr = format(slotDate, 'HH:mm');
 
-      const isBooked = appointments.some(a => {
+      const isBooked = appointments.some((a) => {
         if (!a.date_time || a.status === 'cancelled') return false;
         if (editingId && a.id === editingId) return false;
 
@@ -267,8 +271,9 @@ export default function AppointmentsTable({
     }
 
     return times;
-  }, [appointments, editingId, getDateOnly, getTimeOnly, workingHoursByDay]);
+  }, [appointments, editingId, workingHoursByDay, now, getDateOnly, getTimeOnly]);
 
+  // ====================== دوال التحكم ======================
   const toggleEdit = (id: string, appt: Appointment) => {
     if (editingId === id) {
       setEditingId(null);
@@ -323,10 +328,10 @@ export default function AppointmentsTable({
     setFormErrors({});
 
     const appointmentId = formData.get('appointment_id') as string;
-    const original = appointments.find(a => a.id === appointmentId);
+    const original = appointments.find((a) => a.id === appointmentId);
 
-    setAppointments(prev =>
-      prev.map(a =>
+    setAppointments((prev) =>
+      prev.map((a) =>
         a.id === appointmentId
           ? {
               ...a,
@@ -340,48 +345,36 @@ export default function AppointmentsTable({
 
     const result = await updateAppointment(formData, timezone);
 
-if ('errors' in result) {
-  setFormErrors(result.errors as Record<string, string>);
+    if ('errors' in result) {
+      setFormErrors(result.errors as Record<string, string>);
+      if (original) {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === appointmentId ? original : a))
+        );
+      }
+      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌');
+    } else if ('success' in result) {
+      const fresh = await fetchTodayAppointments(timezone, currentPage, pageSize);
+      if ('appointments' in fresh) {
+        setAppointments(fresh.appointments ?? []);
+      }
+      setEditingId(null);
+      setFormValues({});
+      setFormErrors({});
+      setToast('تم التحديث بنجاح ✅');
+    } else if ('error' in result) {
+      setToast((result as any).error || 'حدث خطأ ❗️');
+      if (original) {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === appointmentId ? original : a))
+        );
+      }
+    } else {
+      setToast('حدث خطأ غير متوقع ❗️');
+    }
 
-  if (original) {
-    setAppointments(prev =>
-      prev.map(a => a.id === appointmentId ? original : a)
-    );
-  }
-
-  // ✅ toast validation
-  setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌️');
-
-} else if ('success' in result) {
-  const fresh = await fetchTodayAppointments(timezone, currentPage, pageSize);
-
-  if ('appointments' in fresh) {
-    setAppointments(fresh.appointments ?? []);
-  }
-
-  setEditingId(null);
-  setFormValues({});
-  setFormErrors({});
-
-  // ✅ (اختياري) success toast
-  setToast('تم التحديث بنجاح ✅');
-
-} else if ('error' in result) {
-  // 🔥 دي الحالة اللي كانت ناقصة
-  setToast(result.error || 'حدث خطأ ❗️');
-
-  if (original) {
-    setAppointments(prev =>
-      prev.map(a => a.id === appointmentId ? original : a)
-    );
-  }
-
-} else {
-  // fallback احتياطي
-  setToast('حدث خطأ غير متوقع ❗️');
-}
     setIsSubmitting(false);
-};
+  };
 
   const handleInsert = async (formData: FormData) => {
     setIsSubmitting(true);
@@ -394,17 +387,17 @@ if ('errors' in result) {
       phone: formData.get('phone') as string | null,
       date_time: null,
       reason: formData.get('reason') as string | null,
-      status: formData.get('status') as string | null ?? 'confirmed',
+      status: (formData.get('status') as string) ?? 'confirmed',
     };
 
-    setAppointments(prev => [optimistic, ...prev]);
+    setAppointments((prev) => [optimistic, ...prev]);
 
     const result = await insertAppointment(formData, timezone);
 
     if ('errors' in result) {
       setFormErrors(result.errors as Record<string, string>);
-      setAppointments(prev => prev.filter(a => a.id !== tempId));
-      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌️');
+      setAppointments((prev) => prev.filter((a) => a.id !== tempId));
+      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌');
     } else if ('success' in result) {
       const fresh = await fetchTodayAppointments(timezone, currentPage, pageSize);
       if ('appointments' in fresh) setAppointments(fresh.appointments ?? []);
@@ -413,14 +406,14 @@ if ('errors' in result) {
       setFormErrors({});
       setToast('تم إضافة الموعد بنجاح ✅');
     } else {
-  setToast(result.error || 'حدث خطأ ❗️');
-  setAppointments(prev => prev.filter(a => a.id !== tempId));
+      setToast((result as any).error || 'حدث خطأ ❗️');
+      setAppointments((prev) => prev.filter((a) => a.id !== tempId));
     }
 
     setIsSubmitting(false);
   };
 
-  // ─── حساب نطاق الصفحات الذكي ───
+  // ====================== حساب الصفحات ======================
   const totalPages = Math.ceil(totalCount / pageSize);
   const maxPagesToShow = 7;
 
@@ -458,11 +451,11 @@ if ('errors' in result) {
           {isAdding ? 'إلغاء الإضافة' : '+ إضافة موعد جديد'}
         </button>
 
-        <div 
-          style={{ 
-            width: '44px', 
-            height: '44px', 
-            minWidth: '44px', 
+        <div
+          style={{
+            width: '44px',
+            height: '44px',
+            minWidth: '44px',
             minHeight: '44px',
             flexShrink: 0,
             flexGrow: 0,
@@ -486,11 +479,7 @@ if ('errors' in result) {
           >
             <svg
               className="refresh-icon-svg"
-              style={{ 
-                width: '24px', 
-                height: '24px',
-                flexShrink: 0,
-              }}
+              style={{ width: '24px', height: '24px', flexShrink: 0 }}
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -505,6 +494,7 @@ if ('errors' in result) {
         </div>
       </div>
 
+      {/* نموذج إضافة موعد جديد */}
       {isAdding && (
         <div className="appointment-form appointment-form--new">
           <h3 className="appointment-form__title">إضافة موعد جديد</h3>
@@ -517,9 +507,9 @@ if ('errors' in result) {
                   type="text"
                   name="full_name"
                   value={formValues.full_name || ''}
-                  onChange={e => {
+                  onChange={(e) => {
                     setFormValues({ ...formValues, full_name: e.target.value });
-                    setFormErrors(prev => ({ ...prev, full_name: '' }));
+                    setFormErrors((prev) => ({ ...prev, full_name: '' }));
                   }}
                   className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
                   placeholder="الاسم الكامل"
@@ -533,9 +523,9 @@ if ('errors' in result) {
                   type="tel"
                   name="phone"
                   value={formValues.phone || ''}
-                  onChange={e => {
+                  onChange={(e) => {
                     setFormValues({ ...formValues, phone: e.target.value });
-                    setFormErrors(prev => ({ ...prev, phone: '' }));
+                    setFormErrors((prev) => ({ ...prev, phone: '' }));
                   }}
                   className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
                   placeholder="01xxxxxxxxx"
@@ -548,13 +538,17 @@ if ('errors' in result) {
                 <select
                   name="date"
                   value={formValues.date || ''}
-                  onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
+                  onChange={(e) => setFormValues({ ...formValues, date: e.target.value, time: '' })}
                   className={`form-select ${formErrors.date ? 'form-select--error' : ''}`}
                 >
                   <option value="">اختر التاريخ</option>
-                  {availableDates.map(d => {
+                  {availableDates.map((d) => {
                     const [iso, label] = d.split('|');
-                    return <option key={iso} value={iso}>{label}</option>;
+                    return (
+                      <option key={iso} value={iso}>
+                        {label}
+                      </option>
+                    );
                   })}
                 </select>
                 {formErrors.date && <p className="form-error">{formErrors.date}</p>}
@@ -565,14 +559,18 @@ if ('errors' in result) {
                 <select
                   name="time"
                   value={formValues.time || ''}
-                  onChange={e => setFormValues({ ...formValues, time: e.target.value })}
+                  onChange={(e) => setFormValues({ ...formValues, time: e.target.value })}
                   className={`form-select ${formErrors.time ? 'form-select--error' : ''}`}
                   disabled={!formValues.date}
                 >
                   <option value="">اختر الوقت</option>
-                  {getAvailableTimesForDate(formValues.date).map(t => {
+                  {getAvailableTimesForDate(formValues.date).map((t) => {
                     const [iso, label] = t.split('|');
-                    return <option key={iso} value={iso}>{label}</option>;
+                    return (
+                      <option key={iso} value={iso}>
+                        {label}
+                      </option>
+                    );
                   })}
                 </select>
                 {formErrors.time && <p className="form-error">{formErrors.time}</p>}
@@ -584,7 +582,7 @@ if ('errors' in result) {
                   type="text"
                   name="reason"
                   value={formValues.reason || ''}
-                  onChange={e => setFormValues({ ...formValues, reason: e.target.value })}
+                  onChange={(e) => setFormValues({ ...formValues, reason: e.target.value })}
                   className="form-input"
                   placeholder="سبب الحجز"
                 />
@@ -595,7 +593,7 @@ if ('errors' in result) {
                 <select
                   name="status"
                   value={formValues.status || 'confirmed'}
-                  onChange={e => setFormValues({ ...formValues, status: e.target.value })}
+                  onChange={(e) => setFormValues({ ...formValues, status: e.target.value })}
                   className={`form-select form-select--status-${formValues.status || 'confirmed'}`}
                 >
                   <option value="pending">معلق</option>
@@ -609,11 +607,7 @@ if ('errors' in result) {
             </div>
 
             <div className="form-actions">
-              <button
-                type="button"
-                onClick={toggleAdd}
-                className="btn btn--secondary"
-              >
+              <button type="button" onClick={toggleAdd} className="btn btn--secondary">
                 إلغاء
               </button>
               <button
@@ -628,6 +622,7 @@ if ('errors' in result) {
         </div>
       )}
 
+      {/* الجدول */}
       {sortedAppointments.length === 0 && !isAdding ? (
         <div className="no-appointments">
           لا توجد مواعيد مسجلة حاليًا (اليوم أو المستقبل)
@@ -648,20 +643,22 @@ if ('errors' in result) {
                 </tr>
               </thead>
               <tbody>
-                {sortedAppointments.map(appt => {
+                {sortedAppointments.map((appt) => {
                   const isPast =
                     appt.date_time &&
-                    toZonedTime(appt.date_time, tz).getTime() + 1 * 60 * 1000 <
-                    now.getTime();
+                    toZonedTime(appt.date_time, tz).getTime() < now.getTime();
+
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
                   return (
-                    <tr key={appt.id} className={`appointment-row
-                       ${isEditing ? 'appointment-row--editing' : ''}
-                       ${isPast ? 'appointment-row--past' : ''}`}
+                    <tr
+                      key={appt.id}
+                      className={`appointment-row
+                        ${isEditing ? 'appointment-row--editing' : ''}
+                        ${isPast ? 'appointment-row--past' : ''}`}
                     >
                       <td>
                         {isEditing ? (
@@ -671,9 +668,9 @@ if ('errors' in result) {
                               name="full_name"
                               form={formId}
                               value={formValues.full_name || ''}
-                              onChange={e => {
+                              onChange={(e) => {
                                 setFormValues({ ...formValues, full_name: e.target.value });
-                                setFormErrors(prev => ({ ...prev, full_name: '' }));
+                                setFormErrors((prev) => ({ ...prev, full_name: '' }));
                               }}
                               placeholder="الاسم الكامل"
                               className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
@@ -695,9 +692,9 @@ if ('errors' in result) {
                               name="phone"
                               form={formId}
                               value={formValues.phone || ''}
-                              onChange={e => {
+                              onChange={(e) => {
                                 setFormValues({ ...formValues, phone: e.target.value });
-                                setFormErrors(prev => ({ ...prev, phone: '' }));
+                                setFormErrors((prev) => ({ ...prev, phone: '' }));
                               }}
                               placeholder="01xxxxxxxxx أو +201..."
                               className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
@@ -717,13 +714,19 @@ if ('errors' in result) {
                             name="date"
                             form={formId}
                             value={formValues.date || ''}
-                            onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
+                            onChange={(e) =>
+                              setFormValues({ ...formValues, date: e.target.value, time: '' })
+                            }
                             className="form-select"
                           >
                             <option value="">اختر تاريخاً</option>
-                            {availableDates.map(d => {
+                            {availableDates.map((d) => {
                               const [iso, label] = d.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
+                              return (
+                                <option key={iso} value={iso}>
+                                  {label}
+                                </option>
+                              );
                             })}
                           </select>
                         ) : (
@@ -739,13 +742,17 @@ if ('errors' in result) {
                             name="time"
                             form={formId}
                             value={formValues.time || ''}
-                            onChange={e => setFormValues({ ...formValues, time: e.target.value })}
+                            onChange={(e) => setFormValues({ ...formValues, time: e.target.value })}
                             className="form-select"
                           >
                             <option value="">اختر وقتاً</option>
-                            {availTimes.map(t => {
+                            {availTimes.map((t) => {
                               const [iso, label] = t.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
+                              return (
+                                <option key={iso} value={iso}>
+                                  {label}
+                                </option>
+                              );
                             })}
                           </select>
                         ) : (
@@ -765,7 +772,7 @@ if ('errors' in result) {
                             name="status"
                             form={formId}
                             value={formValues.status || 'confirmed'}
-                            onChange={e => setFormValues({ ...formValues, status: e.target.value })}
+                            onChange={(e) => setFormValues({ ...formValues, status: e.target.value })}
                             className={`form-select form-select--status-${formValues.status || 'confirmed'}`}
                           >
                             <option value="pending">معلق</option>
@@ -857,7 +864,7 @@ if ('errors' in result) {
               </>
             )}
 
-            {pages.map(p => (
+            {pages.map((p) => (
               <button
                 key={p}
                 className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
@@ -902,12 +909,7 @@ if ('errors' in result) {
         </div>
       )}
 
-        {toast && (
-        <div className="toast">
-         {toast}
-        </div>
-      )}
-      
+      {toast && <div className="toast">{toast}</div>}
     </>
   );
-}
+                        }
