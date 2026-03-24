@@ -742,9 +742,9 @@ if ('errors' in result) {
                           >
                             <option value="pending">معلق</option>
                             <option value="confirmed">مؤكد</option>
-                            <option value="cancelled">ملغي</option>
                             <option value="rescheduled">معاد جدولته</option>
                             <option value="completed">مكتمل</option>
+                            <option value="cancelled">ملغي</option>
                             <option value="absent">متغيب</option>
                           </select>
                         ) : (
