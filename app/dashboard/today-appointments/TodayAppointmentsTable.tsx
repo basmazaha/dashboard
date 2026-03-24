@@ -151,7 +151,7 @@ export default function TodayAppointmentsTable({
     }
   }, [tz]);
 
-  // ====================== ترتيب المواعيد (الجزء المُصلح) ======================
+  // ====================== ترتيب المواعيد (الجزء الأهم) ======================
   const sortedAppointments = useMemo(() => {
     const currentNow = now.getTime();
 
@@ -162,8 +162,17 @@ export default function TodayAppointmentsTable({
       const ta = toZonedTime(a.date_time, tz).getTime();
       const tb = toZonedTime(b.date_time, tz).getTime();
 
-      const aPast = ta < currentNow;
-      const bPast = tb < currentNow;
+      // ================================================================
+      // 👇👇👇 التعديل هنا - مدة اعتبار الموعد فائتاً
+      // حالياً: 5 دقائق (300000 مللي ثانية)
+      // إذا أردت تغيير المدة:
+      // - 3 دقائق  →  3 * 60 * 1000
+      // - 10 دقائق → 10 * 60 * 1000
+      // - 15 دقيقة → 15 * 60 * 1000
+      const GRACE_PERIOD_MINUTES = 5;   // ←←← غيّر الرقم هنا فقط
+      const aPast = ta + GRACE_PERIOD_MINUTES * 60 * 1000 < currentNow;
+      const bPast = tb + GRACE_PERIOD_MINUTES * 60 * 1000 < currentNow;
+      // ================================================================
 
       // المواعيد القادمة أولاً، ثم المواعيد الفائتة في الأسفل
       if (aPast !== bPast) return aPast ? 1 : -1;
@@ -644,9 +653,14 @@ export default function TodayAppointmentsTable({
               </thead>
               <tbody>
                 {sortedAppointments.map((appt) => {
+                  // ================================================================
+                  // 👇👇👇 نفس الـ Grace Period المستخدم في الترتيب (للتنسيق البصري)
+                  const GRACE_PERIOD_MINUTES = 5;   // ←←← غيّر الرقم هنا أيضاً بنفس القيمة
                   const isPast =
                     appt.date_time &&
-                    toZonedTime(appt.date_time, tz).getTime() < now.getTime();
+                    toZonedTime(appt.date_time, tz).getTime() + GRACE_PERIOD_MINUTES * 60 * 1000 <
+                      now.getTime();
+                  // ================================================================
 
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
@@ -912,4 +926,4 @@ export default function TodayAppointmentsTable({
       {toast && <div className="toast">{toast}</div>}
     </>
   );
-                        }
+                      }
