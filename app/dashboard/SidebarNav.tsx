@@ -15,7 +15,7 @@ export default function SidebarNav() {
         <li>
           <Link 
             href="/dashboard" 
-            className={`nav-link ${pathname === '/dashboard' ? 'nav-link--active' : ''}`}
+            className={`nav-link ${pathname === '/dashboard/today-appointments' ? 'nav-link--active' : ''}`}
           >
             مواعيد اليوم
           </Link>
