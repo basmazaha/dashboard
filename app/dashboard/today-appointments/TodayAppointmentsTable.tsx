@@ -636,13 +636,20 @@ if ('errors' in result) {
               </thead>
               <tbody>
                 {sortedAppointments.map(appt => {
+                  const isPast =
+                  appt.date_time &&
+                  toZonedTime(appt.date_time, tz).getTime() <
+                  toZonedTime(new Date(), tz).getTime();
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
 
                   return (
-                    <tr key={appt.id} className={`appointment-row ${isEditing ? 'appointment-row--editing' : ''}`}>
+                    <tr key={appt.id} className={`appointment-row
+                       ${isEditing ? 'appointment-row--editing' : ''}
+                       ${isPast ? 'appointment-row--past' : ''}`}
+                    >
                       <td>
                         {isEditing ? (
                           <div className="input-wrapper">
