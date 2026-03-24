@@ -1,4 +1,4 @@
-// dashboard/app/dashboard/AppointmentsTable.tsx
+//dashboard/app/dashboard/AppointmentsTable.tsx
 
 'use client';
 
@@ -10,6 +10,7 @@ import { ar } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
 import { updateAppointment, insertAppointment, fetchAppointments } from './actions';
 import { DEFAULT_TIMEZONE } from '@/lib/timezone';
+
 
 type Appointment = {
   id: string;
@@ -59,54 +60,15 @@ export default function AppointmentsTable({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);   // ← جديد
 
   useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
-
-  // ── حساب التغييرات عند تعديل أي حقل ──
-  useEffect(() => {
-    if (!editingId) {
-      setHasChanges(false);
-      return;
-    }
-
-    const currentAppt = appointments.find(a => a.id === editingId);
-    if (!currentAppt) {
-      setHasChanges(false);
-      return;
-    }
-
-    const original = {
-      full_name: currentAppt.full_name || '',
-      phone: currentAppt.phone || '',
-      date: getDateOnly(currentAppt.date_time),
-      time: getTimeOnly(currentAppt.date_time),
-      status: currentAppt.status || 'confirmed',
-    };
-
-    const current = {
-      full_name: formValues.full_name || '',
-      phone: formValues.phone || '',
-      date: formValues.date || '',
-      time: formValues.time || '',
-      status: formValues.status || 'confirmed',
-    };
-
-    const changed =
-      original.full_name !== current.full_name ||
-      original.phone !== current.phone ||
-      original.date !== current.date ||
-      original.time !== current.time ||
-      original.status !== current.status;
-
-    setHasChanges(changed);
-  }, [formValues, editingId, appointments, getDateOnly, getTimeOnly]);
+  if (toast) {
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }
+}, [toast]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -139,7 +101,7 @@ export default function AppointmentsTable({
       console.error('خطأ تنسيق التاريخ:', e);
       return iso.split('T')[0] || '—';
     }
-  }, [tz]);
+  }, [timezone]);
 
   const formatTimeLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
@@ -152,7 +114,7 @@ export default function AppointmentsTable({
       console.error('خطأ تنسيق الوقت:', e);
       return iso.split('T')[1]?.slice(0, 5) || '—';
     }
-  }, [tz]);
+  }, [timezone]);
 
   const getDateOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
@@ -162,7 +124,7 @@ export default function AppointmentsTable({
     } catch {
       return '';
     }
-  }, [tz]);
+  }, [timezone]);
 
   const getTimeOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
@@ -172,19 +134,19 @@ export default function AppointmentsTable({
     } catch {
       return '';
     }
-  }, [tz]);
+  }, [timezone]);
 
   const sortedAppointments = useMemo(() => {
-    return [...appointments].sort((a, b) => {
-      if (!a.date_time) return 1;
-      if (!b.date_time) return -1;
+  return [...appointments].sort((a, b) => {
+    if (!a.date_time) return 1;
+    if (!b.date_time) return -1;
 
-      const ta = toZonedTime(a.date_time, tz).getTime();
-      const tb = toZonedTime(b.date_time, tz).getTime();
+    const ta = toZonedTime(a.date_time, tz).getTime();
+    const tb = toZonedTime(b.date_time, tz).getTime();
 
-      return ta - tb;
-    });
-  }, [appointments, tz]);
+    return ta - tb;
+  });
+}, [appointments, timezone]);
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
@@ -207,7 +169,7 @@ export default function AppointmentsTable({
       }
     }
     return dates;
-  }, [offDaysSet, workingHoursByDay, tz]);
+  }, [offDaysSet, workingHoursByDay, timezone]);
 
   const getAvailableTimesForDate = useCallback((selectedDate: string | null) => {
     if (!selectedDate) return [];
@@ -231,12 +193,12 @@ export default function AppointmentsTable({
     const endMs = end.getTime();
 
     const breakStartMs = wh.break_start
-      ? parse(`${selectedDate} ${wh.break_start}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
-      : Infinity;
+     ? parse(`${selectedDate} ${wh.break_start}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
+     : Infinity;
 
     const breakEndMs = wh.break_end
-      ? parse(`${selectedDate} ${wh.break_end}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
-      : -Infinity;
+     ? parse(`${selectedDate} ${wh.break_end}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
+     : -Infinity;
 
     const times: string[] = [];
 
@@ -253,15 +215,14 @@ export default function AppointmentsTable({
       const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
       const isToday =
-        selected.getFullYear() === now.getFullYear() &&
-        selected.getMonth() === now.getMonth() &&
-        selected.getDate() === now.getDate();
+       selected.getFullYear() === now.getFullYear() &&
+       selected.getMonth() === now.getMonth() &&
+       selected.getDate() === now.getDate();
 
       if (isToday && slotDate < now) {
-        current += slotMin * 60 * 1000;
-        continue;
+       current += slotMin * 60 * 1000;
+       continue;
       }
-
       const timeStr = format(slotDate, 'HH:mm');
 
       const isBooked = appointments.some(a => {
@@ -285,14 +246,13 @@ export default function AppointmentsTable({
     }
 
     return times;
-  }, [appointments, editingId, getDateOnly, getTimeOnly, workingHoursByDay, tz]);
+  }, [appointments, editingId, getDateOnly, getTimeOnly, workingHoursByDay]);
 
   const toggleEdit = (id: string, appt: Appointment) => {
     if (editingId === id) {
       setEditingId(null);
       setFormValues({});
       setFormErrors({});
-      setHasChanges(false);
     } else {
       setEditingId(id);
       setFormValues({
@@ -303,7 +263,6 @@ export default function AppointmentsTable({
         status: appt.status || 'confirmed',
       });
       setFormErrors({});
-      setHasChanges(false);   // يبدأ معطل
     }
   };
 
@@ -338,100 +297,70 @@ export default function AppointmentsTable({
     return map[status ?? 'confirmed'] ?? 'مؤكد';
   };
 
-  // ── الدالة المحدثة handleUpdate ──
   const handleUpdate = async (formData: FormData) => {
     setIsSubmitting(true);
     setFormErrors({});
 
     const appointmentId = formData.get('appointment_id') as string;
-    const currentAppt = appointments.find(a => a.id === appointmentId);
-
-    if (!currentAppt) {
-      setToast('لم يتم العثور على الموعد ❗️');
-      setIsSubmitting(false);
-      return;
-    }
-
-    // مقارنة للتحقق من وجود تغييرات فعلية (حماية إضافية)
-    const originalValues = {
-      full_name: currentAppt.full_name || '',
-      phone: currentAppt.phone || '',
-      date: getDateOnly(currentAppt.date_time),
-      time: getTimeOnly(currentAppt.date_time),
-      status: currentAppt.status || 'confirmed',
-    };
-
-    const newValues = {
-      full_name: (formData.get('full_name') as string)?.trim() || '',
-      phone: (formData.get('phone') as string)?.trim() || '',
-      date: formData.get('date') as string || '',
-      time: formData.get('time') as string || '',
-      status: formData.get('status') as string || 'confirmed',
-    };
-
-    const hasRealChanges =
-      originalValues.full_name !== newValues.full_name ||
-      originalValues.phone !== newValues.phone ||
-      originalValues.date !== newValues.date ||
-      originalValues.time !== newValues.time ||
-      originalValues.status !== newValues.status;
-
-    if (!hasRealChanges) {
-      setToast('لم تقم بأي تغيير على الموعد');
-      setIsSubmitting(false);
-      setEditingId(null);
-      setFormValues({});
-      setFormErrors({});
-      return;
-    }
-
-    // Optimistic Update
-    const optimisticAppt = {
-      ...currentAppt,
-      full_name: newValues.full_name || null,
-      phone: newValues.phone || null,
-      status: newValues.status || null,
-    };
+    const original = appointments.find(a => a.id === appointmentId);
 
     setAppointments(prev =>
-      prev.map(a => (a.id === appointmentId ? optimisticAppt : a))
+      prev.map(a =>
+        a.id === appointmentId
+          ? {
+              ...a,
+              full_name: formData.get('full_name') as string | null,
+              phone: formData.get('phone') as string | null,
+              status: formData.get('status') as string | null,
+            }
+          : a
+      )
     );
 
     const result = await updateAppointment(formData, timezone);
 
-    if ('errors' in result) {
-      setFormErrors(result.errors as Record<string, string>);
-      setAppointments(prev =>
-        prev.map(a => (a.id === appointmentId ? currentAppt : a))
-      );
-      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌️');
+if ('errors' in result) {
+  setFormErrors(result.errors as Record<string, string>);
 
-    } else if ('success' in result) {
-      const fresh = await fetchAppointments(timezone, currentPage, pageSize);
-      if ('appointments' in fresh) {
-        setAppointments(fresh.appointments ?? []);
-      }
+  if (original) {
+    setAppointments(prev =>
+      prev.map(a => a.id === appointmentId ? original : a)
+    );
+  }
 
-      setEditingId(null);
-      setFormValues({});
-      setFormErrors({});
-      setToast('تم التحديث بنجاح ✅');
+  // ✅ toast validation
+  setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❌️');
 
-    } else if ('error' in result) {
-      setAppointments(prev =>
-        prev.map(a => (a.id === appointmentId ? currentAppt : a))
-      );
-      setToast(result.error || 'حدث خطأ ❗️');
+} else if ('success' in result) {
+  const fresh = await fetchAppointments(timezone, currentPage, pageSize);
 
-    } else {
-      setToast('حدث خطأ غير متوقع ❗️');
-      setAppointments(prev =>
-        prev.map(a => (a.id === appointmentId ? currentAppt : a))
-      );
-    }
+  if ('appointments' in fresh) {
+    setAppointments(fresh.appointments ?? []);
+  }
 
+  setEditingId(null);
+  setFormValues({});
+  setFormErrors({});
+
+  // ✅ (اختياري) success toast
+  setToast('تم التحديث بنجاح ✅');
+
+} else if ('error' in result) {
+  // 🔥 دي الحالة اللي كانت ناقصة
+  setToast(result.error || 'حدث خطأ ❗️');
+
+  if (original) {
+    setAppointments(prev =>
+      prev.map(a => a.id === appointmentId ? original : a)
+    );
+  }
+
+} else {
+  // fallback احتياطي
+  setToast('حدث خطأ غير متوقع ❗️');
+}
     setIsSubmitting(false);
-  };
+};
 
   const handleInsert = async (formData: FormData) => {
     setIsSubmitting(true);
@@ -463,8 +392,8 @@ export default function AppointmentsTable({
       setFormErrors({});
       setToast('تم إضافة الموعد بنجاح ✅');
     } else {
-      setToast(result.error || 'حدث خطأ ❗️');
-      setAppointments(prev => prev.filter(a => a.id !== tempId));
+  setToast(result.error || 'حدث خطأ ❗️');
+  setAppointments(prev => prev.filter(a => a.id !== tempId));
     }
 
     setIsSubmitting(false);
@@ -831,10 +760,10 @@ export default function AppointmentsTable({
                             <button
                               type="submit"
                               form={formId}
-                              disabled={isSubmitting || !hasChanges}   // ← الزر معطل إذا لم يكن هناك تغييرات
-                              className={`btn btn--save ${isSubmitting || !hasChanges ? 'btn--disabled' : ''}`}
+                              disabled={isSubmitting}
+                              className={`btn btn--save ${isSubmitting ? 'btn--disabled' : ''}`}
                             >
-                              {isSubmitting ? 'جاري الحفظ...' : hasChanges ? 'حفظ' : 'لا تغييرات'}
+                              {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
 
                             <button
@@ -945,11 +874,12 @@ export default function AppointmentsTable({
         </div>
       )}
 
-      {toast && (
+        {toast && (
         <div className="toast">
-          {toast}
+         {toast}
         </div>
       )}
+      
     </>
   );
-                  }
+                      }
