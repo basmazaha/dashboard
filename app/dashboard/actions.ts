@@ -279,7 +279,7 @@ export async function fetchAppointments(
   };
 }
 
-//دالة مواعيد اليوم
+// دالة مواعيد اليوم
 export async function fetchTodayAppointments(
   businessTimezone: string,
   page: number = 1,
@@ -296,25 +296,23 @@ export async function fetchTodayAppointments(
     new Date()
   );
 
-  const endLocal = parse(
-    `${todayDate} 23:59:59`,
-    'yyyy-MM-dd HH:mm:ss',
-    new Date()
-  );
-
   const todayStart = fromZonedTime(startLocal, businessTimezone).toISOString();
-  const todayEnd   = fromZonedTime(endLocal, businessTimezone).toISOString();
+
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const tomorrowStartISO = tomorrowStart.toISOString();
 
   const from = (page - 1) * pageSize;
-  const to   = from + pageSize - 1;
+  const to = from + pageSize - 1;
 
   const allowedStatuses = ['confirmed', 'pending', 'rescheduled'];
 
+  // حساب العدد الكلي
   const { count, error: countError } = await supabaseServer
     .from('appointments')
     .select('*', { count: 'exact', head: true })
     .gte('date_time', todayStart)
-    .lt('date_time', tomorrowStart)
+    .lt('date_time', tomorrowStartISO)
     .in('status', allowedStatuses);
 
   if (countError) {
@@ -324,11 +322,12 @@ export async function fetchTodayAppointments(
 
   const totalCount = count ?? 0;
 
+  // جلب البيانات
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
     .gte('date_time', todayStart)
-    .lte('date_time', todayEnd)
+    .lt('date_time', tomorrowStartISO)
     .in('status', allowedStatuses)
     .order('date_time', { ascending: true })
     .range(from, to);
