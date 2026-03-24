@@ -69,7 +69,7 @@ export default async function DashboardPage({ searchParams }: Props) {
 
   return (
     <div>
-      <AppointmentsTable
+      <TodayAppointmentsTable
         initialAppointments={appointments || []}
         initialOffDays={offDays}
         initialWorkingHours={workingHours || []}
