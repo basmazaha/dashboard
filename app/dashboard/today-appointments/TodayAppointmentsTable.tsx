@@ -158,25 +158,28 @@ export default function AppointmentsTable({
   });
 }, [appointments, tz]);
 
-  const nextAppointmentTime = useMemo(() => {
+  const expiredAppointmentTime = useMemo(() => {
   const nowMs = now.getTime();
 
-  const next = sortedAppointments.find(a => {
-    if (!a.date_time) return false;
-    return toZonedTime(a.date_time, tz).getTime() > nowMs;
-  });
+  const expireTimes = sortedAppointments
+    .filter(a => a.date_time)
+    .map(a => {
+      const apptTime = toZonedTime(a.date_time!, tz).getTime();
+      return apptTime + 5 * 60 * 1000; // الموعد + 5 دقائق
+    })
+    .filter(time => time > nowMs);
 
-  if (!next?.date_time) return null;
+  if (expireTimes.length === 0) return null;
 
-  return toZonedTime(next.date_time, tz).getTime();
+  return Math.min(...expireTimes); // أقرب وقت انتهاء
 }, [sortedAppointments, now, tz]);
 
   
 // 👇 أضف هذا هنا
 useEffect(() => {
-  if (!nextAppointmentTime) return;
+  if (!expiredAppointmentTime) return;
 
-  const delay = nextAppointmentTime - now.getTime();
+  const delay = expiredAppointmentTime - now.getTime();
 
   if (delay <= 0) {
     setNow(toZonedTime(new Date(), tz));
@@ -188,7 +191,7 @@ useEffect(() => {
   }, delay);
 
   return () => clearTimeout(timer);
-}, [nextAppointmentTime, now, tz]);
+}, [expiredAppointmentTime, now, tz]);
   
 
   const availableDates = useMemo(() => {
