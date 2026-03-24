@@ -90,9 +90,9 @@ export default function SearchAppointmentsTable({
   }, [initialWorkingHours]);
 
   const handleFetch = useCallback(async (
-    page: number,
-    type: 'search' | 'refresh' = 'search'
-  ) => {
+  page: number,
+  type: 'search' | 'refresh' | 'update' = 'search'
+) => {
 
     if (type === 'search') setIsSearching(true);
     if (type === 'refresh') setIsRefreshing(true);
@@ -112,8 +112,8 @@ export default function SearchAppointmentsTable({
       setTotalCountState(fresh.totalCount);
     }
 
-    setIsSearching(false);
-    setIsRefreshing(false);
+    if (type === 'search') setIsSearching(false);
+    if (type === 'refresh') setIsRefreshing(false);
 
   }, [searchValues, tz, pageSize]);
 
@@ -350,8 +350,7 @@ export default function SearchAppointmentsTable({
 
     } else if ('success' in result) {
 
-      await handleFetch(currentPageState, 'refresh');
-
+      await handleFetch(currentPageState, 'update');
       setEditingId(null);
       setFormValues({});
       setFormErrors({});
