@@ -71,22 +71,6 @@ export default function AppointmentsTable({
   }
 }, [toast]);
 
-  useEffect(() => {
-  if (!nextAppointmentTime) return;
-
-  const delay = nextAppointmentTime - now.getTime();
-
-  if (delay <= 0) {
-    setNow(toZonedTime(new Date(), tz));
-    return;
-  }
-
-  const timer = setTimeout(() => {
-    setNow(toZonedTime(new Date(), tz));
-  }, delay);
-
-  return () => clearTimeout(timer);
-}, [nextAppointmentTime, now, tz]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -186,6 +170,26 @@ export default function AppointmentsTable({
 
   return toZonedTime(next.date_time, tz).getTime();
 }, [sortedAppointments, now, tz]);
+
+  
+// 👇 أضف هذا هنا
+useEffect(() => {
+  if (!nextAppointmentTime) return;
+
+  const delay = nextAppointmentTime - now.getTime();
+
+  if (delay <= 0) {
+    setNow(toZonedTime(new Date(), tz));
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    setNow(toZonedTime(new Date(), tz));
+  }, delay);
+
+  return () => clearTimeout(timer);
+}, [nextAppointmentTime, now, tz]);
+  
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
