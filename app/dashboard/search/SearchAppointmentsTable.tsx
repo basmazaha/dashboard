@@ -9,11 +9,10 @@ import { toZonedTime } from 'date-fns-tz';
 import { updateAppointment, searchAppointments } from './actions';
 import { DEFAULT_TIMEZONE } from '@/lib/timezone';
 
-
 type Appointment = {
   id: string;
   full_name: string | null;
-  date_time: string | null;   // ISO string in UTC (timestamptz)
+  date_time: string | null;
   phone: string | null;
   reason: string | null;
   status: string | null;
@@ -48,18 +47,23 @@ export default function SearchAppointmentsTable({
   pageSize,
   totalCount,
 }: SearchAppointmentsTableProps) {
+
   const tz = timezone || DEFAULT_TIMEZONE;
+
   const [toast, setToast] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+
   const [editingId, setEditingId] = useState<string | null>(null);
+
   const [formValues, setFormValues] = useState<Record<string, any>>({});
   const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
-  // حالة البحث والصفحة (عميلية)
   const [searchValues, setSearchValues] = useState({
     full_name: '',
     phone: '',
@@ -67,18 +71,34 @@ export default function SearchAppointmentsTable({
     start_date: '',
     end_date: '',
   });
+
   const [currentPageState, setCurrentPageState] = useState(currentPage);
   const [totalCountState, setTotalCountState] = useState(totalCount);
 
   useEffect(() => {
-  if (toast) {
+    if (!toast) return;
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
-  }
-}, [toast]);
+  }, [toast]);
 
-  const handleFetch = useCallback(async (page: number) => {
-    setIsSearching(true);
+  const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
+
+  const workingHoursByDay = useMemo(() => {
+    const map: Record<number, WorkingHour> = {};
+    initialWorkingHours.forEach(wh => {
+      map[wh.day_of_week] = wh;
+    });
+    return map;
+  }, [initialWorkingHours]);
+
+  const handleFetch = useCallback(async (
+    page: number,
+    type: 'search' | 'refresh' = 'search'
+  ) => {
+
+    if (type === 'search') setIsSearching(true);
+    if (type === 'refresh') setIsRefreshing(true);
+
     const params = {
       full_name: searchValues.full_name || undefined,
       phone: searchValues.phone || undefined,
@@ -87,37 +107,31 @@ export default function SearchAppointmentsTable({
       end_date: searchValues.end_date || undefined,
     };
 
-    const fresh = await searchAppointments(timezone, params, page, pageSize);
+    const fresh = await searchAppointments(tz, params, page, pageSize);
+
     if ('appointments' in fresh) {
       setAppointments(fresh.appointments ?? []);
       setTotalCountState(fresh.totalCount);
     }
+
     setIsSearching(false);
-  }, [searchValues, timezone, pageSize]);
+    setIsRefreshing(false);
 
-  // تحميل أولي عند فتح الصفحة (بحث بدون فلاتر = كل المواعيد)
+  }, [searchValues, tz, pageSize]);
+
   useEffect(() => {
-    handleFetch(currentPageState);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
-
-  const workingHoursByDay = useMemo(() => {
-    const map: Record<number, WorkingHour> = {};
-    initialWorkingHours.forEach(wh => map[wh.day_of_week] = wh);
-    return map;
-  }, [initialWorkingHours]);
+    handleFetch(currentPageState, 'refresh');
+  }, []); // intentionally once
 
   const formatDateLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
     try {
       const zoned = toZonedTime(iso, tz);
       return format(zoned, 'EEEE، d MMMM yyyy', { locale: ar });
-    } catch (e) {
-      console.error('خطأ تنسيق التاريخ:', e);
+    } catch {
       return iso.split('T')[0] || '—';
     }
-  }, [timezone]);
+  }, [tz]);
 
   const formatTimeLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
@@ -126,41 +140,39 @@ export default function SearchAppointmentsTable({
       let str = format(zoned, 'hh:mm a');
       str = str.replace('AM', 'صباحاً').replace('PM', 'مساءً');
       return str;
-    } catch (e) {
-      console.error('خطأ تنسيق الوقت:', e);
+    } catch {
       return iso.split('T')[1]?.slice(0, 5) || '—';
     }
-  }, [timezone]);
+  }, [tz]);
 
   const getDateOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
     try {
-      const zoned = toZonedTime(iso, tz);
-      return format(zoned, 'yyyy-MM-dd');
+      return format(toZonedTime(iso, tz), 'yyyy-MM-dd');
     } catch {
       return '';
     }
-  }, [timezone]);
+  }, [tz]);
 
   const getTimeOnly = useCallback((iso: string | null) => {
     if (!iso) return '';
     try {
-      const zoned = toZonedTime(iso, tz);
-      return format(zoned, 'HH:mm');
+      return format(toZonedTime(iso, tz), 'HH:mm');
     } catch {
       return '';
     }
-  }, [timezone]);
-
-  
+  }, [tz]);
 
   const availableDates = useMemo(() => {
+
     const dates: string[] = [];
     const today = new Date();
 
     for (let i = 0; i < 30; i++) {
+
       const d = new Date(today);
       d.setDate(today.getDate() + i);
+
       const isoDate = format(d, 'yyyy-MM-dd');
 
       if (offDaysSet.has(isoDate)) continue;
@@ -169,15 +181,25 @@ export default function SearchAppointmentsTable({
       const wh = workingHoursByDay[dayOfWeek];
 
       if (wh?.is_open && wh.start_time && wh.end_time) {
-        const zoned = toZonedTime(d, tz);
-        const label = format(zoned, 'EEEE d MMMM yyyy', { locale: ar });
-        dates.push(isoDate + '|' + label);
+
+        const label = format(
+          toZonedTime(d, tz),
+          'EEEE d MMMM yyyy',
+          { locale: ar }
+        );
+
+        dates.push(`${isoDate}|${label}`);
+
       }
+
     }
+
     return dates;
-  }, [offDaysSet, workingHoursByDay, timezone]);
+
+  }, [offDaysSet, workingHoursByDay, tz]);
 
   const getAvailableTimesForDate = useCallback((selectedDate: string | null) => {
+
     if (!selectedDate) return [];
 
     const dateObj = parse(selectedDate, 'yyyy-MM-dd', new Date());
@@ -186,31 +208,29 @@ export default function SearchAppointmentsTable({
 
     if (!wh || !wh.is_open || !wh.start_time || !wh.end_time) return [];
 
-    const startTime = wh.start_time;
-    const endTime   = wh.end_time;
-    const slotMin   = wh.slot_duration_minutes ?? 15;
+    const start = parse(`${selectedDate} ${wh.start_time}`, 'yyyy-MM-dd HH:mm:ss', new Date());
+    const end = parse(`${selectedDate} ${wh.end_time}`, 'yyyy-MM-dd HH:mm:ss', new Date());
 
-    const baseDate = parse(selectedDate, 'yyyy-MM-dd', new Date());
+    const slotMin = wh.slot_duration_minutes ?? 15;
 
-    const start = parse(`${selectedDate} ${startTime}`, 'yyyy-MM-dd HH:mm:ss', baseDate);
-    const end   = parse(`${selectedDate} ${endTime}`,   'yyyy-MM-dd HH:mm:ss', baseDate);
+    const breakStartMs = wh.break_start
+      ? parse(`${selectedDate} ${wh.break_start}`, 'yyyy-MM-dd HH:mm:ss', new Date()).getTime()
+      : Infinity;
 
+    const breakEndMs = wh.break_end
+      ? parse(`${selectedDate} ${wh.break_end}`, 'yyyy-MM-dd HH:mm:ss', new Date()).getTime()
+      : -Infinity;
+
+    const times: string[] = [];
 
     let current = start.getTime();
     const endMs = end.getTime();
 
-    const breakStartMs = wh.break_start
-     ? parse(`${selectedDate} ${wh.break_start}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
-     : Infinity;
-
-    const breakEndMs = wh.break_end
-     ? parse(`${selectedDate} ${wh.break_end}`, 'yyyy-MM-dd HH:mm:ss', baseDate).getTime()
-     : -Infinity;
-    
-    const times: string[] = [];
+    const now = toZonedTime(new Date(), tz);
 
     while (current < endMs) {
-      const slotEnd = current + slotMin * 60 * 1000;
+
+      const slotEnd = current + slotMin * 60000;
 
       if (slotEnd > breakStartMs && current < breakEndMs) {
         current = breakEndMs;
@@ -218,50 +238,57 @@ export default function SearchAppointmentsTable({
       }
 
       const slotDate = new Date(current);
-      const now = toZonedTime(new Date(), tz);
-      const selected = parse(selectedDate, 'yyyy-MM-dd', new Date());
 
-      const isToday =
-       selected.getFullYear() === now.getFullYear() &&
-       selected.getMonth() === now.getMonth() &&
-       selected.getDate() === now.getDate();
-
-      if (isToday && slotDate < now) {
-       current += slotMin * 60 * 1000;
-       continue;
+      if (
+        slotDate.toDateString() === now.toDateString() &&
+        slotDate < now
+      ) {
+        current += slotMin * 60000;
+        continue;
       }
+
       const timeStr = format(slotDate, 'HH:mm');
 
       const isBooked = appointments.some(a => {
+
         if (!a.date_time || a.status === 'cancelled') return false;
+
         if (editingId && a.id === editingId) return false;
 
-        const apptDate = getDateOnly(a.date_time);
-        const apptTime = getTimeOnly(a.date_time);
+        return (
+          getDateOnly(a.date_time) === selectedDate &&
+          getTimeOnly(a.date_time) === timeStr
+        );
 
-        return apptDate === selectedDate && apptTime === timeStr;
       });
 
       if (!isBooked) {
+
         let display = format(slotDate, 'hh:mm a')
           .replace('AM', 'صباحاً')
           .replace('PM', 'مساءً');
-        times.push(timeStr + '|' + display);
+
+        times.push(`${timeStr}|${display}`);
+
       }
 
-      current += slotMin * 60 * 1000;
+      current += slotMin * 60000;
+
     }
 
     return times;
-  }, [appointments, editingId, getDateOnly, getTimeOnly, workingHoursByDay]);
 
-  const toggleEdit = (id: string, appt: Appointment) => {
-  if (editingId === id) {
-    setEditingId(null);
-    setFormValues({});
-    setOriginalValues({});
-    setFormErrors({});
-  } else {
+  }, [appointments, editingId, workingHoursByDay, tz, getDateOnly, getTimeOnly]);
+
+  const toggleEdit = useCallback((id: string, appt: Appointment) => {
+
+    if (editingId === id) {
+      setEditingId(null);
+      setFormValues({});
+      setOriginalValues({});
+      setFormErrors({});
+      return;
+    }
 
     const values = {
       full_name: appt.full_name || '',
@@ -273,10 +300,10 @@ export default function SearchAppointmentsTable({
 
     setEditingId(id);
     setFormValues(values);
-    setOriginalValues(values); // 🔥 حفظ القيم الأصلية
+    setOriginalValues(values);
     setFormErrors({});
-  }
-};
+
+  }, [editingId, getDateOnly, getTimeOnly]);
 
   const getStatusText = (status: string | null) => {
     const map: Record<string, string> = {
@@ -290,11 +317,13 @@ export default function SearchAppointmentsTable({
     return map[status ?? 'confirmed'] ?? 'مؤكد';
   };
 
- const handleUpdate = async (formData: FormData) => {
+  const handleUpdate = async (formData: FormData) => {
+
     setIsSubmitting(true);
     setFormErrors({});
 
     const appointmentId = formData.get('appointment_id') as string;
+
     const original = appointments.find(a => a.id === appointmentId);
 
     setAppointments(prev =>
@@ -310,9 +339,10 @@ export default function SearchAppointmentsTable({
       )
     );
 
-    const result = await updateAppointment(formData, timezone);
+    const result = await updateAppointment(formData, tz);
 
     if ('errors' in result) {
+
       setFormErrors(result.errors as Record<string, string>);
 
       if (original) {
@@ -321,10 +351,11 @@ export default function SearchAppointmentsTable({
         );
       }
 
-      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❗️');
+      setToast(Object.values(result.errors)[0] || 'بيانات غير صحيحة ❗️');
 
     } else if ('success' in result) {
-      await handleFetch(currentPageState);
+
+      await handleFetch(currentPageState, 'refresh');
 
       setEditingId(null);
       setFormValues({});
@@ -333,37 +364,30 @@ export default function SearchAppointmentsTable({
       setToast('تم التحديث بنجاح ✅');
 
     } else {
+
       setToast(result.error || 'حدث خطأ ❗️');
 
-      if (original) {
-        setAppointments(prev =>
-          prev.map(a => a.id === appointmentId ? original : a)
-        );
-      }
     }
 
     setIsSubmitting(false);
+
   };
 
-  
   const handleSearch = () => {
     setCurrentPageState(1);
-    handleFetch(1);
+    handleFetch(1, 'search');
   };
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await handleFetch(currentPageState);
-    setIsRefreshing(false);
+  const handleRefresh = () => {
+    handleFetch(currentPageState, 'refresh');
   };
 
   const changePage = (newPage: number) => {
     if (newPage === currentPageState) return;
     setCurrentPageState(newPage);
-    handleFetch(newPage);
+    handleFetch(newPage, 'refresh');
   };
 
-  // ─── حساب نطاق الصفحات الذكي ───
   const totalPages = Math.ceil(totalCountState / pageSize);
   const maxPagesToShow = 7;
 
@@ -371,10 +395,14 @@ export default function SearchAppointmentsTable({
   let endPage: number;
 
   if (totalPages <= maxPagesToShow) {
+
     startPage = 1;
     endPage = totalPages;
+
   } else {
+
     const half = Math.floor(maxPagesToShow / 2);
+
     startPage = Math.max(1, currentPageState - half);
     endPage = Math.min(totalPages, currentPageState + half);
 
@@ -383,12 +411,14 @@ export default function SearchAppointmentsTable({
     } else if (endPage === totalPages) {
       startPage = totalPages - maxPagesToShow + 1;
     }
+
   }
 
   const pages = Array.from(
     { length: endPage - startPage + 1 },
     (_, i) => startPage + i
   );
+
 
   return (
     <>
