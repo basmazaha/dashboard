@@ -164,7 +164,7 @@ export default function AppointmentsTable({
 
     return ta - tb;
   });
-}, [appointments, tz]);
+}, [appointments, tz, now]);
 
   
   
@@ -651,7 +651,7 @@ if ('errors' in result) {
                 {sortedAppointments.map(appt => {
                   const isPast =
                     appt.date_time &&
-                    toZonedTime(appt.date_time, tz).getTime() + 5 * 60 * 1000 <
+                    toZonedTime(appt.date_time, tz).getTime() + 1 * 60 * 1000 <
                     now.getTime();
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
