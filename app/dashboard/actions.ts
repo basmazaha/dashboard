@@ -314,7 +314,7 @@ export async function fetchTodayAppointments(
     .from('appointments')
     .select('*', { count: 'exact', head: true })
     .gte('date_time', todayStart)
-    .lte('date_time', todayEnd)
+    .lt('date_time', tomorrowStart)
     .in('status', allowedStatuses);
 
   if (countError) {
