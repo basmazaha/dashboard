@@ -279,28 +279,30 @@ export async function fetchAppointments(
   };
 }
 
-// دالة مواعيد اليوم
+// دالة مواعيد اليوم 
+
 export async function fetchTodayAppointments(
   businessTimezone: string,
   page: number = 1,
   pageSize: number = 20
 ) {
+  const now = new Date();
 
-  const zonedNow = toZonedTime(new Date(), businessTimezone);
+  // تحويل الوقت الحالي لتايمزون النشاط
+  const zonedNow = toZonedTime(now, businessTimezone);
 
   const todayDate = format(zonedNow, 'yyyy-MM-dd');
 
-  const startLocal = parse(
-    `${todayDate} 00:00:00`,
-    'yyyy-MM-dd HH:mm:ss',
-    new Date()
-  );
+  // بداية اليوم في تايمزون النشاط
+  const todayStartLocal = new Date(`${todayDate}T00:00:00`);
 
-  const todayStart = fromZonedTime(startLocal, businessTimezone).toISOString();
+  // بداية الغد
+  const tomorrowStartLocal = new Date(`${todayDate}T00:00:00`);
+  tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
 
-  const tomorrowStart = new Date(todayStart);
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  const tomorrowStartISO = tomorrowStart.toISOString();
+  // تحويلهم UTC عشان Supabase
+  const todayStart = fromZonedTime(todayStartLocal, businessTimezone).toISOString();
+  const tomorrowStart = fromZonedTime(tomorrowStartLocal, businessTimezone).toISOString();
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -312,7 +314,7 @@ export async function fetchTodayAppointments(
     .from('appointments')
     .select('*', { count: 'exact', head: true })
     .gte('date_time', todayStart)
-    .lt('date_time', tomorrowStartISO)
+    .lt('date_time', tomorrowStart)
     .in('status', allowedStatuses);
 
   if (countError) {
@@ -327,7 +329,7 @@ export async function fetchTodayAppointments(
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
     .gte('date_time', todayStart)
-    .lt('date_time', tomorrowStartISO)
+    .lt('date_time', tomorrowStart)
     .in('status', allowedStatuses)
     .order('date_time', { ascending: true })
     .range(from, to);
