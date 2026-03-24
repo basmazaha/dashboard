@@ -392,9 +392,8 @@ if ('errors' in result) {
       setFormErrors({});
       setToast('تم إضافة الموعد بنجاح ✅');
     } else {
-      setToast(result.error || 'حدث خطأ ❗️');
-      }
-      setAppointments(prev => prev.filter(a => a.id !== tempId));
+  setToast(result.error || 'حدث خطأ ❗️');
+  setAppointments(prev => prev.filter(a => a.id !== tempId));
     }
 
     setIsSubmitting(false);
