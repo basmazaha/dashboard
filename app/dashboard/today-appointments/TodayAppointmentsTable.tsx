@@ -72,6 +72,14 @@ export default function AppointmentsTable({
 }, [toast]);
 
 
+  useEffect(() => {
+  const interval = setInterval(() => {
+    setNow(toZonedTime(new Date(), tz));
+  }, 30000); // كل 30 ثانية
+
+  return () => clearInterval(interval);
+}, [tz]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
@@ -158,40 +166,7 @@ export default function AppointmentsTable({
   });
 }, [appointments, tz]);
 
-  const expiredAppointmentTime = useMemo(() => {
-  const nowMs = now.getTime();
-
-  const expireTimes = sortedAppointments
-    .filter(a => a.date_time)
-    .map(a => {
-      const apptTime = toZonedTime(a.date_time!, tz).getTime();
-      return apptTime + 5 * 60 * 1000; // الموعد + 5 دقائق
-    })
-    .filter(time => time > nowMs);
-
-  if (expireTimes.length === 0) return null;
-
-  return Math.min(...expireTimes); // أقرب وقت انتهاء
-}, [sortedAppointments, now, tz]);
-
   
-// 👇 أضف هذا هنا
-useEffect(() => {
-  if (!expiredAppointmentTime) return;
-
-  const delay = expiredAppointmentTime - now.getTime();
-
-  if (delay <= 0) {
-    setNow(toZonedTime(new Date(), tz));
-    return;
-  }
-
-  const timer = setTimeout(() => {
-    setNow(toZonedTime(new Date(), tz));
-  }, delay);
-
-  return () => clearTimeout(timer);
-}, [expiredAppointmentTime, now, tz]);
   
 
   const availableDates = useMemo(() => {
@@ -675,9 +650,9 @@ if ('errors' in result) {
               <tbody>
                 {sortedAppointments.map(appt => {
                   const isPast =
-                  appt.date_time &&
-                  toZonedTime(appt.date_time, tz).getTime() <
-                  toZonedTime(new Date(), tz).getTime();
+                    appt.date_time &&
+                    toZonedTime(appt.date_time, tz).getTime() + 5 * 60 * 1000 <
+                    now.getTime();
                   const isEditing = editingId === appt.id;
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
