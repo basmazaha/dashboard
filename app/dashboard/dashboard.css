@@ -603,7 +603,6 @@ display: none;
   justify-content: center;
 }
 
-/* نخلي البلوك شبه اللي فوق */
 .dropdown-user-box .current-user-info {
   text-align: center;
   font-size: 0.9rem;
@@ -667,7 +666,7 @@ display: none;
   100% { opacity: 0; transform: translate(-50%, 20px); }
 }
 
-// تنسيق المواعيد الفائتة في جدول مواعيد اليوم
+/*تنسيق المواعيد الفائتة في جدول مواعيد اليوم*/
 
 .appointment-row--past {
   opacity: 0.6;
