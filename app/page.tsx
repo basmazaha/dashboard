@@ -16,7 +16,7 @@ export default function Home() {
           </p>
 
           <div className="hero-buttons">
-            <Link href="/dashboard" className="btn btn-primary">
+            <Link href="/dashboard/today-appointments" className="btn btn-primary">
               الدخول إلى لوحة التحكم
             </Link>
 
