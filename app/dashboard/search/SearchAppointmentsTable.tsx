@@ -52,7 +52,6 @@ export default function SearchAppointmentsTable({
 
   const [toast, setToast] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
-
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formValues, setFormValues] = useState<Record<string, any>>({});
@@ -60,7 +59,6 @@ export default function SearchAppointmentsTable({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -121,7 +119,7 @@ export default function SearchAppointmentsTable({
 
   useEffect(() => {
     handleFetch(currentPageState, 'refresh');
-  }, []); // intentionally once
+  }, []);
 
   const formatDateLocal = useCallback((iso: string | null) => {
     if (!iso) return '—';
@@ -225,7 +223,6 @@ export default function SearchAppointmentsTable({
 
     let current = start.getTime();
     const endMs = end.getTime();
-
     const now = toZonedTime(new Date(), tz);
 
     while (current < endMs) {
@@ -280,7 +277,7 @@ export default function SearchAppointmentsTable({
 
   }, [appointments, editingId, workingHoursByDay, tz, getDateOnly, getTimeOnly]);
 
-  const toggleEdit = useCallback((id: string, appt: Appointment) => {
+  const toggleEdit = (id: string, appt: Appointment) => {
 
     if (editingId === id) {
       setEditingId(null);
@@ -302,8 +299,7 @@ export default function SearchAppointmentsTable({
     setFormValues(values);
     setOriginalValues(values);
     setFormErrors({});
-
-  }, [editingId, getDateOnly, getTimeOnly]);
+  };
 
   const getStatusText = (status: string | null) => {
     const map: Record<string, string> = {
@@ -323,7 +319,6 @@ export default function SearchAppointmentsTable({
     setFormErrors({});
 
     const appointmentId = formData.get('appointment_id') as string;
-
     const original = appointments.find(a => a.id === appointmentId);
 
     setAppointments(prev =>
@@ -351,7 +346,7 @@ export default function SearchAppointmentsTable({
         );
       }
 
-      setToast(Object.values(result.errors)[0] || 'بيانات غير صحيحة ❗️');
+      setToast(Object.values(result.errors ?? {})[0] || 'بيانات غير صحيحة ❗️');
 
     } else if ('success' in result) {
 
@@ -370,7 +365,6 @@ export default function SearchAppointmentsTable({
     }
 
     setIsSubmitting(false);
-
   };
 
   const handleSearch = () => {
@@ -406,12 +400,8 @@ export default function SearchAppointmentsTable({
     startPage = Math.max(1, currentPageState - half);
     endPage = Math.min(totalPages, currentPageState + half);
 
-    if (startPage === 1) {
-      endPage = maxPagesToShow;
-    } else if (endPage === totalPages) {
-      startPage = totalPages - maxPagesToShow + 1;
-    }
-
+    if (startPage === 1) endPage = maxPagesToShow;
+    else if (endPage === totalPages) startPage = totalPages - maxPagesToShow + 1;
   }
 
   const pages = Array.from(
@@ -420,441 +410,443 @@ export default function SearchAppointmentsTable({
   );
 
 
-  return (
-    <>
-      {/* نموذج البحث */}
-      <div className="appointment-form appointment-form--search">
-        <h3 className="appointment-form__title">بحث في المواعيد</h3>
-        <div className="form-grid">
-          <div className="form-field">
-            <label className="form-label">الاسم</label>
-            <input
-              type="text"
-              value={searchValues.full_name}
-              onChange={e => setSearchValues({ ...searchValues, full_name: e.target.value })}
-              className="form-input"
-              placeholder="الاسم"
-            />
-          </div>
+return (
+<>
+{/* نموذج البحث */}
+<div className="appointment-form appointment-form--search">
+<h3 className="appointment-form__title">بحث في المواعيد</h3>
+<div className="form-grid">
+<div className="form-field">
+<label className="form-label">الاسم</label>
+<input
+type="text"
+value={searchValues.full_name}
+onChange={e => setSearchValues({ ...searchValues, full_name: e.target.value })}
+className="form-input"
+placeholder="الاسم"
+/>
+</div>
 
-          <div className="form-field">
-            <label className="form-label">رقم التليفون</label>
-            <input
-              type="tel"
-              value={searchValues.phone}
-              onChange={e => setSearchValues({ ...searchValues, phone: e.target.value })}
-              className="form-input"
-              placeholder="01xxxxxxxxx"
-            />
-          </div>
+<div className="form-field">  
+        <label className="form-label">رقم التليفون</label>  
+        <input  
+          type="tel"  
+          value={searchValues.phone}  
+          onChange={e => setSearchValues({ ...searchValues, phone: e.target.value })}  
+          className="form-input"  
+          placeholder="01xxxxxxxxx"  
+        />  
+      </div>  
 
 
-          <div className="form-field">
-            <label className="form-label">من تاريخ</label>
-            <input
-              type="date"
-              value={searchValues.start_date}
-              onChange={e => setSearchValues({ ...searchValues, start_date: e.target.value })}
-              className="form-input"
-            />
-          </div>
+      <div className="form-field">  
+        <label className="form-label">من تاريخ</label>  
+        <input  
+          type="date"  
+          value={searchValues.start_date}  
+          onChange={e => setSearchValues({ ...searchValues, start_date: e.target.value })}  
+          className="form-input"  
+        />  
+      </div>  
 
-          <div className="form-field">
-            <label className="form-label">إلى تاريخ</label>
-            <input
-              type="date"
-              value={searchValues.end_date}
-              onChange={e => setSearchValues({ ...searchValues, end_date: e.target.value })}
-              className="form-input"
-            />
-          </div>
+      <div className="form-field">  
+        <label className="form-label">إلى تاريخ</label>  
+        <input  
+          type="date"  
+          value={searchValues.end_date}  
+          onChange={e => setSearchValues({ ...searchValues, end_date: e.target.value })}  
+          className="form-input"  
+        />  
+      </div>  
 
-            <div className="form-field">
-            <label className="form-label">الحالة</label>
-            <select
-              value={searchValues.status}
-              onChange={e => setSearchValues({ ...searchValues, status: e.target.value })}
-              className="form-select"
-            >
-              <option value="">الكل</option>
-              <option value="pending">معلق</option>
-              <option value="confirmed">مؤكد</option>
-              <option value="cancelled">ملغي</option>
-              <option value="rescheduled">معاد جدولته</option>
-              <option value="completed">مكتمل</option>
-              <option value="absent">متغيب</option>
-             </select>
-             </div>
-          
-        </div>
+        <div className="form-field">  
+        <label className="form-label">الحالة</label>  
+        <select  
+          value={searchValues.status}  
+          onChange={e => setSearchValues({ ...searchValues, status: e.target.value })}  
+          className="form-select"  
+        >  
+          <option value="">الكل</option>  
+          <option value="pending">معلق</option>  
+          <option value="confirmed">مؤكد</option>  
+          <option value="cancelled">ملغي</option>  
+          <option value="rescheduled">معاد جدولته</option>  
+          <option value="completed">مكتمل</option>  
+          <option value="absent">متغيب</option>  
+         </select>  
+         </div>  
+        
+    </div>  
 
-        <div className="form-actions">
-          <button
-            type="button"
-            onClick={() => {
-              setSearchValues({ full_name: '', phone: '', status: '', start_date: '', end_date: '' });
-              setCurrentPageState(1);
-              handleFetch(1);
-            }}
-            className="btn btn--secondary"
-          >
-            مسح البحث
-          </button>
-          <button
-            type="button"
-            onClick={handleSearch}
-            disabled={isSearching}
-            className={`btn btn--primary ${isSearching ? 'btn--disabled' : ''}`}
-          >
-            {isSearching ? 'جاري البحث...' : 'بحث'}
-          </button>
-        </div>
-      </div>
+    <div className="form-actions">  
+      <button  
+        type="button"  
+        onClick={() => {  
+          setSearchValues({ full_name: '', phone: '', status: '', start_date: '', end_date: '' });  
+          setCurrentPageState(1);  
+          handleFetch(1);  
+        }}  
+        className="btn btn--secondary"  
+      >  
+        مسح البحث  
+      </button>  
+      <button  
+        type="button"  
+        onClick={handleSearch}  
+        disabled={isSearching}  
+        className={`btn btn--primary ${isSearching ? 'btn--disabled' : ''}`}  
+      >  
+        {isSearching ? 'جاري البحث...' : 'بحث'}  
+      </button>  
+    </div>  
+  </div>  
 
-      <div className="appointments__actions">
-        <div 
-          style={{ 
-            width: '44px', 
-            height: '44px', 
-            minWidth: '44px', 
-            minHeight: '44px',
-            flexShrink: 0,
-            flexGrow: 0,
-            display: 'inline-block',
-          }}
-        >
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}
-            style={{
-              width: '100% !important',
-              height: '100% !important',
-              minWidth: '100%',
-              minHeight: '100%',
-              padding: 0,
-              margin: 0,
-              boxSizing: 'border-box',
-            }}
-            disabled={isRefreshing}
-          >
-            <svg
-              className="refresh-icon-svg"
-              style={{ 
-                width: '24px', 
-                height: '24px',
-                flexShrink: 0,
-              }}
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M23 4v6h-6M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-            </svg>
-          </button>
-        </div>
-      </div>
+  <div className="appointments__actions">  
+    <div   
+      style={{   
+        width: '44px',   
+        height: '44px',   
+        minWidth: '44px',   
+        minHeight: '44px',  
+        flexShrink: 0,  
+        flexGrow: 0,  
+        display: 'inline-block',  
+      }}  
+    >  
+      <button  
+        type="button"  
+        onClick={handleRefresh}  
+        className={`btn btn--refresh ${isRefreshing ? 'is-loading' : ''}`}  
+        style={{  
+          width: '100% !important',  
+          height: '100% !important',  
+          minWidth: '100%',  
+          minHeight: '100%',  
+          padding: 0,  
+          margin: 0,  
+          boxSizing: 'border-box',  
+        }}  
+        disabled={isRefreshing}  
+      >  
+        <svg  
+          className="refresh-icon-svg"  
+          style={{   
+            width: '24px',   
+            height: '24px',  
+            flexShrink: 0,  
+          }}  
+          xmlns="http://www.w3.org/2000/svg"  
+          fill="none"  
+          viewBox="0 0 24 24"  
+          stroke="currentColor"  
+          strokeWidth="2.5"  
+          strokeLinecap="round"  
+          strokeLinejoin="round"  
+        >  
+          <path d="M23 4v6h-6M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />  
+        </svg>  
+      </button>  
+    </div>  
+  </div>  
 
-      {appointments.length === 0 ? (
-        <div className="no-appointments">
-          لا توجد نتائج مطابقة للبحث
-        </div>
-      ) : (
-        <div className="appointments-table-wrapper">
-          <div className="table-container">
-            <table className="appointments-table">
-              <thead>
-                <tr>
-                  <th>الاسم</th>
-                  <th>التليفون</th>
-                  <th>التاريخ</th>
-                  <th>الوقت</th>
-                  <th>السبب</th>
-                  <th>الحالة</th>
-                  <th>إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.map(appt => {
-                  const isEditing = editingId === appt.id;
-                  const formId = `form-${appt.id}`;
-                  const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
-                  const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
-                  const hasChanges =
-                   formValues.full_name !== originalValues.full_name ||
-                   formValues.phone !== originalValues.phone ||
-                   formValues.date !== originalValues.date ||
-                   formValues.time !== originalValues.time ||
-                   formValues.status !== originalValues.status;
+  {appointments.length === 0 ? (  
+    <div className="no-appointments">  
+      لا توجد نتائج مطابقة للبحث  
+    </div>  
+  ) : (  
+    <div className="appointments-table-wrapper">  
+      <div className="table-container">  
+        <table className="appointments-table">  
+          <thead>  
+            <tr>  
+              <th>الاسم</th>  
+              <th>التليفون</th>  
+              <th>التاريخ</th>  
+              <th>الوقت</th>  
+              <th>السبب</th>  
+              <th>الحالة</th>  
+              <th>إجراءات</th>  
+            </tr>  
+          </thead>  
+          <tbody>  
+            {appointments.map(appt => {  
+              const isEditing = editingId === appt.id;  
+              const formId = `form-${appt.id}`;  
+              const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);  
+              const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];  
+              const hasChanges =  
+               formValues.full_name !== originalValues.full_name ||  
+               formValues.phone !== originalValues.phone ||  
+               formValues.date !== originalValues.date ||  
+               formValues.time !== originalValues.time ||  
+               formValues.status !== originalValues.status;  
 
-                  return (
-                    <tr key={appt.id} className={`appointment-row ${isEditing ? 'appointment-row--editing' : ''}`}>
-                      <td>
-                        {isEditing ? (
-                          <div className="input-wrapper">
-                            <input
-                              type="text"
-                              name="full_name"
-                              form={formId}
-                              value={formValues.full_name || ''}
-                              onChange={e => {
-                                setFormValues({ ...formValues, full_name: e.target.value });
-                                setFormErrors(prev => ({ ...prev, full_name: '' }));
-                              }}
-                              placeholder="الاسم الكامل"
-                              className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}
-                            />
-                            {formErrors.full_name && (
-                              <span className="form-error">{formErrors.full_name}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="cell-content">{appt.full_name || '—'}</span>
-                        )}
-                      </td>
+              return (  
+                <tr key={appt.id} className={`appointment-row ${isEditing ? 'appointment-row--editing' : ''}`}>  
+                  <td>  
+                    {isEditing ? (  
+                      <div className="input-wrapper">  
+                        <input  
+                          type="text"  
+                          name="full_name"  
+                          form={formId}  
+                          value={formValues.full_name || ''}  
+                          onChange={e => {  
+                            setFormValues({ ...formValues, full_name: e.target.value });  
+                            setFormErrors(prev => ({ ...prev, full_name: '' }));  
+                          }}  
+                          placeholder="الاسم الكامل"  
+                          className={`form-input ${formErrors.full_name ? 'form-input--error' : ''}`}  
+                        />  
+                        {formErrors.full_name && (  
+                          <span className="form-error">{formErrors.full_name}</span>  
+                        )}  
+                      </div>  
+                    ) : (  
+                      <span className="cell-content">{appt.full_name || '—'}</span>  
+                    )}  
+                  </td>  
 
-                      <td>
-                        {isEditing ? (
-                          <div className="input-wrapper">
-                            <input
-                              type="tel"
-                              name="phone"
-                              form={formId}
-                              value={formValues.phone || ''}
-                              onChange={e => {
-                                setFormValues({ ...formValues, phone: e.target.value });
-                                setFormErrors(prev => ({ ...prev, phone: '' }));
-                              }}
-                              placeholder="01xxxxxxxxx"
-                              className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}
-                            />
-                            {formErrors.phone && (
-                              <span className="form-error">{formErrors.phone}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="cell-content">{appt.phone || '—'}</span>
-                        )}
-                      </td>
+                  <td>  
+                    {isEditing ? (  
+                      <div className="input-wrapper">  
+                        <input  
+                          type="tel"  
+                          name="phone"  
+                          form={formId}  
+                          value={formValues.phone || ''}  
+                          onChange={e => {  
+                            setFormValues({ ...formValues, phone: e.target.value });  
+                            setFormErrors(prev => ({ ...prev, phone: '' }));  
+                          }}  
+                          placeholder="01xxxxxxxxx"  
+                          className={`form-input ${formErrors.phone ? 'form-input--error' : ''}`}  
+                        />  
+                        {formErrors.phone && (  
+                          <span className="form-error">{formErrors.phone}</span>  
+                        )}  
+                      </div>  
+                    ) : (  
+                      <span className="cell-content">{appt.phone || '—'}</span>  
+                    )}  
+                  </td>  
 
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="date"
-                            form={formId}
-                            value={formValues.date || ''}
-                            onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}
-                            className="form-select"
-                          >
-                            <option value="">اختر تاريخاً</option>
-                            {availableDates.map(d => {
-                              const [iso, label] = d.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
-                            })}
-                          </select>
-                        ) : (
-                          <span className="cell-content">
-                            {formatDateLocal(appt.date_time)}
-                          </span>
-                        )}
-                      </td>
+                  <td>  
+                    {isEditing ? (  
+                      <select  
+                        name="date"  
+                        form={formId}  
+                        value={formValues.date || ''}  
+                        onChange={e => setFormValues({ ...formValues, date: e.target.value, time: '' })}  
+                        className="form-select"  
+                      >  
+                        <option value="">اختر تاريخاً</option>  
+                        {availableDates.map(d => {  
+                          const [iso, label] = d.split('|');  
+                          return <option key={iso} value={iso}>{label}</option>;  
+                        })}  
+                      </select>  
+                    ) : (  
+                      <span className="cell-content">  
+                        {formatDateLocal(appt.date_time)}  
+                      </span>  
+                    )}  
+                  </td>  
 
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="time"
-                            form={formId}
-                            value={formValues.time || ''}
-                            onChange={e => setFormValues({ ...formValues, time: e.target.value })}
-                            className="form-select"
-                          >
-                            <option value="">اختر وقتاً</option>
-                            {availTimes.map(t => {
-                              const [iso, label] = t.split('|');
-                              return <option key={iso} value={iso}>{label}</option>;
-                            })}
-                          </select>
-                        ) : (
-                          <span className="cell-content">
-                            {formatTimeLocal(appt.date_time)}
-                          </span>
-                        )}
-                      </td>
+                  <td>  
+                    {isEditing ? (  
+                      <select  
+                        name="time"  
+                        form={formId}  
+                        value={formValues.time || ''}  
+                        onChange={e => setFormValues({ ...formValues, time: e.target.value })}  
+                        className="form-select"  
+                      >  
+                        <option value="">اختر وقتاً</option>  
+                        {availTimes.map(t => {  
+                          const [iso, label] = t.split('|');  
+                          return <option key={iso} value={iso}>{label}</option>;  
+                        })}  
+                      </select>  
+                    ) : (  
+                      <span className="cell-content">  
+                        {formatTimeLocal(appt.date_time)}  
+                      </span>  
+                    )}  
+                  </td>  
 
-                      <td>
-                        <span className="cell-content">{appt.reason || '—'}</span>
-                      </td>
+                  <td>  
+                    <span className="cell-content">{appt.reason || '—'}</span>  
+                  </td>  
 
-                      <td>
-                        {isEditing ? (
-                          <select
-                            name="status"
-                            form={formId}
-                            value={formValues.status || 'confirmed'}
-                            onChange={e => setFormValues({ ...formValues, status: e.target.value })}
-                            className={`form-select form-select--status-${formValues.status || 'confirmed'}`}
-                          >
-                            <option value="pending">معلق</option>
-                            <option value="confirmed">مؤكد</option>
-                            <option value="rescheduled">معاد جدولته</option>
-                            <option value="completed">مكتمل</option>
-                            <option value="cancelled">ملغي</option>
-                            <option value="absent">متغيب</option>
-                          </select>
-                        ) : (
-                          <span className={`status-badge status-badge--${appt.status || 'confirmed'}`}>
-                            {getStatusText(appt.status)}
-                          </span>
-                        )}
-                      </td>
+                  <td>  
+                    {isEditing ? (  
+                      <select  
+                        name="status"  
+                        form={formId}  
+                        value={formValues.status || 'confirmed'}  
+                        onChange={e => setFormValues({ ...formValues, status: e.target.value })}  
+                        className={`form-select form-select--status-${formValues.status || 'confirmed'}`}  
+                      >  
+                        <option value="pending">معلق</option>  
+                        <option value="confirmed">مؤكد</option>  
+                        <option value="rescheduled">معاد جدولته</option>  
+                        <option value="completed">مكتمل</option>  
+                        <option value="cancelled">ملغي</option>  
+                        <option value="absent">متغيب</option>  
+                      </select>  
+                    ) : (  
+                      <span className={`status-badge status-badge--${appt.status || 'confirmed'}`}>  
+                        {getStatusText(appt.status)}  
+                      </span>  
+                    )}  
+                  </td>  
 
-                      <td className="actions-cell">
-                        {isEditing ? (
-                          <div className="edit-actions">
-                            <button
-                              type="submit"
-                              form={formId}
-                              disabled={isSubmitting || !hasChanges}
-                              className={`btn btn--save ${(isSubmitting || !hasChanges) ? 'btn--disabled' : ''}`}
-                            >
-                              {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
-                            </button>
+                  <td className="actions-cell">  
+                    {isEditing ? (  
+                      <div className="edit-actions">  
+                        <button  
+                          type="submit"  
+                          form={formId}  
+                          disabled={isSubmitting || !hasChanges}  
+                          className={`btn btn--save ${(isSubmitting || !hasChanges) ? 'btn--disabled' : ''}`}  
+                        >  
+                          {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}  
+                        </button>  
 
-                            <button
-                              type="button"
-                              onClick={() => toggleEdit(appt.id, appt)}
-                              className="btn btn--cancel"
-                            >
-                              رجوع
-                            </button>
-                          </div>
-                        ) : (() => {
-                                const nowZoned = toZonedTime(new Date(), tz);
+                        <button  
+                          type="button"  
+                          onClick={() => toggleEdit(appt.id, appt)}  
+                          className="btn btn--cancel"  
+                        >  
+                          رجوع  
+                        </button>  
+                      </div>  
+                    ) : (() => {  
+                            const nowZoned = toZonedTime(new Date(), tz);  
 
-                                const apptZoned = appt.date_time
-                                ? toZonedTime(appt.date_time, tz)
-                                : null;
+                            const apptZoned = appt.date_time  
+                            ? toZonedTime(appt.date_time, tz)  
+                            : null;  
 
-                                const isPast = apptZoned
-                                ? apptZoned.getTime() < nowZoned.getTime()
-                                : false;
+                            const isPast = apptZoned  
+                            ? apptZoned.getTime() < nowZoned.getTime()  
+                            : false;  
 
-                                const isLockedStatus = ['cancelled', 'completed', 'absent'].includes(appt.status || '');
+                            const isLockedStatus = ['cancelled', 'completed', 'absent'].includes(appt.status || '');  
 
-                                const isDisabled = isPast || isLockedStatus;
+                            const isDisabled = isPast || isLockedStatus;  
 
-                                return (
-                              <button
-                               type="button"
-                               onClick={() => !isDisabled && toggleEdit(appt.id, appt)}
-                               className={`btn btn--edit ${isDisabled ? 'btn--disabled' : ''}`}
-                               disabled={isDisabled}
-                               >
-                                  تعديل
-                              </button>
-                              );
-                             })()}
-                    
+                            return (  
+                          <button  
+                           type="button"  
+                           onClick={() => !isDisabled && toggleEdit(appt.id, appt)}  
+                           className={`btn btn--edit ${isDisabled ? 'btn--disabled' : ''}`}  
+                           disabled={isDisabled}  
+                           >  
+                              تعديل  
+                          </button>  
+                          );  
+                         })()}  
+                  
 
-                        <form id={formId} action={handleUpdate} className="form--hidden">
-                          <input type="hidden" name="appointment_id" value={appt.id} />
-                        </form>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                    <form id={formId} action={handleUpdate} className="form--hidden">  
+                      <input type="hidden" name="appointment_id" value={appt.id} />  
+                    </form>  
+                  </td>  
+                </tr>  
+              );  
+            })}  
+          </tbody>  
+        </table>  
+      </div>  
+    </div>  
+  )}  
 
-      {/* الـ Pagination */}
-      {totalCountState > 0 && (
-        <div className="pagination-container">
-          <div className="pagination">
-            <button
-              className="pagination-btn"
-              disabled={currentPageState === 1}
-              onClick={() => changePage(1)}
-            >
-              الأولى
-            </button>
+  {/* الـ Pagination */}  
+  {totalCountState > 0 && (  
+    <div className="pagination-container">  
+      <div className="pagination">  
+        <button  
+          className="pagination-btn"  
+          disabled={currentPageState === 1}  
+          onClick={() => changePage(1)}  
+        >  
+          الأولى  
+        </button>  
 
-            <button
-              className="pagination-btn"
-              disabled={currentPageState === 1}
-              onClick={() => changePage(currentPageState - 1)}
-            >
-              السابق
-            </button>
+        <button  
+          className="pagination-btn"  
+          disabled={currentPageState === 1}  
+          onClick={() => changePage(currentPageState - 1)}  
+        >  
+          السابق  
+        </button>  
 
-            {startPage > 1 && (
-              <>
-                <button
-                  className="pagination-btn"
-                  onClick={() => changePage(1)}
-                >
-                  1
-                </button>
-                {startPage > 2 && <span className="pagination-ellipsis">...</span>}
-              </>
-            )}
+        {startPage > 1 && (  
+          <>  
+            <button  
+              className="pagination-btn"  
+              onClick={() => changePage(1)}  
+            >  
+              1  
+            </button>  
+            {startPage > 2 && <span className="pagination-ellipsis">...</span>}  
+          </>  
+        )}  
 
-            {pages.map(p => (
-              <button
-                key={p}
-                className={`pagination-btn ${p === currentPageState ? 'active' : ''}`}
-                onClick={() => changePage(p)}
-              >
-                {p}
-              </button>
-            ))}
+        {pages.map(p => (  
+          <button  
+            key={p}  
+            className={`pagination-btn ${p === currentPageState ? 'active' : ''}`}  
+            onClick={() => changePage(p)}  
+          >  
+            {p}  
+          </button>  
+        ))}  
 
-            {endPage < totalPages && (
-              <>
-                {endPage < totalPages - 1 && <span className="pagination-ellipsis">...</span>}
-                <button
-                  className="pagination-btn"
-                  onClick={() => changePage(totalPages)}
-                >
-                  {totalPages}
-                </button>
-              </>
-            )}
+        {endPage < totalPages && (  
+          <>  
+            {endPage < totalPages - 1 && <span className="pagination-ellipsis">...</span>}  
+            <button  
+              className="pagination-btn"  
+              onClick={() => changePage(totalPages)}  
+            >  
+              {totalPages}  
+            </button>  
+          </>  
+        )}  
 
-            <button
-              className="pagination-btn"
-              disabled={currentPageState === totalPages}
-              onClick={() => changePage(currentPageState + 1)}
-            >
-              التالي
-            </button>
+        <button  
+          className="pagination-btn"  
+          disabled={currentPageState === totalPages}  
+          onClick={() => changePage(currentPageState + 1)}  
+        >  
+          التالي  
+        </button>  
 
-            <button
-              className="pagination-btn"
-              disabled={currentPageState === totalPages}
-              onClick={() => changePage(totalPages)}
-            >
-              الأخيرة
-            </button>
-          </div>
+        <button  
+          className="pagination-btn"  
+          disabled={currentPageState === totalPages}  
+          onClick={() => changePage(totalPages)}  
+        >  
+          الأخيرة  
+        </button>  
+      </div>  
 
-          <div className="pagination-info">
-            عرض {(currentPageState - 1) * pageSize + 1} – {Math.min(currentPageState * pageSize, totalCountState)} من أصل {totalCountState} موعد
-          </div>
-        </div>
-      )}
+      <div className="pagination-info">  
+        عرض {(currentPageState - 1) * pageSize + 1} – {Math.min(currentPageState * pageSize, totalCountState)} من أصل {totalCountState} موعد  
+      </div>  
+    </div>  
+  )}  
 
-      {toast && (
-       <div className="toast">
-      {toast}
-       </div>
-      )}
-    </>
-  );
-  }
+  {toast && (  
+   <div className="toast">  
+  {toast}  
+   </div>  
+  )}  
+</>
+
+);
+}
+
