@@ -86,11 +86,26 @@ export async function updateAppointment(formData: FormData, businessTimezone: st
     const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd');
     const targetTimeOnly = format(targetDateLocal, 'HH:mm');
 
-    const { data: existing, error } = await supabaseServer
-      .from('appointments')
-      .select('id, status, date_time')
-      .gte('date_time', `${targetDateOnly}T00:00:00Z`)
-      .lt('date_time', `${targetDateOnly}T23:59:59Z`);
+    const startLocal = parse(
+  `${targetDateOnly} 00:00:00`,
+  'yyyy-MM-dd HH:mm:ss',
+  new Date()
+);
+
+const endLocal = parse(
+  `${targetDateOnly} 23:59:59`,
+  'yyyy-MM-dd HH:mm:ss',
+  new Date()
+);
+
+const startUTC = fromZonedTime(startLocal, businessTimezone).toISOString();
+const endUTC = fromZonedTime(endLocal, businessTimezone).toISOString();
+
+const { data: existing, error } = await supabaseServer
+  .from('appointments')
+  .select('id, status, date_time')
+  .gte('date_time', startUTC)
+  .lte('date_time', endUTC);
 
     if (error) {
       console.error('خطأ في التحقق من التداخل:', error);
@@ -183,11 +198,26 @@ export async function insertAppointment(formData: FormData, businessTimezone: st
     const targetDateOnly = format(targetDateLocal, 'yyyy-MM-dd');
     const targetTimeOnly = format(targetDateLocal, 'HH:mm');
 
-    const { data: existing, error } = await supabaseServer
-      .from('appointments')
-      .select('id, status, date_time')
-      .gte('date_time', `${targetDateOnly}T00:00:00Z`)
-      .lt('date_time', `${targetDateOnly}T23:59:59Z`);
+    const startLocal = parse(
+  `${targetDateOnly} 00:00:00`,
+  'yyyy-MM-dd HH:mm:ss',
+  new Date()
+);
+
+const endLocal = parse(
+  `${targetDateOnly} 23:59:59`,
+  'yyyy-MM-dd HH:mm:ss',
+  new Date()
+);
+
+const startUTC = fromZonedTime(startLocal, businessTimezone).toISOString();
+const endUTC = fromZonedTime(endLocal, businessTimezone).toISOString();
+
+const { data: existing, error } = await supabaseServer
+  .from('appointments')
+  .select('id, status, date_time')
+  .gte('date_time', startUTC)
+  .lte('date_time', endUTC);
 
     if (error) return { error: 'خطأ في التحقق من توفر الموعد' };
 
@@ -294,11 +324,19 @@ export async function fetchTodayAppointments(
   const todayDate = format(zonedNow, 'yyyy-MM-dd');
 
   // بداية اليوم في تايمزون النشاط
-  const todayStartLocal = new Date(`${todayDate}T00:00:00`);
+  const todayStartLocal = parse(
+  `${todayDate} 00:00:00`,
+  'yyyy-MM-dd HH:mm:ss',
+  new Date()
+);
 
-  // بداية الغد
-  const tomorrowStartLocal = new Date(`${todayDate}T00:00:00`);
-  tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
+const tomorrowStartLocal = parse(
+  `${todayDate} 00:00:00`,
+  'yyyy-MM-dd HH:mm:ss',
+  new Date()
+);
+
+tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
 
   // تحويلهم UTC عشان Supabase
   const todayStart = fromZonedTime(todayStartLocal, businessTimezone).toISOString();
