@@ -55,6 +55,7 @@ export default function TodayAppointmentsTable({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -284,22 +285,27 @@ export default function TodayAppointmentsTable({
 
   // ====================== دوال التحكم ======================
   const toggleEdit = (id: string, appt: Appointment) => {
-    if (editingId === id) {
-      setEditingId(null);
-      setFormValues({});
-      setFormErrors({});
-    } else {
-      setEditingId(id);
-      setFormValues({
-        full_name: appt.full_name || '',
-        phone: appt.phone || '',
-        date: getDateOnly(appt.date_time),
-        time: getTimeOnly(appt.date_time),
-        status: appt.status || 'confirmed',
-      });
-      setFormErrors({});
-    }
-  };
+  if (editingId === id) {
+    setEditingId(null);
+    setFormValues({});
+    setOriginalValues({});
+    setFormErrors({});
+  } else {
+
+    const values = {
+      full_name: appt.full_name || '',
+      phone: appt.phone || '',
+      date: getDateOnly(appt.date_time),
+      time: getTimeOnly(appt.date_time),
+      status: appt.status || 'confirmed',
+    };
+
+    setEditingId(id);
+    setFormValues(values);
+    setOriginalValues(values); // 🔥 حفظ القيم الأصلية
+    setFormErrors({});
+  }
+};
 
   const toggleAdd = () => {
     if (isAdding) {
@@ -666,6 +672,12 @@ export default function TodayAppointmentsTable({
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
+                  const hasChanges =
+                   formValues.full_name !== originalValues.full_name ||
+                   formValues.phone !== originalValues.phone ||
+                   formValues.date !== originalValues.date ||
+                   formValues.time !== originalValues.time ||
+                   formValues.status !== originalValues.status;
 
                   return (
                     <tr
@@ -807,13 +819,11 @@ export default function TodayAppointmentsTable({
                         {isEditing ? (
                           <div className="edit-actions">
                             <button
-                              type="submit"
-                              form={formId}
-                              disabled={isSubmitting}
-                              className={`btn btn--save ${isSubmitting ? 'btn--disabled' : ''}`}
+                             type="submit"
+                             form={formId}
+                             disabled={isSubmitting || !hasChanges}
+                             className={`btn btn--save ${(isSubmitting || !hasChanges) ? 'btn--disabled' : ''}`}
                             >
-                              {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
-                            </button>
 
                             <button
                               type="button"
