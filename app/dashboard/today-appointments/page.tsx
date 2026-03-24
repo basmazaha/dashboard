@@ -3,7 +3,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { supabaseServer } from '@/lib/supabaseServer';
-import AppointmentsTable from '../AppointmentsTable';
+import TodayAppointmentsTable from './TodayAppointmentsTable';
 import { fetchTodayAppointments, getBusinessTimezone } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -58,7 +58,7 @@ export default async function TodayAppointmentsPage({ searchParams }: Props) {
 
   return (
     <div>
-      <AppointmentsTable
+      <TodayAppointmentsTable
         initialAppointments={appointments || []}
         initialOffDays={offDays}
         initialWorkingHours={workingHours || []}
