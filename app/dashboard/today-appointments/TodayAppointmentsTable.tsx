@@ -62,6 +62,7 @@ export default function AppointmentsTable({
   const [toast, setToast] = useState<string | null>(null);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [now, setNow] = useState(() => toZonedTime(new Date(), tz));
 
   useEffect(() => {
   if (toast) {
@@ -69,6 +70,23 @@ export default function AppointmentsTable({
     return () => clearTimeout(t);
   }
 }, [toast]);
+
+  useEffect(() => {
+  if (!nextAppointmentTime) return;
+
+  const delay = nextAppointmentTime - now.getTime();
+
+  if (delay <= 0) {
+    setNow(toZonedTime(new Date(), tz));
+    return;
+  }
+
+  const timer = setTimeout(() => {
+    setNow(toZonedTime(new Date(), tz));
+  }, delay);
+
+  return () => clearTimeout(timer);
+}, [nextAppointmentTime, now, tz]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -155,6 +173,19 @@ export default function AppointmentsTable({
     return ta - tb;
   });
 }, [appointments, tz]);
+
+  const nextAppointmentTime = useMemo(() => {
+  const nowMs = now.getTime();
+
+  const next = sortedAppointments.find(a => {
+    if (!a.date_time) return false;
+    return toZonedTime(a.date_time, tz).getTime() > nowMs;
+  });
+
+  if (!next?.date_time) return null;
+
+  return toZonedTime(next.date_time, tz).getTime();
+}, [sortedAppointments, now, tz]);
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
