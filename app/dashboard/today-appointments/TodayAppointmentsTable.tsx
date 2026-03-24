@@ -8,7 +8,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { format, parse, addMinutes } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
-import { updateAppointment, insertAppointment, fetchAppointments } from './actions';
+import { updateAppointment, insertAppointment, fetchAppointments } from '../actions';
 import { DEFAULT_TIMEZONE } from '@/lib/timezone';
 
 
