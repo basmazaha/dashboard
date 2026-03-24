@@ -669,6 +669,5 @@ display: none;
 /*تنسيق المواعيد الفائتة في جدول مواعيد اليوم*/
 
 .appointment-row--past {
-  opacity: 0.6;
   background: #f8f8f8;
 }
