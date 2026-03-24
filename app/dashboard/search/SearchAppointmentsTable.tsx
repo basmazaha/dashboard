@@ -53,6 +53,7 @@ export default function SearchAppointmentsTable({
   const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formValues, setFormValues] = useState<Record<string, any>>({});
+  const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -255,22 +256,27 @@ export default function SearchAppointmentsTable({
   }, [appointments, editingId, getDateOnly, getTimeOnly, workingHoursByDay]);
 
   const toggleEdit = (id: string, appt: Appointment) => {
-    if (editingId === id) {
-      setEditingId(null);
-      setFormValues({});
-      setFormErrors({});
-    } else {
-      setEditingId(id);
-      setFormValues({
-        full_name: appt.full_name || '',
-        phone: appt.phone || '',
-        date: getDateOnly(appt.date_time),
-        time: getTimeOnly(appt.date_time),
-        status: appt.status || 'confirmed',
-      });
-      setFormErrors({});
-    }
-  };
+  if (editingId === id) {
+    setEditingId(null);
+    setFormValues({});
+    setOriginalValues({});
+    setFormErrors({});
+  } else {
+
+    const values = {
+      full_name: appt.full_name || '',
+      phone: appt.phone || '',
+      date: getDateOnly(appt.date_time),
+      time: getTimeOnly(appt.date_time),
+      status: appt.status || 'confirmed',
+    };
+
+    setEditingId(id);
+    setFormValues(values);
+    setOriginalValues(values); // 🔥 حفظ القيم الأصلية
+    setFormErrors({});
+  }
+};
 
   const getStatusText = (status: string | null) => {
     const map: Record<string, string> = {
@@ -548,6 +554,12 @@ export default function SearchAppointmentsTable({
                   const formId = `form-${appt.id}`;
                   const currentDate = isEditing ? formValues.date : getDateOnly(appt.date_time);
                   const availTimes = isEditing ? getAvailableTimesForDate(currentDate) : [];
+                  const hasChanges =
+                   formValues.full_name !== originalValues.full_name ||
+                   formValues.phone !== originalValues.phone ||
+                   formValues.date !== originalValues.date ||
+                   formValues.time !== originalValues.time ||
+                   formValues.status !== originalValues.status;
 
                   return (
                     <tr key={appt.id} className={`appointment-row ${isEditing ? 'appointment-row--editing' : ''}`}>
@@ -676,8 +688,8 @@ export default function SearchAppointmentsTable({
                             <button
                               type="submit"
                               form={formId}
-                              disabled={isSubmitting}
-                              className={`btn btn--save ${isSubmitting ? 'btn--disabled' : ''}`}
+                              disabled={isSubmitting || !hasChanges}
+                              className={`btn btn--save ${(isSubmitting || !hasChanges) ? 'btn--disabled' : ''}`}
                             >
                               {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
                             </button>
