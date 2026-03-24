@@ -278,3 +278,70 @@ export async function fetchAppointments(
     pageSize,
   };
 }
+
+//دالة مواعيد اليوم
+export async function fetchTodayAppointments(
+  businessTimezone: string,
+  page: number = 1,
+  pageSize: number = 20
+) {
+
+  const zonedNow = toZonedTime(new Date(), businessTimezone);
+
+  const todayDate = format(zonedNow, 'yyyy-MM-dd');
+
+  const startLocal = parse(
+    `${todayDate} 00:00:00`,
+    'yyyy-MM-dd HH:mm:ss',
+    new Date()
+  );
+
+  const endLocal = parse(
+    `${todayDate} 23:59:59`,
+    'yyyy-MM-dd HH:mm:ss',
+    new Date()
+  );
+
+  const todayStart = fromZonedTime(startLocal, businessTimezone).toISOString();
+  const todayEnd   = fromZonedTime(endLocal, businessTimezone).toISOString();
+
+  const from = (page - 1) * pageSize;
+  const to   = from + pageSize - 1;
+
+  const allowedStatuses = ['confirmed', 'pending', 'rescheduled'];
+
+  const { count, error: countError } = await supabaseServer
+    .from('appointments')
+    .select('*', { count: 'exact', head: true })
+    .gte('date_time', todayStart)
+    .lte('date_time', todayEnd)
+    .in('status', allowedStatuses);
+
+  if (countError) {
+    console.error('خطأ في حساب العدد:', countError);
+    return { error: countError.message, appointments: [], totalCount: 0 };
+  }
+
+  const totalCount = count ?? 0;
+
+  const { data, error } = await supabaseServer
+    .from('appointments')
+    .select('id, full_name, date_time, phone, reason, status')
+    .gte('date_time', todayStart)
+    .lte('date_time', todayEnd)
+    .in('status', allowedStatuses)
+    .order('date_time', { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    console.error('خطأ في جلب مواعيد اليوم:', error);
+    return { error: error.message, appointments: [], totalCount: 0 };
+  }
+
+  return {
+    appointments: data ?? [],
+    totalCount,
+    page,
+    pageSize,
+  };
+}
