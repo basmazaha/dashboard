@@ -137,6 +137,8 @@ export default function AppointmentsTable({
   }, [timezone]);
 
   const sortedAppointments = useMemo(() => {
+  const now = toZonedTime(new Date(), tz).getTime();
+
   return [...appointments].sort((a, b) => {
     if (!a.date_time) return 1;
     if (!b.date_time) return -1;
@@ -144,9 +146,15 @@ export default function AppointmentsTable({
     const ta = toZonedTime(a.date_time, tz).getTime();
     const tb = toZonedTime(b.date_time, tz).getTime();
 
+    const aPast = ta < now;
+    const bPast = tb < now;
+
+    // المواعيد القادمة أولاً
+    if (aPast !== bPast) return aPast ? 1 : -1;
+
     return ta - tb;
   });
-}, [appointments, timezone]);
+}, [appointments, tz]);
 
   const availableDates = useMemo(() => {
     const dates: string[] = [];
