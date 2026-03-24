@@ -11,6 +11,15 @@ export default function SidebarNav() {
   return (
     <nav className="sidebar-nav">
       <ul className="nav-list">
+
+        <li>
+          <Link 
+            href="/dashboard" 
+            className={`nav-link ${pathname === '/dashboard' ? 'nav-link--active' : ''}`}
+          >
+            مواعيد اليوم
+          </Link>
+        </li>
         <li>
           <Link 
             href="/dashboard" 
