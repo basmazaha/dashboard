@@ -6,6 +6,7 @@ import { DEFAULT_TIMEZONE, TIMEZONE_LABELS } from '@/lib/timezone';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import SidebarNav from './SidebarNav';
 import SettingsMenu from './SettingsMenu';
+import Link from 'next/link';
 import './dashboard.css';
 
 export const metadata = {
@@ -34,7 +35,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <div className="dashboard-wrapper">
       <header className="dashboard-header">
         <div className="header-container">
-          <h1 className="dashboard-logo">لوحة التحكم</h1>
+          <Link href="/dashboard/today-appointments">
+           <h1 className="dashboard-logo">لوحة التحكم</h1>
+           </Link>
 
           <div className="user-info">
             <div className="current-user-info">
