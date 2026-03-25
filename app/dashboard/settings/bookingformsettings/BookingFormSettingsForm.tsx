@@ -114,24 +114,22 @@ export default function BookingFormSettingsForm({
         </div>
 
         <div className="form-buttons">
-          <button
-            type="submit"
-            className="bookingform-form__submit"
-            disabled={saving || !hasChanges}
-          >
-            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-          </button>
-        </div>
+         <button
+          type="submit"
+          className="bookingform-form__submit"
+          disabled={saving || !hasChanges}
+         >
+           {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+         </button>
 
-        <div>
-          <button
-            type="button"
-            className="btn btn-cancel"
-            onClick={handleBack}
-            disabled={saving}
-          >
-            رجوع
-          </button>
+         <button
+           type="button"
+           className="btn btn-cancel"
+           onClick={handleBack}
+           disabled={saving}
+         >
+          رجوع
+         </button>
         </div>
       </form>
     </>
