@@ -15,7 +15,15 @@ const initialState: FormState = {
   message: '',
 };
 
-const MIN_NOTICE_OPTIONS = [1, 2, 3, 6, 12, 24, 48];
+const MIN_NOTICE_OPTIONS = [
+  { label: '1 ساعة', value: 60 },
+  { label: '2 ساعتان', value: 120 },
+  { label: '3 ساعات', value: 180 },
+  { label: '6 ساعات', value: 360 },
+  { label: '12 ساعة', value: 720 },
+  { label: '24 ساعة', value: 1440 },
+  { label: '48 ساعة', value: 2880 },
+];
 const DAYS_AHEAD_OPTIONS = [7, 15, 30, 60, 90];
 
 interface Props {
@@ -63,9 +71,9 @@ export default function BookingFormSettingsForm({
             className="bookingform-form__select"
             disabled={pending}
           >
-            {MIN_NOTICE_OPTIONS.map((value) => (
-              <option key={value} value={value}>
-                {value} ساعة
+            {MIN_NOTICE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                 {opt.label}
               </option>
             ))}
           </select>
