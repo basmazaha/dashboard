@@ -3,7 +3,6 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { useState } from 'react';
 import { updateBookingFormSettings } from './actions';
 
 type FormState = {
@@ -71,14 +70,13 @@ export default function BookingFormSettingsForm({
           <select
             id="min_booking_notice_minutes"
             name="min_booking_notice_minutes"
-            value={minNotice}
-            onChange={(e) => setMinNotice(Number(e.target.value))}
+            defaultValue={initialMinNotice}
             className="bookingform-form__select"
             disabled={pending}
           >
-            {MIN_NOTICE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                 {opt.label}
+            {MIN_NOTICE_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {value} ساعة
               </option>
             ))}
           </select>
@@ -96,8 +94,7 @@ export default function BookingFormSettingsForm({
           <select
             id="booking_days_ahead"
             name="booking_days_ahead"
-            value={daysAhead}
-            onChange={(e) => setDaysAhead(Number(e.target.value))}
+            defaultValue={initialDaysAhead}
             className="bookingform-form__select"
             disabled={pending}
           >
@@ -120,4 +117,3 @@ export default function BookingFormSettingsForm({
     </>
   );
 }
-
