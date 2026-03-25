@@ -61,4 +61,4 @@ export async function updateBookingFormSettings(
       message: 'حدث خطأ أثناء الحفظ',
     };
   }
-            }
+}
