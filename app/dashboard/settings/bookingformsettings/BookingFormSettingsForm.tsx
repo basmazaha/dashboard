@@ -1,19 +1,13 @@
 // app/dashboard/settings/bookingformsettings/BookingFormSettingsForm.tsx
-
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateBookingFormSettings } from './actions';
 
 type ActionResult<T = unknown> =
   | { success: true; data: T }
   | { success: false; error: string };
-
-interface Props {
-  initialMinNotice: number;
-  initialDaysAhead: number;
-}
 
 const MIN_NOTICE_OPTIONS = [
   { label: '1 ساعة', value: 60 },
@@ -27,32 +21,45 @@ const MIN_NOTICE_OPTIONS = [
 
 const DAYS_AHEAD_OPTIONS = [7, 15, 30, 60, 90];
 
+interface Props {
+  initialMinNotice: number;
+  initialDaysAhead: number;
+}
+
 export default function BookingFormSettingsForm({
   initialMinNotice,
   initialDaysAhead,
 }: Props) {
+  const router = useRouter();
   const [minNotice, setMinNotice] = useState(initialMinNotice);
   const [daysAhead, setDaysAhead] = useState(initialDaysAhead);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // التحقق إذا تم تغيير أي قيمة
+  const hasChanges = minNotice !== initialMinNotice || daysAhead !== initialDaysAhead;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();           // ← مهم جدًا
+    e.preventDefault();
+    if (!hasChanges) return;
+
     setSaving(true);
     setMessage(null);
 
     const formData = new FormData(e.currentTarget);
-
     const result = await updateBookingFormSettings(formData);
 
     if (result.success) {
-      // ← هنا يحدث الحقول تلقائيًا بدون ريفريش (نفس OffDaysSection)
       setMessage({ type: 'success', text: 'تم حفظ الإعدادات بنجاح' });
     } else {
       setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
     }
 
     setSaving(false);
+  };
+
+  const handleBack = () => {
+    router.push('/dashboard/settings');
   };
 
   return (
@@ -106,13 +113,24 @@ export default function BookingFormSettingsForm({
           </select>
         </div>
 
-        <button
-          type="submit"
-          className="bookingform-form__submit"
-          disabled={saving}
-        >
-          {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-        </button>
+        <div className="form-buttons">
+          <button
+            type="submit"
+            className="bookingform-form__submit"
+            disabled={saving || !hasChanges}
+          >
+            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-cancel"
+            onClick={handleBack}
+            disabled={saving}
+          >
+            رجوع
+          </button>
+        </div>
       </form>
     </>
   );
