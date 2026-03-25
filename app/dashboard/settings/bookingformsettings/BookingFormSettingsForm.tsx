@@ -82,11 +82,11 @@ export default function BookingFormSettingsForm({
             className="bookingform-form__select"
             disabled={pending}
           >
-            {MIN_NOTICE_OPTIONS.map((value) => (
-              <option key={value} value={value}>
-                {value} ساعة
-              </option>
-            ))}
+            {MIN_NOTICE_OPTIONS.map((opt) => (
+             <option key={opt.value} value={opt.value}>
+               {opt.label}
+             </option>
+           ))}
           </select>
         </div>
 
