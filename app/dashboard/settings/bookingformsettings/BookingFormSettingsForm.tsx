@@ -1,5 +1,3 @@
-// app/dashboard/settings/bookingformsettings/BookingFormSettingsForm.tsx
-
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
@@ -35,9 +33,6 @@ export default function BookingFormSettingsForm({
   initialMinNotice,
   initialDaysAhead,
 }: Props) {
-
-  const [minNotice, setMinNotice] = useState(initialMinNotice);
-  const [daysAhead, setDaysAhead] = useState(initialDaysAhead);
   const [state, formAction] = useFormState(
     updateBookingFormSettings,
     initialState
