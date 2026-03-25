@@ -4,21 +4,17 @@
 import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 
-export type FormState = {
-  success: boolean;
-  message: string;
-};
+type ActionResult<T = unknown> =
+  | { success: true; data: T }
+  | { success: false; error: string };
 
-export async function updateTimezone(
-  prevState: FormState,
-  formData: FormData
-): Promise<FormState> {
+export async function updateTimezone(formData: FormData): Promise<ActionResult<null>> {
   const newTz = formData.get('timezone') as string;
 
   if (!newTz || !newTz.trim()) {
     return {
       success: false,
-      message: 'يرجى اختيار منطقة زمنية صالحة',
+      error: 'يرجى اختيار منطقة زمنية صالحة',
     };
   }
 
@@ -31,25 +27,19 @@ export async function updateTimezone(
       })
       .eq('id', 1);
 
-    if (error) {
-      console.error('Supabase update error:', error);
-      return {
-        success: false,
-        message: error.message || 'فشل في تحديث الإعدادات',
-      };
-    }
+    if (error) throw error;
 
     revalidatePath('/dashboard/settings/timezone');
 
     return {
       success: true,
-      message: 'تم حفظ المنطقة الزمنية بنجاح',
+      data: null,
     };
   } catch (err: any) {
-    console.error('Unexpected error:', err);
+    console.error('updateTimezone error:', err);
     return {
       success: false,
-      message: 'حدث خطأ أثناء المحاولة، حاول مرة أخرى',
+      error: err.message || 'حدث خطأ أثناء حفظ المنطقة الزمنية',
     };
   }
 }
