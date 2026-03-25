@@ -74,7 +74,7 @@
   margin-top:10px;
 }
 
-.btn-cancel{
+.btn-back{
   padding: 0.875rem;
   font-size: 1rem;
   font-weight: 600;
@@ -86,12 +86,12 @@
   transition: all .2s ease;
 }
 
-.btn-cancel:hover{
+.btn-back:hover{
   transform: translateY(-1px);
   box-shadow:0 6px 16px rgba(239,68,68,.35);
 }
 
-.btn-cancel:disabled{
+.btn-back:disabled{
   opacity:.6;
   cursor:not-allowed;
 }
