@@ -10,6 +10,7 @@
   padding: 2rem 1rem;
   direction: rtl;
   text-align: right;
+  font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
 }
 
 .timezone-page__container {
