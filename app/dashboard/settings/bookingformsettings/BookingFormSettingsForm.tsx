@@ -1,14 +1,14 @@
 // app/dashboard/settings/bookingformsettings/BookingFormSettingsForm.tsx
 
+
 'use client';
 
 import { useState } from 'react';
 import { updateBookingFormSettings } from './actions';
 
-type FormState = {
-  success: boolean;
-  message: string;
-};
+type ActionResult<T = unknown> =
+  | { success: true; data: T }
+  | { success: false; error: string };
 
 interface Props {
   initialMinNotice: number;
@@ -36,20 +36,20 @@ export default function BookingFormSettingsForm({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();           // ← مهم جدًا
     setSaving(true);
     setMessage(null);
 
-    const result = await updateBookingFormSettings({ success: false, message: '' }, formData); // أو عدّل الـ action ليأخذ prevState
+    const formData = new FormData(e.currentTarget);
+
+    const result = await updateBookingFormSettings(formData);
 
     if (result.success) {
-      // تحديث الحالة المحلية فورًا (هذا هو الجزء المهم)
-      setMinNotice(Number(formData.get('min_booking_notice_minutes')));
-      setDaysAhead(Number(formData.get('booking_days_ahead')));
-
+      // ← هنا يحدث الحقول تلقائيًا بدون ريفريش (نفس OffDaysSection)
       setMessage({ type: 'success', text: 'تم حفظ الإعدادات بنجاح' });
     } else {
-      setMessage({ type: 'error', text: result.message || 'حدث خطأ أثناء الحفظ' });
+      setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
     }
 
     setSaving(false);
@@ -63,7 +63,7 @@ export default function BookingFormSettingsForm({
         </div>
       )}
 
-      <form action={handleSubmit} className="bookingform-form">
+      <form onSubmit={handleSubmit} className="bookingform-form">
         {/* أقل وقت للحجز */}
         <div className="bookingform-form__group">
           <label htmlFor="min_booking_notice_minutes" className="bookingform-form__label">
@@ -72,7 +72,7 @@ export default function BookingFormSettingsForm({
           <select
             id="min_booking_notice_minutes"
             name="min_booking_notice_minutes"
-            value={minNotice}           // ← غيّرنا من defaultValue إلى value
+            value={minNotice}
             onChange={(e) => setMinNotice(Number(e.target.value))}
             className="bookingform-form__select"
             disabled={saving}
@@ -93,7 +93,7 @@ export default function BookingFormSettingsForm({
           <select
             id="booking_days_ahead"
             name="booking_days_ahead"
-            value={daysAhead}           // ← غيّرنا من defaultValue إلى value
+            value={daysAhead}
             onChange={(e) => setDaysAhead(Number(e.target.value))}
             className="bookingform-form__select"
             disabled={saving}
