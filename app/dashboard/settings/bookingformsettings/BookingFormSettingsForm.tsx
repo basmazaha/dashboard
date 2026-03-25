@@ -4,6 +4,8 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { updateBookingFormSettings } from './actions';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 type FormState = {
   success: boolean;
@@ -44,6 +46,13 @@ export default function BookingFormSettingsForm({
   );
 
   const { pending } = useFormStatus();
+  const router = useRouter();
+
+  useEffect(() => {
+  if (state.success) {
+    router.refresh();
+  }
+}, [state.success, router]);
 
   return (
     <>
