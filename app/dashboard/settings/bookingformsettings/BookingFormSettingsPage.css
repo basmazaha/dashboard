@@ -66,3 +66,30 @@
 .bookingform-message.error {
   color: #991b1b;
 }
+
+
+.form-buttons{
+  display:flex;
+  gap:12px;
+  margin-top:10px;
+}
+
+.btn-cancel{
+  padding:0.875rem 1.2rem;
+  font-size:0.95rem;
+  background:#f3f4f6;
+  border:1px solid #d1d5db;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.btn-cancel:hover{
+  background:#e5e7eb;
+}
+
+.bookingform-form__submit:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+  box-shadow:none;
+  transform:none;
+}
