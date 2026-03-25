@@ -33,6 +33,9 @@ export default function BookingFormSettingsForm({
   initialDaysAhead,
 }: Props) {
 
+  // مفتاح لإعادة تهيئة النموذج بعد التحديث الناجح
+  const [formKey, setFormKey] = useState(0);
+
   const [minNotice, setMinNotice] = useState(initialMinNotice);
   const [daysAhead, setDaysAhead] = useState(initialDaysAhead);
 
@@ -40,15 +43,18 @@ export default function BookingFormSettingsForm({
 
   const { pending } = useFormStatus();
 
-  // تحديث القيم في الـ state بعد نجاح عملية الحفظ
+  // عند نجاح التحديث → نزيد المفتاح → يعاد تهيئة المكون
   useEffect(() => {
-    if (state.success) {
-      if (state.minNotice !== undefined) {
-        setMinNotice(state.minNotice);
-      }
-      if (state.daysAhead !== undefined) {
-        setDaysAhead(state.daysAhead);
-      }
+    if (state.success && state.minNotice && state.daysAhead) {
+      setMinNotice(state.minNotice);
+      setDaysAhead(state.daysAhead);
+      
+      // إعادة تهيئة النموذج بعد تحديث القيم
+      const timer = setTimeout(() => {
+        setFormKey(prev => prev + 1);
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
   }, [state.success, state.minNotice, state.daysAhead]);
 
@@ -64,7 +70,11 @@ export default function BookingFormSettingsForm({
         </div>
       )}
 
-      <form action={formAction} className="bookingform-form">
+      <form 
+        key={formKey}   // ← هذا هو الحل الرئيسي
+        action={formAction} 
+        className="bookingform-form"
+      >
         {/* أقل وقت للحجز */}
         <div className="bookingform-form__group">
           <label
