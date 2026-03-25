@@ -4,6 +4,7 @@ import { getWorkingHoursAndOffDays } from './actions';
 import WorkingHoursForm from './WorkingHoursForm';
 import OffDaysSection from './OffDaysSection';
 import type { WorkingHour, OffDay } from './types';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,12 +46,9 @@ export default async function WorkingHoursPage() {
       <WorkingHoursForm initialHours={defaultHours} />
       <OffDaysSection initialOffDays={safeOffDays} />
       <div className="workinghours-buttons">
-          <button
-            type="button"
-            className="btn-back"
-          >
-            رجوع
-          </button>
+          <Link href="/dashboard/settings" className="btn btn-cancel">
+              رجوع
+          </Link>
         </div>
     </div>
   );
