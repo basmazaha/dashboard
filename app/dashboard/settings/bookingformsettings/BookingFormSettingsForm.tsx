@@ -4,8 +4,6 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { updateBookingFormSettings } from './actions';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
 type FormState = {
   success: boolean;
@@ -38,20 +36,14 @@ export default function BookingFormSettingsForm({
   initialDaysAhead,
 }: Props) {
 
-  
+  const [minNotice, setMinNotice] = useState(initialMinNotice);
+  const [daysAhead, setDaysAhead] = useState(initialDaysAhead);
   const [state, formAction] = useFormState(
     updateBookingFormSettings,
     initialState
   );
 
   const { pending } = useFormStatus();
-  const router = useRouter();
-
-  useEffect(() => {
-  if (state.success) {
-    router.refresh();
-  }
-}, [state.success, router]);
 
   return (
     <>
@@ -82,11 +74,11 @@ export default function BookingFormSettingsForm({
             className="bookingform-form__select"
             disabled={pending}
           >
-            {MIN_NOTICE_OPTIONS.map((opt) => (
-             <option key={opt.value} value={opt.value}>
-               {opt.label}
-             </option>
-           ))}
+            {MIN_NOTICE_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {value} ساعة
+              </option>
+            ))}
           </select>
         </div>
 
