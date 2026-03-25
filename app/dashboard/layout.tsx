@@ -35,7 +35,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <div className="dashboard-wrapper">
       <header className="dashboard-header">
         <div className="header-container">
-          <Link href="/dashboard/today-appointments">
+          <Link href="/dashboard/today-appointments" className="dashboard-logo">
            <h1 className="dashboard-logo">لوحة التحكم</h1>
            </Link>
 
