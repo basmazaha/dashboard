@@ -1,38 +1,28 @@
-// app/dashboard/settings/bookingformsettings/page.tsx
-
 import { supabaseServer } from '@/lib/supabaseServer';
 import BookingFormSettingsForm from './BookingFormSettingsForm';
 import './BookingFormSettingsPage.css';
 
 export default async function BookingFormSettingsPage() {
-
-  const { data, error } = await supabaseServer
+  const { data: settings, error } = await supabaseServer
     .from('business_settings')
-    .select(`
-      min_booking_notice_min,
-      min_booking_notice_minutes,
-      booking_days_ahead
-    `)
+    .select('min_booking_notice_minutes, booking_days_ahead')
     .eq('id', 1)
     .single();
 
-  if (error || !data) {
-
-    console.error(error);
+  if (error || !settings) {
+    console.error('Error fetching booking form settings:', error);
 
     return (
-      <div className="booking-page__error">
-        حدث خطأ أثناء تحميل الإعدادات
+      <div className="bookingform-page__error">
+        حدث خطأ أثناء تحميل الإعدادات، حاول مرة أخرى لاحقًا.
       </div>
     );
-
   }
 
   return (
     <BookingFormSettingsForm
-      minBookingNoticeHours={data.min_booking_notice_min ?? 1}
-      minBookingNoticeMinutes={data.min_booking_notice_minutes ?? 1}
-      bookingDaysAhead={data.booking_days_ahead ?? 30}
+      initialMinNotice={settings.min_booking_notice_minutes || 1}
+      initialDaysAhead={settings.booking_days_ahead || 30}
     />
   );
 }
