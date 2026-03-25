@@ -100,7 +100,7 @@ export default function TimezoneForm({ initialTimezone }: Props) {
             onClick={handleBack}
             disabled={saving}
           >
-            رجوع
+            رجــــوع
           </button>
         </div>
       </form>
