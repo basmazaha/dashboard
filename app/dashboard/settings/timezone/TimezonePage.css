@@ -108,6 +108,21 @@
 }
 
 
+.timezone-message {
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+
+.timezone-message.success {
+  color: #065f46;
+}
+
+.timezone-message.error {
+  color: #991b1b;
+}
+
+
 
 .form-buttons{
   display:flex;
