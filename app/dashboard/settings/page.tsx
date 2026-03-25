@@ -25,6 +25,16 @@ export default function SettingsDashboard() {
           </div>
 
           <div className="settings-card">
+            <h2 className="settings-card__title">اعدادات الحجز من الموقع الالكتروني</h2>
+            <p className="settings-card__description">
+              التحكم في عرض الاوقات المتاحة خلال فترة محددة
+            </p>
+            <Link href="/dashboard/settings/timezone" className="settings-card__link">
+              تعديل →
+            </Link>
+          </div>
+
+          <div className="settings-card">
             <h2 className="settings-card__title">المنطقة الزمنية</h2>
             <p className="settings-card__description">
               تحديد التوقيت المحلي الافتراضي للشركة (يؤثر على عرض المواعيد وحساب الأوقات المتاحة).
