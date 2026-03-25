@@ -44,6 +44,16 @@ export default async function WorkingHoursPage() {
     <div style={{ padding: '1.5rem' }}>
       <WorkingHoursForm initialHours={defaultHours} />
       <OffDaysSection initialOffDays={safeOffDays} />
+      <div className="form-buttons">
+          <button
+            type="button"
+            className="btn-back"
+            onClick={handleBack}
+            disabled={saving}
+          >
+            رجوع
+          </button>
+        </div>
     </div>
   );
 }
