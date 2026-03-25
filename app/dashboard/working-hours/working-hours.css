@@ -354,14 +354,17 @@ input[type="number"].form-input::-webkit-inner-spin-button {
 }
 
 .btn-back{
-  padding: 0.875rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(90deg,#ef4444,#dc2626);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0.875rem 1.2rem;
+  font-size:1rem;
+  font-weight:600;
+  color:white;
+  background:linear-gradient(90deg,#ef4444,#dc2626);
+  border-radius:6px;
+  text-decoration:none;
+  cursor:pointer;
   flex: 1;
 }
 
