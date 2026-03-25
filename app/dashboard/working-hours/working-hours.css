@@ -347,6 +347,30 @@ input[type="number"].form-input::-webkit-inner-spin-button {
   }
 }
 
+.workinghours-buttons{
+  display:flex;
+  gap:12px;
+  margin-top:10px;
+}
+
+.btn-back{
+  padding: 0.875rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(90deg,#ef4444,#dc2626);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.btn-back:hover{
+  transform: translateY(-1px);
+  box-shadow:0 6px 16px rgba(239,68,68,.35);
+}
+
+
 @media (max-width: 480px) {
   .section-header h2 {
     font-size: 1.4rem;
