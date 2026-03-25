@@ -1,3 +1,5 @@
+/* app/dashboard/settings/bookingformsettings/page.tsx */
+
 import { supabaseServer } from '@/lib/supabaseServer';
 import BookingFormSettingsForm from './BookingFormSettingsForm';
 import './BookingFormSettingsPage.css';
