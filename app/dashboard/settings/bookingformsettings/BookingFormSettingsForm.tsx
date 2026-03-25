@@ -1,4 +1,5 @@
 // app/dashboard/settings/bookingformsettings/BookingFormSettingsForm.tsx
+
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
@@ -14,89 +15,81 @@ const initialState: FormState = {
   message: '',
 };
 
-const NOTICE_HOURS = [1, 2, 3, 6, 12, 24, 48];
-const NOTICE_MINUTES = [1, 2, 3, 6, 12, 24, 48];
-const BOOKING_DAYS = [7, 15, 30, 60, 90];
+const MIN_NOTICE_OPTIONS = [1, 2, 3, 6, 12, 24, 48];
+const DAYS_AHEAD_OPTIONS = [7, 15, 30, 60, 90];
 
 interface Props {
-  minBookingNoticeHours: number;
-  minBookingNoticeMinutes: number;
-  bookingDaysAhead: number;
+  initialMinNotice: number;
+  initialDaysAhead: number;
 }
 
 export default function BookingFormSettingsForm({
-  minBookingNoticeHours,
-  minBookingNoticeMinutes,
-  bookingDaysAhead,
+  initialMinNotice,
+  initialDaysAhead,
 }: Props) {
-  const [state, formAction] = useFormState(updateBookingFormSettings, initialState);
+  const [state, formAction] = useFormState(
+    updateBookingFormSettings,
+    initialState
+  );
+
   const { pending } = useFormStatus();
 
   return (
     <>
       {state.message && (
-        <div className={`booking-message ${state.success ? 'success' : 'error'}`}>
+        <div
+          className={`bookingform-message ${
+            state.success ? 'success' : 'error'
+          }`}
+        >
           {state.message}
         </div>
       )}
 
-      <form action={formAction} className="booking-form">
-
-        {/* minimum notice hours */}
-        <div className="booking-form__group">
-          <label className="booking-form__label">
-            أقل وقت قبل الحجز (ساعات)
-          </label>
-
-          <select
-            name="min_booking_notice_hours"
-            defaultValue={minBookingNoticeHours}
-            className="booking-form__select"
-            disabled={pending}
+      <form action={formAction} className="bookingform-form">
+        {/* أقل وقت للحجز */}
+        <div className="bookingform-form__group">
+          <label
+            htmlFor="min_booking_notice_minutes"
+            className="bookingform-form__label"
           >
-            {NOTICE_HOURS.map((h) => (
-              <option key={h} value={h}>
-                {h} ساعة
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* minimum notice minutes */}
-        <div className="booking-form__group">
-          <label className="booking-form__label">
-            أقل وقت قبل الحجز (دقائق)
+            أقل وقت قبل الحجز
           </label>
 
           <select
+            id="min_booking_notice_minutes"
             name="min_booking_notice_minutes"
-            defaultValue={minBookingNoticeMinutes}
-            className="booking-form__select"
+            defaultValue={initialMinNotice}
+            className="bookingform-form__select"
             disabled={pending}
           >
-            {NOTICE_MINUTES.map((m) => (
-              <option key={m} value={m}>
-                {m} دقيقة
+            {MIN_NOTICE_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {value} ساعة
               </option>
             ))}
           </select>
         </div>
 
-        {/* booking days ahead */}
-        <div className="booking-form__group">
-          <label className="booking-form__label">
+        {/* عدد الأيام المسموح بالحجز خلالها */}
+        <div className="bookingform-form__group">
+          <label
+            htmlFor="booking_days_ahead"
+            className="bookingform-form__label"
+          >
             السماح بالحجز حتى
           </label>
 
           <select
+            id="booking_days_ahead"
             name="booking_days_ahead"
-            defaultValue={bookingDaysAhead}
-            className="booking-form__select"
+            defaultValue={initialDaysAhead}
+            className="bookingform-form__select"
             disabled={pending}
           >
-            {BOOKING_DAYS.map((d) => (
-              <option key={d} value={d}>
-                {d} يوم
+            {DAYS_AHEAD_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {value} يوم
               </option>
             ))}
           </select>
@@ -104,12 +97,13 @@ export default function BookingFormSettingsForm({
 
         <button
           type="submit"
-          className="booking-form__submit"
+          className="bookingform-form__submit"
           disabled={pending}
         >
-          {pending ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+          {pending ? 'جاري الحفظ...' : 'حفظ التغييرات'}
         </button>
       </form>
     </>
   );
 }
+
