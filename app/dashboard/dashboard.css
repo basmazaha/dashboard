@@ -31,6 +31,7 @@ justify-content: space-between;
 }
 
 .dashboard-logo {
+text-decoration: none;
 font-size: 1.8rem;
 font-weight: 800;
 color: #111827;
