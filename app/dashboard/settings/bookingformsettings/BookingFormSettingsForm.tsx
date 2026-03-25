@@ -38,8 +38,7 @@ export default function BookingFormSettingsForm({
   initialDaysAhead,
 }: Props) {
 
-  const [minNotice, setMinNotice] = useState(initialMinNotice);
-  const [daysAhead, setDaysAhead] = useState(initialDaysAhead);
+  
   const [state, formAction] = useFormState(
     updateBookingFormSettings,
     initialState
