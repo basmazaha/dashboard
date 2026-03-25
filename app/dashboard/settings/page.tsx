@@ -29,7 +29,7 @@ export default function SettingsDashboard() {
             <p className="settings-card__description">
               التحكم في عرض الاوقات المتاحة خلال فترة محددة
             </p>
-            <Link href="/dashboard/settings/timezone" className="settings-card__link">
+            <Link href="/dashboard/settings/bookingformsettings" className="settings-card__link">
               تعديل →
             </Link>
           </div>
