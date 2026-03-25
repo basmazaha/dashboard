@@ -46,6 +46,7 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
+  flex: 1;
 }
 
 .bookingform-form__submit:hover {
@@ -83,7 +84,7 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: all .2s ease;
+  flex: 1;
 }
 
 .btn-back:hover{
