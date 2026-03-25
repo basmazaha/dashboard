@@ -6,6 +6,7 @@
   flex-direction: column;
   gap: 1.5rem;
   direction: rtl;
+  font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
 }
 
 .bookingform-form__group {
