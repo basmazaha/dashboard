@@ -28,7 +28,6 @@ export async function updateBookingFormSettings(
   }
 
   try {
-
     const { error } = await supabaseServer
       .from('business_settings')
       .update({
@@ -40,7 +39,6 @@ export async function updateBookingFormSettings(
 
     if (error) {
       console.error('Supabase update error:', error);
-
       return {
         success: false,
         message: 'فشل حفظ الإعدادات',
@@ -57,9 +55,7 @@ export async function updateBookingFormSettings(
     };
 
   } catch (err) {
-
     console.error(err);
-
     return {
       success: false,
       message: 'حدث خطأ أثناء الحفظ',
