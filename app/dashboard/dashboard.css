@@ -37,8 +37,16 @@ font-weight: 800;
 color: #111827;
 }
 
-.dashboard-logo:hover {
+.dashboard-logo:hover
+.dashboard-logo:focus
+.dashboard-logo:active
+{
   color: #3b82f6;
+}
+
+/* إذا أردت بعد الضغط أن يعود اللون بعد الانتقال */
+.dashboard-logo:focus {
+  outline: none; /* إزالة الإطار الافتراضي للمتصفح */
 }
 
 .user-info {
