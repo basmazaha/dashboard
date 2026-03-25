@@ -8,8 +8,6 @@ import { revalidatePath } from 'next/cache';
 export type FormState = {
   success: boolean;
   message: string;
-  minNotice?: number;
-  daysAhead?: number;
 };
 
 export async function updateBookingFormSettings(
@@ -28,6 +26,7 @@ export async function updateBookingFormSettings(
   }
 
   try {
+
     const { error } = await supabaseServer
       .from('business_settings')
       .update({
@@ -39,6 +38,7 @@ export async function updateBookingFormSettings(
 
     if (error) {
       console.error('Supabase update error:', error);
+
       return {
         success: false,
         message: 'فشل حفظ الإعدادات',
@@ -50,15 +50,15 @@ export async function updateBookingFormSettings(
     return {
       success: true,
       message: 'تم حفظ الإعدادات بنجاح',
-      minNotice,
-      daysAhead,
     };
 
   } catch (err) {
+
     console.error(err);
+
     return {
       success: false,
       message: 'حدث خطأ أثناء الحفظ',
     };
   }
-}
+            }
