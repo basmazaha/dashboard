@@ -1,7 +1,8 @@
 // app/dashboard/settings/timezone/TimezoneForm.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { updateTimezone } from './actions';
 
 type ActionResult<T = unknown> =
@@ -22,27 +23,37 @@ interface Props {
 }
 
 export default function TimezoneForm({ initialTimezone }: Props) {
+  const router = useRouter();
   const [timezone, setTimezone] = useState(initialTimezone);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // التحقق إذا تم تغيير القيمة
+  const hasChanges = timezone !== initialTimezone;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!hasChanges) return;
+
     setSaving(true);
     setMessage(null);
 
     const formData = new FormData(e.currentTarget);
-
     const result = await updateTimezone(formData);
 
     if (result.success) {
       setMessage({ type: 'success', text: 'تم حفظ المنطقة الزمنية بنجاح' });
-      // لا نحتاج لتحديث الـ state هنا لأن القيمة لم تتغير محليًا (تم اختيارها من الـ select)
+      // يمكنك تحديث initialTimezone محليًا إذا أردت
+      // setInitialTimezone(timezone); لكن ليس ضروري هنا
     } else {
       setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
     }
 
     setSaving(false);
+  };
+
+  const handleBack = () => {
+    router.push('/dashboard/settings');
   };
 
   return (
@@ -74,13 +85,24 @@ export default function TimezoneForm({ initialTimezone }: Props) {
           </select>
         </div>
 
-        <button
-          type="submit"
-          className="timezone-form__submit"
-          disabled={saving}
-        >
-          {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-        </button>
+        <div className="form-buttons">
+          <button
+            type="submit"
+            className="timezone-form__submit"
+            disabled={saving || !hasChanges}
+          >
+            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-cancel"
+            onClick={handleBack}
+            disabled={saving}
+          >
+            رجوع
+          </button>
+        </div>
       </form>
     </>
   );
