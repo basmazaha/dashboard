@@ -8,8 +8,6 @@ import { revalidatePath } from 'next/cache';
 export type FormState = {
   success: boolean;
   message: string;
-  minNotice?: number;     // ← أضف هذا
-  daysAhead?: number;
 };
 
 export async function updateBookingFormSettings(
