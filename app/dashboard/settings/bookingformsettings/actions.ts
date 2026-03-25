@@ -1,4 +1,5 @@
 // app/dashboard/settings/bookingformsettings/actions.ts
+
 'use server';
 
 import { supabaseServer } from '@/lib/supabaseServer';
@@ -14,24 +15,30 @@ export async function updateBookingFormSettings(
   formData: FormData
 ): Promise<FormState> {
 
-  const hours = Number(formData.get('min_booking_notice_hours'));
-  const minutes = Number(formData.get('min_booking_notice_minutes'));
+  const minNotice = Number(formData.get('min_booking_notice_minutes'));
   const daysAhead = Number(formData.get('booking_days_ahead'));
+
+  if (!minNotice || !daysAhead) {
+    return {
+      success: false,
+      message: 'البيانات غير صالحة',
+    };
+  }
 
   try {
 
     const { error } = await supabaseServer
       .from('business_settings')
       .update({
-        min_booking_notice_min: hours,
-        min_booking_notice_minutes: minutes,
+        min_booking_notice_minutes: minNotice,
         booking_days_ahead: daysAhead,
         updated_at: new Date().toISOString(),
       })
       .eq('id', 1);
 
     if (error) {
-      console.error(error);
+      console.error('Supabase update error:', error);
+
       return {
         success: false,
         message: 'فشل حفظ الإعدادات',
@@ -51,8 +58,7 @@ export async function updateBookingFormSettings(
 
     return {
       success: false,
-      message: 'حدث خطأ غير متوقع',
+      message: 'حدث خطأ أثناء الحفظ',
     };
-
   }
 }
