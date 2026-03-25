@@ -121,7 +121,9 @@ export default function BookingFormSettingsForm({
           >
             {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
           </button>
+        </div>
 
+        <div>
           <button
             type="button"
             className="btn btn-cancel"
