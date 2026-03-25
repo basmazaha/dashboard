@@ -3,16 +3,8 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { updateBookingFormSettings } from './actions';
-import { useState, useEffect } from 'react';   // ← أضف useEffect
-
-type FormState = {
-  success: boolean;
-  message: string;
-  // يفضل أن ترجع الـ action القيم الجديدة بعد التحديث
-  minNotice?: number;
-  daysAhead?: number;
-};
+import { updateBookingFormSettings, type FormState } from './actions';
+import { useState, useEffect } from 'react';
 
 const initialState: FormState = {
   success: false,
@@ -40,7 +32,7 @@ export default function BookingFormSettingsForm({
   initialMinNotice,
   initialDaysAhead,
 }: Props) {
-  // استخدام state للتحكم في القيم (controlled)
+
   const [minNotice, setMinNotice] = useState(initialMinNotice);
   const [daysAhead, setDaysAhead] = useState(initialDaysAhead);
 
@@ -48,7 +40,7 @@ export default function BookingFormSettingsForm({
 
   const { pending } = useFormStatus();
 
-  // ← الحل المهم: عند نجاح التحديث، نحدث الـ state محلياً
+  // تحديث القيم في الـ state بعد نجاح عملية الحفظ
   useEffect(() => {
     if (state.success) {
       if (state.minNotice !== undefined) {
@@ -63,7 +55,11 @@ export default function BookingFormSettingsForm({
   return (
     <>
       {state.message && (
-        <div className={`bookingform-message ${state.success ? 'success' : 'error'}`}>
+        <div
+          className={`bookingform-message ${
+            state.success ? 'success' : 'error'
+          }`}
+        >
           {state.message}
         </div>
       )}
@@ -71,14 +67,17 @@ export default function BookingFormSettingsForm({
       <form action={formAction} className="bookingform-form">
         {/* أقل وقت للحجز */}
         <div className="bookingform-form__group">
-          <label htmlFor="min_booking_notice_minutes" className="bookingform-form__label">
+          <label
+            htmlFor="min_booking_notice_minutes"
+            className="bookingform-form__label"
+          >
             أقل وقت قبل الحجز
           </label>
 
           <select
             id="min_booking_notice_minutes"
             name="min_booking_notice_minutes"
-            value={minNotice}                    // ← غيرنا إلى value
+            value={minNotice}
             onChange={(e) => setMinNotice(Number(e.target.value))}
             className="bookingform-form__select"
             disabled={pending}
@@ -93,14 +92,17 @@ export default function BookingFormSettingsForm({
 
         {/* عدد الأيام المسموح بالحجز خلالها */}
         <div className="bookingform-form__group">
-          <label htmlFor="booking_days_ahead" className="bookingform-form__label">
+          <label
+            htmlFor="booking_days_ahead"
+            className="bookingform-form__label"
+          >
             السماح بالحجز حتى
           </label>
 
           <select
             id="booking_days_ahead"
             name="booking_days_ahead"
-            value={daysAhead}                    // ← غيرنا إلى value
+            value={daysAhead}
             onChange={(e) => setDaysAhead(Number(e.target.value))}
             className="bookingform-form__select"
             disabled={pending}
