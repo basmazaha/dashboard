@@ -47,7 +47,7 @@ export default async function WorkingHoursPage() {
       <OffDaysSection initialOffDays={safeOffDays} />
       <div className="workinghours-buttons">
       <Link href="/dashboard/settings" className="btn-back">
-        رجوع
+        رجــــوع
       </Link>
     </div>
  </div>
