@@ -5,28 +5,24 @@
 import { supabaseServer } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 
-export type FormState = {
-  success: boolean;
-  message: string;
-};
+type ActionResult<T = unknown> =
+  | { success: true; data: T }
+  | { success: false; error: string };
 
 export async function updateBookingFormSettings(
-  prevState: FormState,
   formData: FormData
-): Promise<FormState> {
-
+): Promise<ActionResult<null>> {
   const minNotice = Number(formData.get('min_booking_notice_minutes'));
   const daysAhead = Number(formData.get('booking_days_ahead'));
 
   if (!minNotice || !daysAhead) {
     return {
       success: false,
-      message: 'البيانات غير صالحة',
+      error: 'البيانات غير صالحة',
     };
   }
 
   try {
-
     const { error } = await supabaseServer
       .from('business_settings')
       .update({
@@ -36,29 +32,19 @@ export async function updateBookingFormSettings(
       })
       .eq('id', 1);
 
-    if (error) {
-      console.error('Supabase update error:', error);
-
-      return {
-        success: false,
-        message: 'فشل حفظ الإعدادات',
-      };
-    }
+    if (error) throw error;
 
     revalidatePath('/dashboard/settings/bookingformsettings');
 
     return {
       success: true,
-      message: 'تم حفظ الإعدادات بنجاح',
+      data: null,
     };
-
-  } catch (err) {
-
-    console.error(err);
-
+  } catch (err: any) {
+    console.error('updateBookingFormSettings error:', err);
     return {
       success: false,
-      message: 'حدث خطأ أثناء الحفظ',
+      error: err.message || 'حدث خطأ أثناء حفظ الإعدادات',
     };
   }
 }
