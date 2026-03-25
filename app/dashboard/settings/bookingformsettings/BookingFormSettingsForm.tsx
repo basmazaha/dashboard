@@ -128,7 +128,7 @@ export default function BookingFormSettingsForm({
            onClick={handleBack}
            disabled={saving}
          >
-          رجوع
+          رجــــوع
          </button>
         </div>
       </form>
