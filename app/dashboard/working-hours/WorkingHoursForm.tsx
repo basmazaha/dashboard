@@ -29,24 +29,27 @@ function normalizeTime(time: string | null): string {
 function formatArabicTime(time: string | null): string {
   if (!time) return '—';
 
-  // نحول الوقت إلى صيغة كاملة إذا كان HH:MM فقط
   let fullTime = time;
+
   if (time.split(':').length === 2) {
     fullTime = `${time}:00`;
   }
 
   try {
     const date = new Date(`2000-01-01T${fullTime}`);
+
     if (isNaN(date.getTime())) return time;
 
-    return date
-      .toLocaleTimeString('ar-EG', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      })
-      .replace('ص', 'صباحاً')
-      .replace('م', 'مساءً');
+    const formatted = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    return formatted
+      .replace('AM', 'صباحاً')
+      .replace('PM', 'مساءً');
+
   } catch {
     return time || '—';
   }
