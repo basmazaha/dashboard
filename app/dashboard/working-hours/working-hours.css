@@ -38,6 +38,12 @@
   flex-wrap: wrap;
 }
 
+.edit-button{
+display:flex;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
 /* الأزرار العامة */
 .btn {
   padding: 0.65rem 1.4rem;
