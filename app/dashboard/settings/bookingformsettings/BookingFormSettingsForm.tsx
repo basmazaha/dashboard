@@ -74,7 +74,7 @@ export default function BookingFormSettingsForm({
         {/* أقل وقت للحجز */}
         <div className="bookingform-form__group">
           <label htmlFor="min_booking_notice_minutes" className="bookingform-form__label">
-            أقل وقت قبل الحجز
+            السماح بالحجز قبل الموعد بمدة لا تقل عن
           </label>
           <select
             id="min_booking_notice_minutes"
@@ -95,7 +95,7 @@ export default function BookingFormSettingsForm({
         {/* عدد الأيام المسموح بالحجز خلالها */}
         <div className="bookingform-form__group">
           <label htmlFor="booking_days_ahead" className="bookingform-form__label">
-            السماح بالحجز حتى
+            السماح بالحجز قبل الموعد بمدة لا تزيد عن
           </label>
           <select
             id="booking_days_ahead"
