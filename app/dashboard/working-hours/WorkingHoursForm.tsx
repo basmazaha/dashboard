@@ -104,7 +104,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
               <th>مفتوح</th>
               <th>من</th>
               <th>إلى</th>
-              <th>مدة الكشف (د)</th>
+              <th>مدة الموعد (د)</th>
               <th>استراحة من</th>
               <th>استراحة إلى</th>
             </tr>
