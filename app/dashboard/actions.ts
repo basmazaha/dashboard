@@ -312,6 +312,22 @@ export async function fetchAppointments(
 // دالة مواعيد اليوم 
 
 
+type AppointmentWithCount = {
+  id: string;
+  full_name: string | null;
+  date_time: string | null;
+  phone: string | null;
+  reason: string | null;
+  status: string | null;
+  total_count: number | null;
+};
+
+/**
+ * جلب مواعيد اليوم مع ترتيب ذكي:
+ * - المواعيد القادمة أولاً
+ * - ثم المواعيد الفائتة (بعد 5 دقائق grace period)
+ * - مع دعم الـ pagination
+ */
 export async function fetchTodayAppointments(
   businessTimezone: string,
   page: number = 1,
@@ -326,41 +342,46 @@ export async function fetchTodayAppointments(
       });
 
     if (error) {
-      console.error('خطأ في جلب المواعيد:', error);
+      console.error('خطأ في RPC fetch_today_appointments:', error);
       return { 
         error: error.message || 'حدث خطأ أثناء جلب المواعيد', 
-        appointments: [], 
+        appointments: [] as Appointment[],
         totalCount: 0 
       };
     }
 
+    // حالة عدم وجود بيانات
     if (!data || data.length === 0) {
       return { 
-        appointments: [], 
+        appointments: [] as Appointment[],
         totalCount: 0,
         page,
         pageSize 
       };
     }
 
+    // استخراج العدد الكلي من أول صف
     const totalCount = Number(data[0]?.total_count ?? 0);
 
-    const appointments = data.map(({ total_count, ...appt }) => appt);
+    // تنظيف البيانات: إزالة حقل total_count
+    const appointments: Appointment[] = data.map((item: AppointmentWithCount) => {
+      const { total_count, ...appointment } = item;
+      return appointment;
+    });
 
     return {
-      appointments: appointments as Appointment[],
+      appointments,
       totalCount,
       page,
       pageSize,
     };
 
   } catch (err: any) {
-    console.error('خطأ غير متوقع:', err);
+    console.error('خطأ غير متوقع في fetchTodayAppointments:', err);
     return { 
-      error: err.message || 'حدث خطأ غير متوقع', 
-      appointments: [], 
+      error: err.message || 'حدث خطأ غير متوقع أثناء جلب المواعيد', 
+      appointments: [] as Appointment[],
       totalCount: 0 
     };
   }
 }
-
