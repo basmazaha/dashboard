@@ -83,6 +83,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [originalHours, setOriginalHours] = useState<WorkingHour[]>(initialHours);
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
   
   const hasChanges = hoursChanged(hours, originalHours);
 
@@ -91,6 +92,13 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     field: keyof WorkingHour,
     value: string | number | boolean | null
   ) => {
+
+    setErrors(prev => {
+  const newErrors = { ...prev };
+  delete newErrors[`${dayOfWeek}_${field}`];
+  return newErrors;
+});
+    
     setHours(prev =>
   prev.map(h => {
     if (h.day_of_week !== dayOfWeek) return h;
@@ -120,11 +128,26 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   if (day.is_open) {
 
     if (!day.start_time || !day.end_time || !day.slot_duration_minutes) {
-      setMessage({
-        type: 'error',
-        text: `يرجى تحديد من وإلى ومدة الموعد ليوم ${DAY_NAMES[day.day_of_week]}`
-      });
-      return;
+
+  const newErrors: Record<string, boolean> = {};
+
+  if (!day.start_time)
+    newErrors[`${day.day_of_week}_start_time`] = true;
+
+  if (!day.end_time)
+    newErrors[`${day.day_of_week}_end_time`] = true;
+
+  if (!day.slot_duration_minutes)
+    newErrors[`${day.day_of_week}_slot_duration_minutes`] = true;
+
+  setErrors(newErrors);
+
+  setMessage({
+    type: 'error',
+    text: `يرجى تحديد من وإلى ومدة الموعد ليوم ${DAY_NAMES[day.day_of_week]}`
+  });
+
+  return;
     }
 
     const start = day.start_time;
@@ -139,19 +162,31 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     }
 
     if (day.break_start && !day.break_end) {
-      setMessage({
-        type: 'error',
-        text: `يرجى تحديد نهاية الاستراحة (${DAY_NAMES[day.day_of_week]})`
-      });
-      return;
+
+  setErrors({
+    [`${day.day_of_week}_break_end`]: true
+  });
+
+  setMessage({
+    type: 'error',
+    text: `يرجى تحديد نهاية الاستراحة (${DAY_NAMES[day.day_of_week]})`
+  });
+
+  return;
     }
 
     if (!day.break_start && day.break_end) {
-      setMessage({
-        type: 'error',
-        text: `يرجى تحديد بداية الاستراحة (${DAY_NAMES[day.day_of_week]})`
-      });
-      return;
+
+  setErrors({
+    [`${day.day_of_week}_break_start`]: true
+  });
+
+  setMessage({
+    type: 'error',
+    text: `يرجى تحديد بداية الاستراحة (${DAY_NAMES[day.day_of_week]})`
+  });
+
+  return;
     }
 
     if (day.break_start && day.break_end) {
@@ -238,7 +273,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
-                      className="form-input"
+                      className={`form-input ${errors[`${day.day_of_week}_start_time`] ? 'input-error' : ''}`}
                       value={normalizeTime(day.start_time)}
                       onChange={e => handleChange(day.day_of_week, 'start_time', e.target.value)}
                     />
@@ -251,7 +286,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
-                      className="form-input"
+                      className={`form-input ${errors[`${day.day_of_week}_end_time`] ? 'input-error' : ''}`}
                       value={normalizeTime(day.end_time)}
                       onChange={e => handleChange(day.day_of_week, 'end_time', e.target.value)}
                     />
@@ -263,7 +298,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                 <td>
                   {isEditing && day.is_open ? (
                     <select
-                      className="form-input"
+                      className={`form-input ${errors[`${day.day_of_week}_slot_duration_minutes`] ? 'input-error' : ''}`}
                       value={day.slot_duration_minutes ?? ''}
                       onChange={(e) =>
                         handleChange(
@@ -287,7 +322,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
-                      className="form-input"
+                      className={`form-input ${errors[`${day.day_of_week}_break_start`] ? 'input-error' : ''}`}
                       value={normalizeTime(day.break_start)}
                       onChange={e => handleChange(day.day_of_week, 'break_start', e.target.value)}
                     />
@@ -300,7 +335,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                   {isEditing && day.is_open ? (
                     <input
                       type="time"
-                      className="form-input"
+                      className={`form-input ${errors[`${day.day_of_week}_break_end`] ? 'input-error' : ''}`}
                       value={normalizeTime(day.break_end)}
                       onChange={e => handleChange(day.day_of_week, 'break_end', e.target.value)}
                     />
