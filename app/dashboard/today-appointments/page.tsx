@@ -19,16 +19,8 @@ export default async function TodayAppointmentsPage({ searchParams }: Props) {
     redirect('/sign-in');
   }
 
-  const pageParam = Array.isArray(searchParams.page)
-  ? searchParams.page[0]
-  : searchParams.page;
-
-const pageSizeParam = Array.isArray(searchParams.pageSize)
-  ? searchParams.pageSize[0]
-  : searchParams.pageSize;
-
-const currentPage = Math.max(1, Number(pageParam) || 1);
-const pageSize = Math.max(1, Number(pageSizeParam) || 20);
+  const currentPage = Number(searchParams.page) || 1;
+  const pageSize = Number(searchParams.pageSize) || 20;
 
   const timezone = await getBusinessTimezone();
 
