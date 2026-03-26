@@ -20,8 +20,8 @@ export default function OffDaysSection({ initialOffDays }: Props) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const hasChanges =
-  JSON.stringify(hours) !== JSON.stringify(initialHours);
-
+  JSON.stringify(offDays) !== JSON.stringify(originalOffDays);
+  
   const handleAdd = async () => {
     if (!newDate) {
       setMessage({ type: 'error', text: 'يرجى اختيار تاريخ' });
@@ -175,7 +175,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
             <button
              className="btn btn-save"
              onClick={handleSave}
-             disabled={saving || !hasChanges}
+             disabled={saving || adding || !hasChanges}
             >
               {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
             </button>
