@@ -19,8 +19,8 @@ export default function OffDaysSection({ initialOffDays }: Props) {
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const hasChanges =
-  JSON.stringify(offDays) !== JSON.stringify(originalOffDays);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const hasChanges =JSON.stringify(offDays) !== JSON.stringify(originalOffDays);
   
   const handleAdd = async () => {
     if (!newDate) {
@@ -51,19 +51,21 @@ export default function OffDaysSection({ initialOffDays }: Props) {
     setAdding(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا اليوم؟')) return;
+  const handleDelete = async () => {
+  if (!deleteId) return;
 
-    const result = await deleteOffDay(id);
+  const result = await deleteOffDay(deleteId);
 
-    if (result.success) {
-      setOffDays(prev => prev.filter(d => d.id !== id));
-      setOriginalOffDays(prev => prev.filter(d => d.id !== id));
-      setMessage({ type: 'success', text: 'تم الحذف بنجاح' });
-    } else {
-      setMessage({ type: 'error', text: result.error || 'فشل الحذف' });
-    }
-  };
+  if (result.success) {
+    setOffDays(prev => prev.filter(d => d.id !== deleteId));
+    setOriginalOffDays(prev => prev.filter(d => d.id !== deleteId));
+    setMessage({ type: 'success', text: 'تم الحذف بنجاح' });
+  } else {
+    setMessage({ type: 'error', text: result.error || 'فشل الحذف' });
+  }
+
+  setDeleteId(null);
+};
 
   const handleSave = async () => {
     setSaving(true);
@@ -155,7 +157,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
                   <td>
                     <button
                       className="btn btn-delete small"
-                      onClick={() => handleDelete(day.id)}
+                      onClick={() => setDeleteId(day.id)}
                     >
                       حذف
                     </button>
@@ -216,6 +218,32 @@ export default function OffDaysSection({ initialOffDays }: Props) {
           </div>
         </div>
       )}
+
+      {deleteId && (
+  <div className="confirm-overlay">
+    <div className="confirm-box">
+      <h3>تأكيد الحذف</h3>
+
+      <p>هل أنت متأكد من حذف يوم العطلة؟</p>
+
+      <div className="confirm-actions">
+        <button
+          className="btn btn-cancel"
+          onClick={() => setDeleteId(null)}
+        >
+          إلغاء
+        </button>
+
+        <button
+          className="btn btn-delete"
+          onClick={handleDelete}
+        >
+          تأكيد الحذف
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </section>
   );
 }
