@@ -104,7 +104,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
               <th>مفتوح</th>
               <th>من</th>
               <th>إلى</th>
-              <th>مدة الموعد (د)</th>
+              <th>مدة الموعد</th>
               <th>استراحة من</th>
               <th>استراحة إلى</th>
             </tr>
@@ -173,7 +173,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
                       <option value="60">60 دقيقة</option>
                     </select>
                   ) : (
-                    day.slot_duration_minutes ? `${day.slot_duration_minutes} د` : '—'
+                    day.slot_duration_minutes ? `${day.slot_duration_minutes} دقيقة` : '—'
                   )}
                 </td>
 
