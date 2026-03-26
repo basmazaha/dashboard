@@ -414,7 +414,7 @@ input[type="number"].form-input::-webkit-inner-spin-button {
   margin-top: 20px;
 }
 
-/* Responsivness */
+/* Responsiveness */
 @media (max-width: 480px) {
   .section-header h2 {
     font-size: 1.4rem;
