@@ -73,20 +73,33 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    setMessage(null);
+  setMessage(null);
 
-    const result = await upsertWorkingHours(hours);
-
-    if (result.success) {
-      setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
-      setIsEditing(false);
-    } else {
-      setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
+  for (const day of hours) {
+    if (day.is_open) {
+      if (!day.start_time || !day.end_time || !day.slot_duration_minutes) {
+        setMessage({
+          type: 'error',
+          text: `يرجى تحديد من وإلى ومدة الموعد ليوم ${DAY_NAMES[day.day_of_week]}`
+        });
+        return;
+      }
     }
+  }
 
-    setSaving(false);
-  };
+  setSaving(true);
+
+  const result = await upsertWorkingHours(hours);
+
+  if (result.success) {
+    setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
+    setIsEditing(false);
+  } else {
+    setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
+  }
+
+  setSaving(false);
+};
 
   return (
     <section className="hours-section">
