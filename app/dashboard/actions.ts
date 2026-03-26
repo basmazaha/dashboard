@@ -311,6 +311,7 @@ export async function fetchAppointments(
 
 // دالة مواعيد اليوم 
 
+
 export async function fetchTodayAppointments(
   businessTimezone: string,
   page: number = 1,
@@ -318,27 +319,18 @@ export async function fetchTodayAppointments(
 ) {
   const now = new Date();
 
-  // تحويل الوقت الحالي لتايمزون النشاط
   const zonedNow = toZonedTime(now, businessTimezone);
-
   const todayDate = format(zonedNow, 'yyyy-MM-dd');
 
-  // بداية اليوم في تايمزون النشاط
   const todayStartLocal = parse(
-  `${todayDate} 00:00:00`,
-  'yyyy-MM-dd HH:mm:ss',
-  new Date()
-);
+    `${todayDate} 00:00:00`,
+    'yyyy-MM-dd HH:mm:ss',
+    new Date()
+  );
 
-const tomorrowStartLocal = parse(
-  `${todayDate} 00:00:00`,
-  'yyyy-MM-dd HH:mm:ss',
-  new Date()
-);
+  const tomorrowStartLocal = new Date(todayStartLocal);
+  tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
 
-tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
-
-  // تحويلهم UTC عشان Supabase
   const todayStart = fromZonedTime(todayStartLocal, businessTimezone).toISOString();
   const tomorrowStart = fromZonedTime(tomorrowStartLocal, businessTimezone).toISOString();
 
@@ -347,7 +339,7 @@ tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
 
   const allowedStatuses = ['confirmed', 'pending', 'rescheduled'];
 
-  // حساب العدد الكلي
+  // حساب العدد الكلي (يبقى كما هو)
   const { count, error: countError } = await supabaseServer
     .from('appointments')
     .select('*', { count: 'exact', head: true })
@@ -362,14 +354,27 @@ tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
 
   const totalCount = count ?? 0;
 
-  // جلب البيانات
+  // جلب البيانات مع الترتيب الجديد
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
     .gte('date_time', todayStart)
     .lt('date_time', tomorrowStart)
     .in('status', allowedStatuses)
+    // ====================== التعديل هنا ======================
+    .order('date_time', { 
+      ascending: true, 
+      referencedTable: undefined // اختياري
+    })  // هذا لن يؤثر لوحده بعد الآن
+    // الترتيب الصحيح: القادم أولاً ثم الفائت
+    // نستخدم raw SQL expression عبر .order()
+    .order(
+      `date_time + interval '5 minutes' < now()::timestamptz`, 
+      { ascending: true }   // false (قادم) يأتي أولاً → ascending = true
+    )
+    // ثم نرتب حسب الوقت داخل كل مجموعة
     .order('date_time', { ascending: true })
+    // =========================================================
     .range(from, to);
 
   if (error) {
@@ -384,3 +389,4 @@ tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
     pageSize,
   };
 }
+
