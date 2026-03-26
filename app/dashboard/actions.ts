@@ -312,21 +312,26 @@ export async function fetchAppointments(
 // دالة مواعيد اليوم 
 
 
+/**
+ * نوع البيانات المرجعة من الـ RPC Function
+ * (يجب أن يطابق بالضبط RETURNS TABLE في الـ Function)
+ */
 type AppointmentWithCount = {
   id: string;
   full_name: string | null;
-  date_time: string | null;
+  date_time: string | null;     // Supabase يرجع timestamptz كـ string
   phone: string | null;
   reason: string | null;
   status: string | null;
-  total_count: number | null;
+  total_count: number | null;   // bigint يُعامل كـ number في JS
 };
 
 /**
  * جلب مواعيد اليوم مع ترتيب ذكي:
- * - المواعيد القادمة أولاً
+ * - المواعيد القادمة (غير فائتة) تظهر أولاً
  * - ثم المواعيد الفائتة (بعد 5 دقائق grace period)
- * - مع دعم الـ pagination
+ * - مرتبة زمنياً داخل كل مجموعة
+ * - مع دعم الـ Pagination
  */
 export async function fetchTodayAppointments(
   businessTimezone: string,
@@ -341,26 +346,27 @@ export async function fetchTodayAppointments(
         page_size: pageSize,
       });
 
+    // معالجة خطأ Supabase
     if (error) {
       console.error('خطأ في RPC fetch_today_appointments:', error);
-      return { 
-        error: error.message || 'حدث خطأ أثناء جلب المواعيد', 
+      return {
+        error: error.message || 'حدث خطأ أثناء جلب المواعيد',
         appointments: [] as Appointment[],
-        totalCount: 0 
+        totalCount: 0,
       };
     }
 
-    // حالة عدم وجود بيانات
+    // حالة عدم وجود أي مواعيد
     if (!data || data.length === 0) {
-      return { 
+      return {
         appointments: [] as Appointment[],
         totalCount: 0,
         page,
-        pageSize 
+        pageSize,
       };
     }
 
-    // استخراج العدد الكلي من أول صف
+    // استخراج العدد الكلي من أول صف (COUNT(*) OVER)
     const totalCount = Number(data[0]?.total_count ?? 0);
 
     // تنظيف البيانات: إزالة حقل total_count
@@ -378,10 +384,11 @@ export async function fetchTodayAppointments(
 
   } catch (err: any) {
     console.error('خطأ غير متوقع في fetchTodayAppointments:', err);
-    return { 
-      error: err.message || 'حدث خطأ غير متوقع أثناء جلب المواعيد', 
+    return {
+      error: err.message || 'حدث خطأ غير متوقع أثناء جلب المواعيد',
       appointments: [] as Appointment[],
-      totalCount: 0 
+      totalCount: 0,
     };
   }
 }
+
