@@ -90,21 +90,6 @@ export default function OffDaysSection({ initialOffDays }: Props) {
     <section className="off-days-section">
       <div className="section-header">
         <h2>الأيام المغلقة (العطلات الاستثنائية)</h2>
-
-        {isEditing ? (
-          <div className="edit-controls">
-            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving || adding}>
-              إلغاء
-            </button>
-            <button className="btn btn-save" onClick={handleSave} disabled={saving || adding}>
-              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-            </button>
-          </div>
-        ) : (
-          <button className="btn btn-edit" onClick={() => setIsEditing(true)}>
-            تعديل
-          </button>
-        )}
       </div>
 
       {message && (
@@ -178,6 +163,23 @@ export default function OffDaysSection({ initialOffDays }: Props) {
             ))}
           </tbody>
         </table>
+
+        <div className="edit-button">
+        {isEditing ? (
+          <div className="edit-controls">
+            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving || adding}>
+              إلغاء
+            </button>
+            <button className="btn btn-save" onClick={handleSave} disabled={saving || adding}>
+              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+            </button>
+          </div>
+        ) : (
+          <button className="btn btn-edit" onClick={() => setIsEditing(true)}>
+            تعديل
+          </button>
+        )}
+        </div>
       </div>
 
       {isEditing && (
