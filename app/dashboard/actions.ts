@@ -317,69 +317,50 @@ export async function fetchTodayAppointments(
   page: number = 1,
   pageSize: number = 20
 ) {
-  const now = new Date();
+  try {
+    const { data, error } = await supabaseServer
+      .rpc('fetch_today_appointments', {
+        business_timezone: businessTimezone,
+        page_num: page,
+        page_size: pageSize,
+      });
 
-  const zonedNow = toZonedTime(now, businessTimezone);
-  const todayDate = format(zonedNow, 'yyyy-MM-dd');
+    if (error) {
+      console.error('خطأ في جلب المواعيد:', error);
+      return { 
+        error: error.message || 'حدث خطأ أثناء جلب المواعيد', 
+        appointments: [], 
+        totalCount: 0 
+      };
+    }
 
-  const todayStartLocal = parse(
-    `${todayDate} 00:00:00`,
-    'yyyy-MM-dd HH:mm:ss',
-    new Date()
-  );
+    if (!data || data.length === 0) {
+      return { 
+        appointments: [], 
+        totalCount: 0,
+        page,
+        pageSize 
+      };
+    }
 
-  const tomorrowStartLocal = new Date(todayStartLocal);
-  tomorrowStartLocal.setDate(tomorrowStartLocal.getDate() + 1);
+    const totalCount = Number(data[0]?.total_count ?? 0);
 
-  const todayStart = fromZonedTime(todayStartLocal, businessTimezone).toISOString();
-  const tomorrowStart = fromZonedTime(tomorrowStartLocal, businessTimezone).toISOString();
+    const appointments = data.map(({ total_count, ...appt }) => appt);
 
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+    return {
+      appointments: appointments as Appointment[],
+      totalCount,
+      page,
+      pageSize,
+    };
 
-  const allowedStatuses = ['confirmed', 'pending', 'rescheduled'];
-
-  // حساب العدد الكلي (يبقى كما هو)
-  const { count, error: countError } = await supabaseServer
-    .from('appointments')
-    .select('*', { count: 'exact', head: true })
-    .gte('date_time', todayStart)
-    .lt('date_time', tomorrowStart)
-    .in('status', allowedStatuses);
-
-  if (countError) {
-    console.error('خطأ في حساب العدد:', countError);
-    return { error: countError.message, appointments: [], totalCount: 0 };
+  } catch (err: any) {
+    console.error('خطأ غير متوقع:', err);
+    return { 
+      error: err.message || 'حدث خطأ غير متوقع', 
+      appointments: [], 
+      totalCount: 0 
+    };
   }
-
-  const totalCount = count ?? 0;
-
-  // جلب البيانات مع الترتيب الصحيح
-  const { data, error } = await supabaseServer
-    .from('appointments')
-    .select('id, full_name, date_time, phone, reason, status')
-    .gte('date_time', todayStart)
-    .lt('date_time', tomorrowStart)
-    .in('status', allowedStatuses)
-    // ====================== الترتيب الجديد ======================
-    .order(
-      `case when date_time + interval '5 minutes' < now()::timestamptz then 1 else 0 end`,
-      { ascending: true }
-    )
-    // ترتيب ثانوي حسب وقت الموعد
-    .order('date_time', { ascending: true })
-    // =========================================================
-    .range(from, to);
-
-  if (error) {
-    console.error('خطأ في جلب مواعيد اليوم:', error);
-    return { error: error.message, appointments: [], totalCount: 0 };
-  }
-
-  return {
-    appointments: data ?? [],
-    totalCount,
-    page,
-    pageSize,
-  };
 }
+
