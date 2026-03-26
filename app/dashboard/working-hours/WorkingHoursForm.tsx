@@ -207,6 +207,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
           </tbody>
         </table>
 
+        <div className="edit-button">
         {isEditing ? (
           <div className="edit-controls">
             <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
@@ -221,7 +222,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
             تعديل
           </button>
         )}
-        
+        </div> 
       </div>
     </section>
   );
