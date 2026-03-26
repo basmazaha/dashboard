@@ -90,21 +90,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     <section className="hours-section">
       <div className="section-header">
         <h2>ساعات العمل الأسبوعية</h2>
-
-        {isEditing ? (
-          <div className="edit-controls">
-            <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
-              إلغاء
-            </button>
-            <button className="btn btn-save" onClick={handleSave} disabled={saving}>
-              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-            </button>
-          </div>
-        ) : (
-          <button className="btn btn-edit" onClick={() => setIsEditing(true)}>
-            تعديل
-          </button>
-        )}
       </div>
 
       {message && (
@@ -221,6 +206,22 @@ export default function WorkingHoursForm({ initialHours }: Props) {
             ))}
           </tbody>
         </table>
+
+        {isEditing ? (
+          <div className="edit-controls">
+            <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
+              إلغاء
+            </button>
+            <button className="btn btn-save" onClick={handleSave} disabled={saving}>
+              {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+            </button>
+          </div>
+        ) : (
+          <button className="btn btn-edit" onClick={() => setIsEditing(true)}>
+            تعديل
+          </button>
+        )}
+        
       </div>
     </section>
   );
