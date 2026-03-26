@@ -52,13 +52,37 @@ function formatArabicTime(time: string | null): string {
   }
 }
 
+function hoursChanged(a: WorkingHour[], b: WorkingHour[]) {
+  if (a.length !== b.length) return true;
+
+  for (let i = 0; i < a.length; i++) {
+    const h1 = a[i];
+    const h2 = b[i];
+
+    if (
+      h1.is_open !== h2.is_open ||
+      h1.start_time !== h2.start_time ||
+      h1.end_time !== h2.end_time ||
+      h1.break_start !== h2.break_start ||
+      h1.break_end !== h2.break_end ||
+      h1.slot_duration_minutes !== h2.slot_duration_minutes
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export default function WorkingHoursForm({ initialHours }: Props) {
   const [hours, setHours] = useState<WorkingHour[]>(initialHours);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [originalHours, setOriginalHours] = useState<WorkingHour[]>(initialHours);
+  
   const hasChanges =JSON.stringify(hours) !== JSON.stringify(initialHours);
+  const hasChanges = hoursChanged(hours, originalHours);
 
   const handleChange = (
     dayOfWeek: number,
@@ -66,10 +90,24 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     value: string | number | boolean | null
   ) => {
     setHours(prev =>
-      prev.map(h =>
-        h.day_of_week === dayOfWeek ? { ...h, [field]: value } : h
-      )
-    );
+  prev.map(h => {
+    if (h.day_of_week !== dayOfWeek) return h;
+
+    if (field === 'is_open' && value === false) {
+      return {
+        ...h,
+        is_open: false,
+        start_time: null,
+        end_time: null,
+        break_start: null,
+        break_end: null,
+        slot_duration_minutes: null
+      };
+    }
+
+    return { ...h, [field]: value };
+  })
+);
   };
 
   const handleSave = async () => {
@@ -86,6 +124,65 @@ export default function WorkingHoursForm({ initialHours }: Props) {
       }
     }
   }
+
+    for (const day of hours) {
+  if (day.is_open) {
+
+    if (!day.start_time || !day.end_time || !day.slot_duration_minutes) {
+      setMessage({
+        type: 'error',
+        text: `يرجى تحديد من وإلى ومدة الموعد ليوم ${DAY_NAMES[day.day_of_week]}`
+      });
+      return;
+    }
+
+    const start = day.start_time;
+    const end = day.end_time;
+
+    if (start >= end) {
+      setMessage({
+        type: 'error',
+        text: `وقت النهاية يجب أن يكون بعد البداية (${DAY_NAMES[day.day_of_week]})`
+      });
+      return;
+    }
+
+    if (day.break_start && !day.break_end) {
+      setMessage({
+        type: 'error',
+        text: `يرجى تحديد نهاية الاستراحة (${DAY_NAMES[day.day_of_week]})`
+      });
+      return;
+    }
+
+    if (!day.break_start && day.break_end) {
+      setMessage({
+        type: 'error',
+        text: `يرجى تحديد بداية الاستراحة (${DAY_NAMES[day.day_of_week]})`
+      });
+      return;
+    }
+
+    if (day.break_start && day.break_end) {
+
+      if (day.break_start >= day.break_end) {
+        setMessage({
+          type: 'error',
+          text: `نهاية الاستراحة يجب أن تكون بعد بدايتها (${DAY_NAMES[day.day_of_week]})`
+        });
+        return;
+      }
+
+      if (day.break_start < start || day.break_end > end) {
+        setMessage({
+          type: 'error',
+          text: `الاستراحة يجب أن تكون داخل ساعات العمل (${DAY_NAMES[day.day_of_week]})`
+        });
+        return;
+      }
+    }
+  }
+    }
 
   setSaving(true);
 
@@ -253,3 +350,4 @@ export default function WorkingHoursForm({ initialHours }: Props) {
     </section>
   );
 }
+
