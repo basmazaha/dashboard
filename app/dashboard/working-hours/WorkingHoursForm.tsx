@@ -202,10 +202,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
         <h2>ساعات العمل الأسبوعية</h2>
       </div>
 
-      {message && (
-        <div className={`message ${message.type}`}>{message.text}</div>
-      )}
-
       <div className="table-wrapper">
         <table className="hours-table">
           <thead>
@@ -316,6 +312,10 @@ export default function WorkingHoursForm({ initialHours }: Props) {
             ))}
           </tbody>
         </table>
+
+        {message && (
+        <div className={`message ${message.type}`}>{message.text}</div>
+      )}
 
         <div className="edit-button">
         {isEditing ? (
