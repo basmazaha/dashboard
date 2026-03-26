@@ -871,82 +871,88 @@ export default function TodayAppointmentsTable({
         </div>
       )}
 
-      {/* الـ Pagination */}
-      {totalCount > 0 && (
-        <div className="pagination-container">
-          <div className="pagination">
-            <button
-              className="pagination-btn"
-              disabled={currentPage === 1}
-              onClick={() => router.push(`/dashboard/today-appointments?page=1`)}
-            >
-              الأولى
-            </button>
+      {/* الـ Pagination المحسّن */}
+{totalCountState > 0 && (
+  <div className="pagination-container">
+    <div className="pagination">
+      {/* زر الصفحة الأولى */}
+      <button
+        className="pagination-btn"
+        disabled={currentPageState === 1}
+        onClick={() => changePage(1)}
+      >
+        الأولى
+      </button>
 
-            <button
-              className="pagination-btn"
-              disabled={currentPage === 1}
-              onClick={() => changePage(currentPageState - 1)}
-            >
-              السابق
-            </button>
+      {/* زر الصفحة السابقة */}
+      <button
+        className="pagination-btn"
+        disabled={currentPageState === 1}
+        onClick={() => changePage(currentPageState - 1)}
+      >
+        السابق
+      </button>
 
-            {startPage > 1 && (
-              <>
-                <button
-                  className="pagination-btn"
-                  onClick={() => router.push(`/dashboard/today-appointments?page=1`)}
-                >
-                  1
-                </button>
-                {startPage > 2 && <span className="pagination-ellipsis">...</span>}
-              </>
-            )}
-
-            {pages.map((p) => (
-              <button
-                key={p}
-                className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
-                onClick={() => changePage(p)}
-              >
-                {p}
-              </button>
-            ))}
-
-            {endPage < totalPages && (
-              <>
-                {endPage < totalPages - 1 && <span className="pagination-ellipsis">...</span>}
-                <button
-                  className="pagination-btn"
-                  onClick={() => router.push(`/dashboard/today-appointments?page=${totalPages}`)}
-                >
-                  {totalPages}
-                </button>
-              </>
-            )}
-
-            <button
-              className="pagination-btn"
-              disabled={currentPage === totalPages}
-              onClick={() => changePage(currentPageState + 1)}
-            >
-              التالي
-            </button>
-
-            <button
-              className="pagination-btn"
-              disabled={currentPage === totalPages}
-              onClick={() => router.push(`/dashboard/today-appointments?page=${totalPages}`)}
-            >
-              الأخيرة
-            </button>
-          </div>
-
-          <div className="pagination-info">
-            عرض {(currentPageState - 1) * pageSize + 1} – {Math.min(currentPage * pageSize, totalCountState)} من أصل {totalCountState} موعد
-          </div>
-        </div>
+      {/* عرض ... إذا كان هناك صفحات قبل البداية */}
+      {startPage > 1 && (
+        <>
+          <button className="pagination-btn" onClick={() => changePage(1)}>
+            1
+          </button>
+          {startPage > 2 && <span className="pagination-ellipsis">...</span>}
+        </>
       )}
+
+      {/* أزرار الصفحات */}
+      {pages.map((p) => (
+        <button
+          key={p}
+          className={`pagination-btn ${p === currentPageState ? 'active' : ''}`}
+          onClick={() => changePage(p)}
+        >
+          {p}
+        </button>
+      ))}
+
+      {/* عرض ... إذا كان هناك صفحات بعد النهاية */}
+      {endPage < totalPages && (
+        <>
+          {endPage < totalPages - 1 && <span className="pagination-ellipsis">...</span>}
+          <button
+            className="pagination-btn"
+            onClick={() => changePage(totalPages)}
+          >
+            {totalPages}
+          </button>
+        </>
+      )}
+
+      {/* زر الصفحة التالية */}
+      <button
+        className="pagination-btn"
+        disabled={currentPageState === totalPages}
+        onClick={() => changePage(currentPageState + 1)}
+      >
+        التالي
+      </button>
+
+      {/* زر الصفحة الأخيرة */}
+      <button
+        className="pagination-btn"
+        disabled={currentPageState === totalPages}
+        onClick={() => changePage(totalPages)}
+      >
+        الأخيرة
+      </button>
+    </div>
+
+    {/* معلومات عدد المواعيد المعروضة */}
+    <div className="pagination-info">
+      عرض {(currentPageState - 1) * pageSize + 1} –{' '}
+      {Math.min(currentPageState * pageSize, totalCountState)} من أصل {totalCountState} موعد
+    </div>
+  </div>
+)}
 
       {toast && <div className="toast">{toast}</div>}
     </>
