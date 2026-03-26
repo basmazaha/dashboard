@@ -81,7 +81,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [originalHours, setOriginalHours] = useState<WorkingHour[]>(initialHours);
   
-  const hasChanges =JSON.stringify(hours) !== JSON.stringify(initialHours);
   const hasChanges = hoursChanged(hours, originalHours);
 
   const handleChange = (
@@ -113,17 +112,6 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   const handleSave = async () => {
   setMessage(null);
 
-  for (const day of hours) {
-    if (day.is_open) {
-      if (!day.start_time || !day.end_time || !day.slot_duration_minutes) {
-        setMessage({
-          type: 'error',
-          text: `يرجى تحديد من وإلى ومدة الموعد ليوم ${DAY_NAMES[day.day_of_week]}`
-        });
-        return;
-      }
-    }
-  }
 
     for (const day of hours) {
   if (day.is_open) {
