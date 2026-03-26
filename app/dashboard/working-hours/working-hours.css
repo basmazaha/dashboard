@@ -381,6 +381,11 @@ input[type="number"].form-input::-webkit-inner-spin-button {
   box-shadow:0 6px 16px rgba(239,68,68,.35);
 }
 
+.input-error {
+  border: 2px solid #d32f2f !important;
+  background: #fff5f5;
+}
+
 
 /* تأكيد حذف العطلة  */
 
