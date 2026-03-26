@@ -60,6 +60,8 @@ export default function TodayAppointmentsTable({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPageState, setCurrentPageState] = useState(currentPage);
+  const [totalCountState, setTotalCountState] = useState(totalCount);
 
   // الوقت الحالي (يُحدث تلقائياً)
   const [now, setNow] = useState(() => toZonedTime(new Date(), tz));
@@ -98,6 +100,21 @@ export default function TodayAppointmentsTable({
       setIsRefreshing(false);
     }
   };
+
+  const handleFetch = async (page: number) => {
+  const fresh = await fetchTodayAppointments(timezone, page, pageSize);
+
+      if ('appointments' in fresh) {
+        setAppointments(fresh.appointments ?? []);
+        setTotalCountState(fresh.totalCount);
+     }
+   };
+  
+   const changePage = (newPage: number) => {
+      if (newPage === currentPageState) return;
+        setCurrentPageState(newPage);
+         handleFetch(newPage);
+   };
 
   const offDaysSet = useMemo(() => new Set(initialOffDays), [initialOffDays]);
 
@@ -429,7 +446,7 @@ export default function TodayAppointmentsTable({
   };
 
   // ====================== حساب الصفحات ======================
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const totalPages = Math.ceil(totalCountState / pageSize);
   const maxPagesToShow = 7;
 
   let startPage: number;
@@ -869,7 +886,7 @@ export default function TodayAppointmentsTable({
             <button
               className="pagination-btn"
               disabled={currentPage === 1}
-              onClick={() => router.push(`/dashboard/today-appointments?page=${currentPage - 1}`)}
+              onClick={() => changePage(currentPageState - 1)}
             >
               السابق
             </button>
@@ -890,7 +907,7 @@ export default function TodayAppointmentsTable({
               <button
                 key={p}
                 className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
-                onClick={() => router.push(`/dashboard/today-appointments?page=${p}`)}
+                onClick={() => changePage(p)}
               >
                 {p}
               </button>
@@ -911,7 +928,7 @@ export default function TodayAppointmentsTable({
             <button
               className="pagination-btn"
               disabled={currentPage === totalPages}
-              onClick={() => router.push(`/dashboard/today-appointments?page=${currentPage + 1}`)}
+              onClick={() => changePage(currentPageState + 1)}
             >
               التالي
             </button>
@@ -926,7 +943,7 @@ export default function TodayAppointmentsTable({
           </div>
 
           <div className="pagination-info">
-            عرض {(currentPage - 1) * pageSize + 1} – {Math.min(currentPage * pageSize, totalCount)} من أصل {totalCount} موعد
+            عرض {(currentPageState - 1) * pageSize + 1} – {Math.min(currentPage * pageSize, totalCountState)} من أصل {totalCountState} موعد
           </div>
         </div>
       )}
