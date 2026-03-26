@@ -41,7 +41,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
       setOriginalOffDays(prev => [...prev, result.data]);
       setNewDate('');
       setNewDescription('');
-      setMessage({ type: 'success', text: 'تم إضافة اليوم المغلق بنجاح' });
+      setMessage({ type: 'success', text: 'تم إضافة اليوم بنجاح' });
     } else {
       setMessage({ type: 'error', text: result.error || 'فشل الإضافة' });
     }
@@ -89,7 +89,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
   return (
     <section className="off-days-section">
       <div className="section-header">
-        <h2>الأيام المغلقة (العطلات الاستثنائية)</h2>
+        <h2>  العطلات والاجازات السنوية </h2>
       </div>
 
       {message && (
@@ -184,7 +184,7 @@ export default function OffDaysSection({ initialOffDays }: Props) {
 
       {isEditing && (
         <div className="add-new-row">
-          <h3>إضافة يوم مغلق جديد</h3>
+          <h3>إضافة يوم عطلة جديد</h3>
           <div className="add-form">
             <input
               className="form-input"
