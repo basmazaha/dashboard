@@ -354,25 +354,19 @@ export async function fetchTodayAppointments(
 
   const totalCount = count ?? 0;
 
-  // جلب البيانات مع الترتيب الجديد
+  // جلب البيانات مع الترتيب الصحيح
   const { data, error } = await supabaseServer
     .from('appointments')
     .select('id, full_name, date_time, phone, reason, status')
     .gte('date_time', todayStart)
     .lt('date_time', tomorrowStart)
     .in('status', allowedStatuses)
-    // ====================== التعديل هنا ======================
-    .order('date_time', { 
-      ascending: true, 
-      referencedTable: undefined // اختياري
-    })  // هذا لن يؤثر لوحده بعد الآن
-    // الترتيب الصحيح: القادم أولاً ثم الفائت
-    // نستخدم raw SQL expression عبر .order()
+    // ====================== الترتيب الجديد ======================
     .order(
-      `date_time + interval '5 minutes' < now()::timestamptz`, 
-      { ascending: true }   // false (قادم) يأتي أولاً → ascending = true
+      `case when date_time + interval '5 minutes' < now()::timestamptz then 1 else 0 end`,
+      { ascending: true }
     )
-    // ثم نرتب حسب الوقت داخل كل مجموعة
+    // ترتيب ثانوي حسب وقت الموعد
     .order('date_time', { ascending: true })
     // =========================================================
     .range(from, to);
@@ -389,4 +383,3 @@ export async function fetchTodayAppointments(
     pageSize,
   };
 }
-
