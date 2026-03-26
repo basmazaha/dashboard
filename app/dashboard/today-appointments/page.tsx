@@ -23,12 +23,12 @@ export default async function TodayAppointmentsPage({ searchParams }: Props) {
   ? searchParams.page[0]
   : searchParams.page;
 
-  const currentPage = Number(pageParam ?? 1);
-  const pageSizeParam = Array.isArray(searchParams.pageSize)
+const pageSizeParam = Array.isArray(searchParams.pageSize)
   ? searchParams.pageSize[0]
   : searchParams.pageSize;
 
-  const pageSize = Number(pageSizeParam ?? 20);
+const currentPage = Math.max(1, Number(pageParam) || 1);
+const pageSize = Math.max(1, Number(pageSizeParam) || 20);
 
   const timezone = await getBusinessTimezone();
 
