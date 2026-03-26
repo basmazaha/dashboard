@@ -861,7 +861,7 @@ export default function TodayAppointmentsTable({
             <button
               className="pagination-btn"
               disabled={currentPage === 1}
-              onClick={() => router.push(`/dashboard?page=1`)}
+              onClick={() => router.push(`/dashboard/today-appointments?page=1`)}
             >
               الأولى
             </button>
@@ -869,7 +869,7 @@ export default function TodayAppointmentsTable({
             <button
               className="pagination-btn"
               disabled={currentPage === 1}
-              onClick={() => router.push(`/dashboard?page=${currentPage - 1}`)}
+              onClick={() => router.push(`/dashboard/today-appointments?page=${currentPage - 1}`)}
             >
               السابق
             </button>
@@ -878,7 +878,7 @@ export default function TodayAppointmentsTable({
               <>
                 <button
                   className="pagination-btn"
-                  onClick={() => router.push(`/dashboard?page=1`)}
+                  onClick={() => router.push(`/dashboard/today-appointments?page=1`)}
                 >
                   1
                 </button>
@@ -890,7 +890,7 @@ export default function TodayAppointmentsTable({
               <button
                 key={p}
                 className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
-                onClick={() => router.push(`/dashboard?page=${p}`)}
+                onClick={() => router.push(`/dashboard/today-appointments?page=${p}`)}
               >
                 {p}
               </button>
@@ -901,7 +901,7 @@ export default function TodayAppointmentsTable({
                 {endPage < totalPages - 1 && <span className="pagination-ellipsis">...</span>}
                 <button
                   className="pagination-btn"
-                  onClick={() => router.push(`/dashboard?page=${totalPages}`)}
+                  onClick={() => router.push(`/dashboard/today-appointments?page=${totalPages}`)}
                 >
                   {totalPages}
                 </button>
@@ -911,7 +911,7 @@ export default function TodayAppointmentsTable({
             <button
               className="pagination-btn"
               disabled={currentPage === totalPages}
-              onClick={() => router.push(`/dashboard?page=${currentPage + 1}`)}
+              onClick={() => router.push(`/dashboard/today-appointments?page=${currentPage + 1}`)}
             >
               التالي
             </button>
@@ -919,7 +919,7 @@ export default function TodayAppointmentsTable({
             <button
               className="pagination-btn"
               disabled={currentPage === totalPages}
-              onClick={() => router.push(`/dashboard?page=${totalPages}`)}
+              onClick={() => router.push(`/dashboard/today-appointments?page=${totalPages}`)}
             >
               الأخيرة
             </button>
