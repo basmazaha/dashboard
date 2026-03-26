@@ -57,8 +57,8 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const hasChanges =
-  JSON.stringify(hours) !== JSON.stringify(initialHours);
+  const [originalHours, setOriginalHours] = useState<WorkingHour[]>(initialHours);
+  const hasChanges =JSON.stringify(hours) !== JSON.stringify(initialHours);
 
   const handleChange = (
     dayOfWeek: number,
@@ -93,12 +93,19 @@ export default function WorkingHoursForm({ initialHours }: Props) {
 
   if (result.success) {
     setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
+    setOriginalHours(hours);
     setIsEditing(false);
   } else {
     setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
   }
 
   setSaving(false);
+};
+
+  const handleCancel = () => {
+  setHours(originalHours);
+  setIsEditing(false);
+  setMessage(null);
 };
 
   return (
@@ -225,7 +232,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
         <div className="edit-button">
         {isEditing ? (
           <div className="edit-controls">
-            <button className="btn btn-cancel" onClick={() => setIsEditing(false)} disabled={saving}>
+            <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
               إلغاء
             </button>
             <button
