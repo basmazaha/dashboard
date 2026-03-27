@@ -80,13 +80,15 @@ export default function TimezoneForm({ initialTimezone }: Props) {
           </select>
         </div>
 
-        {message && (
+        
+        <div className="form-buttons">
+
+          {message && (
         <div className={`timezone-message ${message.type}`}>
           {message.text}
         </div>
       )}
-        
-        <div className="form-buttons">
+          
           <button
             type="submit"
             className="timezone-form__submit"
