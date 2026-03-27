@@ -81,10 +81,10 @@ export default function TimezoneForm({ initialTimezone }: Props) {
         </div>
 
         
-        <div className="settings-buttons">
+        <div className="settings-form__buttons">
 
           {message && (
-        <div className={`settings-message ${message.type}`}>
+        <div className={`settings-form__message ${message.type}`}>
           {message.text}
         </div>
       )}
@@ -99,7 +99,7 @@ export default function TimezoneForm({ initialTimezone }: Props) {
 
           <button
             type="button"
-            className="btn-back"
+            className="settings-form__back"
             onClick={handleBack}
             disabled={saving}
           >
