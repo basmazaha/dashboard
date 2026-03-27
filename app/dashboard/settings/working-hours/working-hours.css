@@ -124,6 +124,7 @@
   background: #ecfdf5;
   color: #065f46;
   border-color: #a7f3d0;
+  margin-top: 1.5rem;
 }
 
 .message.error {
