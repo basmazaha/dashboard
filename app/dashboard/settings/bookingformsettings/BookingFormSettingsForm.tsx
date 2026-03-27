@@ -65,10 +65,10 @@ export default function BookingFormSettingsForm({
   return (
     <>
 
-      <form onSubmit={handleSubmit} className="bookingform-form">
+      <form onSubmit={handleSubmit} className="settings-form">
         {/* أقل وقت للحجز */}
-        <div className="bookingform-form__group">
-          <label htmlFor="min_booking_notice_minutes" className="bookingform-form__label">
+        <div className="settings-form__group">
+          <label htmlFor="min_booking_notice_minutes" className="settings-form__label">
             الحجز قبل الموعد بمدة لا تقل عن
           </label>
           <select
@@ -76,7 +76,7 @@ export default function BookingFormSettingsForm({
             name="min_booking_notice_minutes"
             value={minNotice}
             onChange={(e) => setMinNotice(Number(e.target.value))}
-            className="bookingform-form__select"
+            className="settings-form__select"
             disabled={saving}
           >
             {MIN_NOTICE_OPTIONS.map((opt) => (
@@ -88,8 +88,8 @@ export default function BookingFormSettingsForm({
         </div>
 
         {/* عدد الأيام المسموح بالحجز خلالها */}
-        <div className="bookingform-form__group">
-          <label htmlFor="booking_days_ahead" className="bookingform-form__label">
+        <div className="settings-form__group">
+          <label htmlFor="booking_days_ahead" className="settings-form__label">
             الحجز قبل الموعد بمدة لا تزيد عن
           </label>
           <select
@@ -97,7 +97,7 @@ export default function BookingFormSettingsForm({
             name="booking_days_ahead"
             value={daysAhead}
             onChange={(e) => setDaysAhead(Number(e.target.value))}
-            className="bookingform-form__select"
+            className="settings-form__select"
             disabled={saving}
           >
             {DAYS_AHEAD_OPTIONS.map((value) => (
@@ -109,17 +109,17 @@ export default function BookingFormSettingsForm({
         </div>
 
         
-        <div className="form-buttons">
+        <div className="settings-form__buttons">
 
           {message && (
-        <div className={`bookingform-message ${message.type}`}>
+        <div className={`settings-form__message ${message.type}`}>
           {message.text}
         </div>
       )}
           
          <button
           type="submit"
-          className="bookingform-form__submit"
+          className="settings-form__submit"
           disabled={saving || !hasChanges}
          >
            {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
