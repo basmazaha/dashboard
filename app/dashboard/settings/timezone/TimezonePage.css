@@ -90,7 +90,7 @@
 
 .form-buttons{
   display:flex;
-  flex-direction: column;
+  flex-direction: row;
   gap:12px;
   margin-top:10px;
 }
@@ -105,7 +105,7 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  flex: 0.5;
+  flex: 1;
 }
 
 .timezone-form__submit:hover {
@@ -132,7 +132,7 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  flex: 0.5;
+  flex: 1;
 }
 
 .btn-back:hover{
