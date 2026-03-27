@@ -112,9 +112,11 @@
 
 /* رسائل النجاح / الخطأ */
 .message {
+  width:100%;
+  max-width:260px;
   padding: 1rem 1.5rem;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
+  margin-top: 1.5rem;
   text-align: center;
   font-weight: 500;
   border: 1px solid;
@@ -124,7 +126,6 @@
   background: #ecfdf5;
   color: #065f46;
   border-color: #a7f3d0;
-  margin-top: 1.5rem;
 }
 
 .message.error {
