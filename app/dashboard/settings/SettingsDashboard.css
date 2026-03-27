@@ -107,7 +107,7 @@
    Block: settings-page
    ========================================================================== 
 
-.timezone-page {
+.settings-page {
   min-height: 100vh;
   background-color: #f8f9fa;
   padding: 2rem 1rem;
@@ -116,7 +116,7 @@
   font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
 }
 
-.timezone-page__container {
+.settings-page__container {
   max-width: 480px;
   margin: 0 auto;
   background-color: white;
@@ -125,20 +125,20 @@
   overflow: hidden;
 }
 
-.timezone-page__header {
+.settings-page__header {
   padding: 2rem 1.5rem;
   border-bottom: 1px solid #e9ecef;
   text-align: center;
 }
 
-.timezone-page__title {
+.settings-page__title {
   margin: 0 0 0.5rem;
   font-size: 1.75rem;
   font-weight: 700;
   color: #1f2937;
 }
 
-.timezone-page__description {
+.settings-page__description {
   margin: 0;
   color: #6b7280;
   font-size: 1rem;
@@ -148,26 +148,26 @@
    Block: settings-form
    ========================================================================== */
 
-.timezone-form {
+.settings-form {
   padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.timezone-form__group {
+.settings-form__group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.timezone-form__label {
+.settings-form__label {
   font-size: 0.95rem;
   font-weight: 500;
   color: #374151;
 }
 
-.timezone-form__select {
+.settings-form__select {
   padding: 0.75rem 1rem;
   font-size: 1rem;
   border: 1px solid #d1d5db;
@@ -184,7 +184,7 @@
   max-width: 400px;
 }
 
-.timezone-form__select:focus {
+.settings-form__select:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
@@ -195,7 +195,7 @@
    Buttons
    =============================== */
 
-.form-buttons{
+.settings-buttons{
   display:flex;
   flex-direction:column;
   align-items: center;   /* توسيط الأزرار أفقياً */
@@ -204,7 +204,7 @@
 }
 
 /* زر الحفظ */
-.timezone-form__submit {
+.settings-form__submit {
   width:100%;
   max-width:260px;      /* عرض مناسب */
   padding:0.875rem;
@@ -218,16 +218,16 @@
   transition:all .2s ease;
 }
 
-.timezone-form__submit:hover {
+.settings-form__submit:hover {
   transform:translateY(-1px);
   box-shadow:0 6px 16px rgba(59,130,246,.25);
 }
 
-.timezone-form__submit:active {
+.settings-form__submit:active {
   transform:translateY(0);
 }
 
-.timezone-form__submit:disabled{
+.settings-form__submit:disabled{
   opacity:.6;
   cursor:not-allowed;
 }
@@ -259,7 +259,7 @@
 }
 
 
-.timezone-message {
+.settings-message {
   width:100%;
   max-width:260px;
   padding: 1rem 1.5rem;
@@ -269,13 +269,13 @@
   border: 1px solid;
 }
 
-.timezone-message.success {
+.settings-message.success {
   background: #ecfdf5;
   color: #065f46;
   border-color: #a7f3d0;
 }
 
-.timezone-message.error {
+.settings-message.error {
   background: #fee2e2;
   color: #991b1b;
   border-color: #fecaca;
@@ -284,11 +284,11 @@
 
 /* Responsive */
 @media (max-width: 480px) {
-  .timezone-page__container {
+  .settings-page__container {
     margin: 0 1rem;
   }
 
-  .timezone-page__title {
+  .settings-page__title {
     font-size: 1.5rem;
   }
 }
