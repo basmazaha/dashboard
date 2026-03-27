@@ -373,7 +373,8 @@ input[type="number"].form-input::-webkit-inner-spin-button {
   border-radius:6px;
   text-decoration:none;
   cursor:pointer;
-  flex: 1;
+  flex: 0 0 50%;  /* flex-grow:0, flex-shrink:0, flex-basis:50% */
+  max-width: 200px; /* تحديد حد أقصى */
 }
 
 .btn-back:hover{
