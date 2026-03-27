@@ -627,7 +627,7 @@ display: none;
   display: flex;
   justify-content: center; /* 🔥 في النص */
   align-items: center;
-  gap: 6px;
+  gap: 12px;
 
   padding: 0.7rem 1rem;
   text-align: center;
