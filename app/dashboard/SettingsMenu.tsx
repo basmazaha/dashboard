@@ -61,7 +61,7 @@ export default function SettingsMenu({
   <Link href="/dashboard/settings" className="dropdown-item"
     onClick={() => setOpenMenu(false)}
     >
-     الإعدادات
+     🔧 الإعدادات
   </Link>
 
   {/* 🚪 تسجيل الخروج */}
