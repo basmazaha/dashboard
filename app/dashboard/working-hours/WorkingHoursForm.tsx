@@ -217,6 +217,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
   if (result.success) {
     setMessage({ type: 'success', text: 'تم حفظ ساعات العمل بنجاح' });
     setOriginalHours(hours);
+    setErrors({});
     setIsEditing(false);
   } else {
     setMessage({ type: 'error', text: result.error || 'حدث خطأ أثناء الحفظ' });
@@ -227,6 +228,7 @@ export default function WorkingHoursForm({ initialHours }: Props) {
 
   const handleCancel = () => {
   setHours(originalHours);
+  setErrors({});
   setIsEditing(false);
   setMessage(null);
 };
