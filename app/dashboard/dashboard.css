@@ -645,7 +645,16 @@ display: none;
 }
 
 .logout-item {
-  color: #ef4444;
+  background: #ef4444;
+  color: white;
+  border-radius: 0.5rem;
+  width: 85%;
+  margin: 6px 0 10px;
+  font-weight: 500;
+}
+
+.logout-item:hover {
+  background: #dc2626;
 }
 
 /*رسائل النجاح والخطأ*/
