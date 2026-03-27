@@ -65,17 +65,24 @@
 }
 
 .bookingform-message {
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
   text-align: center;
-  padding: 1rem;
-  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid;
 }
 
 .bookingform-message.success {
+  background: #ecfdf5;
   color: #065f46;
+  border-color: #a7f3d0;
 }
 
 .bookingform-message.error {
+  background: #fee2e2;
   color: #991b1b;
+  border-color: #fecaca;
 }
 
 
