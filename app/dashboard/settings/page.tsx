@@ -27,7 +27,7 @@ export default function SettingsDashboard() {
           <div className="settings-card">
             <h2 className="settings-card__title">اعدادات الحجز من الموقع الالكتروني</h2>
             <p className="settings-card__description">
-              التحكم في عرض الاوقات المتاحة خلال فترة محددة
+              التحكم في مدة الحجز قبل الموعد من خلال الموقع
             </p>
             <Link href="/dashboard/settings/bookingformsettings" className="settings-card__link">
               تعديل →
