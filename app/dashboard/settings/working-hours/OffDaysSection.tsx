@@ -96,10 +96,6 @@ export default function OffDaysSection({ initialOffDays }: Props) {
         <h2>  العطلات والاجازات السنوية </h2>
       </div>
 
-      {message && (
-        <div className={`message ${message.type}`}>{message.text}</div>
-      )}
-
       <div className="table-wrapper">
         <table className="data-table">
           <thead>
@@ -169,6 +165,11 @@ export default function OffDaysSection({ initialOffDays }: Props) {
         </table>
 
         <div className="edit-button">
+
+          {message && (
+        <div className={`message ${message.type}`}>{message.text}</div>
+      )}
+          
         {isEditing ? (
           <div className="edit-controls">
             <button className="btn btn-cancel" onClick={handleCancel} disabled={saving || adding}>
