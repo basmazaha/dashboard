@@ -59,9 +59,9 @@ export default function TimezoneForm({ initialTimezone }: Props) {
   return (
     <>
 
-      <form onSubmit={handleSubmit} className="timezone-form">
-        <div className="timezone-form__group">
-          <label htmlFor="timezone" className="timezone-form__label">
+      <form onSubmit={handleSubmit} className="settings-form">
+        <div className="settings-form__group">
+          <label htmlFor="timezone" className="settings-form__label">
             المنطقة الزمنية
           </label>
           <select
@@ -69,7 +69,7 @@ export default function TimezoneForm({ initialTimezone }: Props) {
             name="timezone"
             value={timezone}
             onChange={(e) => setTimezone(e.target.value)}
-            className="timezone-form__select"
+            className="settings-form__select"
             disabled={saving}
           >
             {COMMON_TIMEZONES.map((tz) => (
@@ -81,17 +81,17 @@ export default function TimezoneForm({ initialTimezone }: Props) {
         </div>
 
         
-        <div className="form-buttons">
+        <div className="settings-buttons">
 
           {message && (
-        <div className={`timezone-message ${message.type}`}>
+        <div className={`settings-message ${message.type}`}>
           {message.text}
         </div>
       )}
           
           <button
             type="submit"
-            className="timezone-form__submit"
+            className="settings-form__submit"
             disabled={saving || !hasChanges}
           >
             {saving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
