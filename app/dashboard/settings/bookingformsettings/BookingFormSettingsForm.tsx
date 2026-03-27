@@ -64,11 +64,6 @@ export default function BookingFormSettingsForm({
 
   return (
     <>
-      {message && (
-        <div className={`bookingform-message ${message.type}`}>
-          {message.text}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="bookingform-form">
         {/* أقل وقت للحجز */}
@@ -112,6 +107,12 @@ export default function BookingFormSettingsForm({
             ))}
           </select>
         </div>
+
+        {message && (
+        <div className={`bookingform-message ${message.type}`}>
+          {message.text}
+        </div>
+      )}
 
         <div className="form-buttons">
          <button
