@@ -1,4 +1,5 @@
 // app/dashboard/settings/timezone/page.tsx
+
 import { supabaseServer } from '@/lib/supabaseServer';
 import TimezoneForm from './TimezoneForm';
 import { DEFAULT_TIMEZONE } from '@/lib/timezone';
@@ -11,15 +12,11 @@ export default async function TimezoneSettingsPage() {
     .eq('id', 1)
     .single();
 
-  if (error || !settings) {
+  if (error) {
     console.error('Error fetching timezone setting:', error);
-    // fallback
-    return (
-      <div className="timezone-page__error">
-        حدث خطأ أثناء تحميل الإعدادات، حاول مرة أخرى لاحقًا.
-      </div>
-    );
   }
 
-  return <TimezoneForm initialTimezone={settings.timezone || DEFAULT_TIMEZONE } />;
+  const timezone = settings?.timezone || DEFAULT_TIMEZONE;
+
+  return <TimezoneForm initialTimezone={timezone} />;
 }
