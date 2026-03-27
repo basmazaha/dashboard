@@ -1,15 +1,59 @@
-/* app/dashboard/settings/bookingformsettings/BookingFormSettingsPage.css */
+/* app/dashboard/settings/bookinformsettings/BookingFormSettingsPage.css */
+
+/* ==========================================================================
+   Block: page
+   ========================================================================== */
+
+.bookingform-page {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 2rem 1rem;
+  direction: rtl;
+  text-align: right;
+  font-family: 'Tajawal', system-ui, -apple-system, sans-serif;
+}
+
+.bookingform-page__container {
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.bookingform-page__header {
+  padding: 2rem 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.bookingform-page__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.bookingform-page__description {
+  margin: 0;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+/* ==========================================================================
+   Block: settings-form
+   ========================================================================== */
 
 .bookingform-form {
   padding: 2rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  direction: rtl;
 }
 
 .bookingform-form__group {
-  display:flex;
+  display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
@@ -28,6 +72,11 @@
   background-color: #f9fafb;
   color: #1f2937;
   appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' viewBox='0 0 12 12'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m1 4 5 4 5-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 1rem center;
+  background-size: 12px;
+  padding-right: 2.5rem;
   cursor: pointer;
   max-width: 400px;
 }
@@ -35,39 +84,81 @@
 .bookingform-form__select:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
+
+
+/* ===============================
+   Buttons
+   =============================== */
 
 .form-buttons{
   display:flex;
-  flex-direction: column;
-  justify-content: center;
+  flex-direction:column;
+  align-items:center;   /* توسيط الأزرار أفقياً */
   gap:12px;
   margin-top:10px;
 }
 
+/* زر الحفظ */
 .bookingform-form__submit {
-  padding: 0.875rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(90deg,#3b82f6,#6366f1);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  flex: 0 0 50%;  /* flex-grow:0, flex-shrink:0, flex-basis:50% */
-  
+  width:100%;
+  max-width:260px;      /* عرض مناسب */
+  padding:0.875rem;
+  font-size:1rem;
+  font-weight:600;
+  color:white;
+  background:linear-gradient(90deg,#3b82f6,#6366f1);
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  transition:all .2s ease;
 }
 
 .bookingform-form__submit:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(59,130,246,0.25);
+  transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(59,130,246,.25);
 }
+
+.bookingform-form__submit:active {
+  transform:translateY(0);
+}
+
+.bookingform-form__submit:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+
+/* زر الرجوع */
+.btn-back{
+  width:100%;
+  max-width:260px;
+  padding:0.875rem;
+  font-size:1rem;
+  font-weight:600;
+  color:white;
+  background:linear-gradient(90deg,#ef4444,#dc2626);
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  transition:all .2s ease;
+}
+
+.btn-back:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 16px rgba(239,68,68,.35);
+}
+
+.btn-back:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
 
 .bookingform-message {
   padding: 1rem 1.5rem;
   border-radius: 8px;
-  margin-bottom: 1.5rem;
   text-align: center;
   font-weight: 500;
   border: 1px solid;
@@ -86,31 +177,13 @@
 }
 
 
-.btn-back{
-  padding: 0.875rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(90deg,#ef4444,#dc2626);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  flex: 0 0 50%;  /* flex-grow:0, flex-shrink:0, flex-basis:50% */
-}
+/* Responsive */
+@media (max-width: 480px) {
+  .bookingform-page__container {
+    margin: 0 1rem;
+  }
 
-.btn-back:hover{
-  transform: translateY(-1px);
-  box-shadow:0 6px 16px rgba(239,68,68,.35);
-}
-
-.btn-back:disabled{
-  opacity:.6;
-  cursor:not-allowed;
-}
-
-.bookingform-form__submit:disabled{
-  opacity:.6;
-  cursor:not-allowed;
-  box-shadow:none;
-  transform:none;
+  .bookingform-page__title {
+    font-size: 1.5rem;
+  }
 }
