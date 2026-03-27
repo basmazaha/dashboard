@@ -127,7 +127,7 @@ export default function BookingFormSettingsForm({
 
          <button
            type="button"
-           className="btn-back"
+           className="settings-form__back"
            onClick={handleBack}
            disabled={saving}
          >
