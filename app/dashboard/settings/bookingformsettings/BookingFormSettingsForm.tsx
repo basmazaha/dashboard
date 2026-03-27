@@ -108,13 +108,15 @@ export default function BookingFormSettingsForm({
           </select>
         </div>
 
-        {message && (
+        
+        <div className="form-buttons">
+
+          {message && (
         <div className={`bookingform-message ${message.type}`}>
           {message.text}
         </div>
       )}
-
-        <div className="form-buttons">
+          
          <button
           type="submit"
           className="bookingform-form__submit"
