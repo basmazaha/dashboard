@@ -1,6 +1,7 @@
 // app/dashboard/settings/timezone/page.tsx
 import { supabaseServer } from '@/lib/supabaseServer';
 import TimezoneForm from './TimezoneForm';
+import { DEFAULT_TIMEZONE } from '@/lib/timezone';
 import '../SettingsDashboard.css';
 
 export default async function TimezoneSettingsPage() {
@@ -20,5 +21,5 @@ export default async function TimezoneSettingsPage() {
     );
   }
 
-  return <TimezoneForm initialTimezone={settings.timezone || 'Africa/Cairo'} />;
+  return <TimezoneForm initialTimezone={settings.timezone || DEFAULT_TIMEZONE } />;
 }
