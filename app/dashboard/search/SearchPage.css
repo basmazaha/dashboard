@@ -1,4 +1,4 @@
-.search-page-container {
+/*.search-page-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 1.5rem;
@@ -37,7 +37,7 @@
   color: #9ca3af;
   border: 1px solid #d1d5db;
   cursor: not-allowed;
-}
+}*/
 
 /* إذا أردتِ تمييز صفحة البحث بلون مختلف قليلاً */
 .dashboard-content:has(.search-form-card) h1 {
