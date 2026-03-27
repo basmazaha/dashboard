@@ -4,19 +4,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateTimezone } from './actions';
+import { TIMEZONE_LABELS } from '@/lib/timezone';
+
 
 type ActionResult<T = unknown> =
   | { success: true; data: T }
   | { success: false; error: string };
 
-const COMMON_TIMEZONES = [
-  { value: 'Africa/Cairo', label: 'القاهرة (UTC+2/+3)' },
-  { value: 'Asia/Riyadh', label: 'الرياض (UTC+3)' },
-  { value: 'Asia/Dubai', label: 'دبي (UTC+4)' },
-  { value: 'Europe/Istanbul', label: 'إسطنبول (UTC+3)' },
-  { value: 'America/New_York', label: 'نيويورك (UTC-5/-4)' },
-  { value: 'UTC', label: 'UTC' },
-];
+const COMMON_TIMEZONES = Object.entries(TIMEZONE_LABELS).map(
+  ([value, label]) => ({
+    value,
+    label,
+  })
+);
 
 interface Props {
   initialTimezone: string;
