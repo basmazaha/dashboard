@@ -2,7 +2,7 @@
 
 import { supabaseServer } from '@/lib/supabaseServer';
 import BookingFormSettingsForm from './BookingFormSettingsForm';
-import './BookingFormSettingsPage.css';
+import '../SettingsDashboard.css';
 
 export default async function BookingFormSettingsPage() {
   const { data: settings, error } = await supabaseServer
