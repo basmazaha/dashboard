@@ -350,11 +350,12 @@ export default function WorkingHoursForm({ initialHours }: Props) {
           </tbody>
         </table>
 
-        {message && (
+        <div className="edit-button">
+
+          {message && (
         <div className={`message ${message.type}`}>{message.text}</div>
       )}
-
-        <div className="edit-button">
+          
         {isEditing ? (
           <div className="edit-controls">
             <button className="btn btn-cancel" onClick={handleCancel} disabled={saving}>
