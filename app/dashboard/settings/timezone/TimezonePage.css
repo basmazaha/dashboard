@@ -157,6 +157,7 @@
 
 
 .timezone-message {
+  width:100%;
   max-width:260px;
   padding: 1rem 1.5rem;
   border-radius: 8px;
