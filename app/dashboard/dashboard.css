@@ -686,7 +686,4 @@ display: none;
   cursor: not-allowed;
 }
 
-/* إذا أردتِ تمييز صفحة البحث بلون مختلف قليلاً */
-.dashboard-content:has(.search-form-card) h1 {
-  color: #1e40af; /* أزرق غامق مثلاً */
-}
+
